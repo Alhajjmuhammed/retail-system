@@ -4,10 +4,10 @@ FROM python:3.13-slim AS css
 WORKDIR /build
 ADD https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 /usr/local/bin/tailwindcss
 RUN chmod +x /usr/local/bin/tailwindcss
-COPY static/src ./static/src
+COPY assets ./assets
 COPY templates ./templates
 COPY apps ./apps
-RUN tailwindcss -i static/src/input.css -o static/css/app.css --minify
+RUN tailwindcss -i assets/tailwind/input.css -o static/css/app.css --minify
 
 
 FROM python:3.13-slim
@@ -30,9 +30,15 @@ RUN pip install -r requirements.txt
 COPY . .
 COPY --from=css /build/static/css/app.css ./static/css/app.css
 
-# collectstatic needs a key and a database URL to import settings, but writes
-# nothing to either.
-RUN SECRET_KEY=build-only DATABASE_URL=postgres://u:p@localhost/db \
+# collectstatic has to import production settings, which refuse to load on
+# development defaults -- so the build hands them throwaway values that pass
+# those checks. None of this reaches the running container: the real values
+# come from the environment at run time, and a container started without them
+# still refuses to boot.
+RUN SECRET_KEY=build-time-placeholder-not-used-at-runtime-0000000000 \
+    DATABASE_URL=postgres://u:p@localhost/db \
+    ALLOWED_HOSTS=build.invalid \
+    EMAIL_HOST=build.invalid \
     python manage.py collectstatic --noinput
 
 # Never run as root.

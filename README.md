@@ -45,7 +45,7 @@ alone. `ops/bootstrap_db.sql` creates the `retail_app` role it should use.
 
 CSS (no Node required, the binary is self-contained):
 
-    ./tailwindcss -i static/src/input.css -o static/css/app.css --watch
+    ./tailwindcss -i assets/tailwind/input.css -o static/css/app.css --watch
 
 Background work (trials, usage, fiscal queue, stock alerts):
 
