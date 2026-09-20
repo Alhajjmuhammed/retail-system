@@ -1,0 +1,44 @@
+{% comment %}Record money that arrived against one invoice.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-md rounded-2xl bg-white shadow-float">
+{% endif %}
+{% include "platform/_modal_head.html" with title="Record a payment" subtitle=invoice.number|add:" · "|add:invoice.tenant.name %}
+
+<form {% if modal %}hx-post="{% url 'platform:invoice_pay' invoice.pk %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post" action="{% url 'platform:invoice_pay' invoice.pk %}"{% endif %} class="p-5">
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% include "platform/_form_errors.html" %}
+  <div class="mb-4 grid grid-cols-2 gap-3">
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Invoice total</p><p class="tnum mt-0.5 font-semibold text-ink-900">{{ invoice.total|floatformat:0|intcomma }}</p></div>
+    <div class="rounded-xl bg-amber-50 px-3 py-2.5"><p class="text-xs text-amber-700">Left to pay</p><p class="tnum mt-0.5 font-semibold text-amber-900">{{ invoice.outstanding|floatformat:0|intcomma }}</p></div>
+  </div>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="label" for="amount">Amount received</label>
+      <input type="number" step="0.01" min="0.01" max="{{ invoice.outstanding|floatformat:2 }}" name="amount" id="amount" class="input" required autofocus
+             value="{% if values %}{{ values.amount }}{% else %}{{ invoice.outstanding|floatformat:2 }}{% endif %}">
+    </div>
+    <div>
+      <label class="label" for="method">How</label>
+      <select name="method" id="method" class="input" required>
+        {% for value, label in methods %}<option value="{{ value }}" {% if values.method == value or not values and value == "mpesa" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="sm:col-span-2">
+      <label class="label" for="reference">Transaction reference</label>
+      <input name="reference" id="reference" class="input" maxlength="120" placeholder="e.g. QGR7XK2P"
+             value="{{ values.reference|default:'' }}">
+      <p class="hint">From the M-Pesa message or bank slip, so the money can be traced.</p>
+    </div>
+  </div>
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">{% icon "check" %} Record it</button>
+  </div>
+</form>
+{% if modal %}
+  </div>
+</div>
+{% endif %}

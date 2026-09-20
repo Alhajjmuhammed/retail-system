@@ -1,0 +1,267 @@
+{% comment %}
+The navigation, shared by the desktop sidebar and the mobile drawer.
+
+Permission-driven: a link somebody cannot use is not rendered at all. Hiding
+it is a courtesy; the view decorator is the boundary.
+
+Labels sit in .nav-label so the collapsed sidebar can hide them without a
+second copy of this file.
+{% endcomment %}
+{% with url_name=request.resolver_match.url_name app=request.resolver_match.app_name %}
+
+<div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-ink-100 px-4">
+  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-sm font-bold text-white shadow-sm">
+    {{ tenant.name|slice:":1"|upper|default:"R" }}
+  </div>
+  <div class="nav-label min-w-0 flex-1">
+    <p class="truncate text-sm font-semibold text-ink-900">{{ tenant.name|default:"Retail" }}</p>
+    {% if branch %}<p class="truncate text-xs text-ink-500">{{ branch.name }}</p>{% endif %}
+  </div>
+</div>
+
+<nav class="sidebar-scroll px-2.5 pb-4">
+
+  <div class="space-y-0.5 pt-3">
+    <a href="{% url 'core:dashboard' %}" title="Dashboard" class="nav-link {% if url_name == 'dashboard' and app != 'platform' %}nav-link-active{% endif %}">
+      {% icon "home" %}<span class="nav-label">Dashboard</span>
+    </a>
+    {% can_do "pos.operate" as may_sell %}
+    {% if may_sell %}
+    <a href="{% url 'pos:till' %}" title="Till" class="nav-link {% if url_name == 'till' %}nav-link-active{% endif %}">
+      {% icon "cart" %}<span class="nav-label">Till</span>
+    </a>
+    {% endif %}
+    {% can_do "pos.mobile_cart" as may_phone %}
+    {% if may_phone %}
+    <a href="{% url 'pos:phone' %}" title="Sell on phone" class="nav-link {% if url_name == 'phone' %}nav-link-active{% endif %}">
+      {% icon "tag" %}<span class="nav-label">Sell on phone</span>
+    </a>
+    {% endif %}
+    {% can_do "report.sales" as may_sales %}
+    {% if may_sales %}
+    <a href="{% url 'pos:sale_list' %}" title="Sales" class="nav-link {% if url_name == 'sale_list' or url_name == 'sale_detail' %}nav-link-active{% endif %}">
+      {% icon "receipt" %}<span class="nav-label">Sales</span>
+    </a>
+    {% endif %}
+  </div>
+
+  {% can_do "product.view" as may_products %}
+  {% can_do "stock.view" as may_stock %}
+  {% can_do "stock.transfer" as may_transfer %}
+  {% can_do "stock.count" as may_count %}
+  {% can_do "stock.batches" as may_batches %}
+  {% if may_products or may_stock or may_transfer or may_count or may_batches %}
+  <div class="space-y-0.5">
+    <p class="nav-section">Inventory</p>
+    {% if may_products %}
+    <a href="{% url 'catalog:product_list' %}" title="Products" class="nav-link {% if app == 'catalog' and 'settings' not in url_name and url_name != 'tiles' and url_name != 'taxonomy' and url_name != 'price_lists' %}nav-link-active{% endif %}">
+      {% icon "tag" %}<span class="nav-label">Products</span>
+    </a>
+    {% endif %}
+    {% if may_stock %}
+    <a href="{% url 'inventory:stock_list' %}" title="Stock" class="nav-link {% if url_name == 'stock_list' or url_name == 'movements' or url_name == 'stock_adjust' %}nav-link-active{% endif %}">
+      {% icon "box" %}<span class="nav-label">Stock</span>
+    </a>
+    {% endif %}
+    {% comment %}Each on its own permission: nested under "stock.view" they
+    were hidden from people allowed to use them.{% endcomment %}
+    {% if may_transfer %}
+    <a href="{% url 'inventory:transfer_list' %}" title="Transfers" class="nav-link {% if 'transfer' in url_name %}nav-link-active{% endif %}">
+      {% icon "truck" %}<span class="nav-label">Transfers</span>
+    </a>
+    {% endif %}
+    {% if may_count %}
+    <a href="{% url 'inventory:count_list' %}" title="Counts" class="nav-link {% if 'count' in url_name %}nav-link-active{% endif %}">
+      {% icon "clipboard" %}<span class="nav-label">Counts</span>
+    </a>
+    {% endif %}
+    {% if may_batches %}
+    <a href="{% url 'inventory:batch_list' %}" title="Expiry" class="nav-link {% if url_name == 'batch_list' %}nav-link-active{% endif %}">
+      {% icon "clock" %}<span class="nav-label">Expiry</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% can_do "po.manage" as may_po %}
+  {% can_do "supplier.manage" as may_suppliers %}
+  {% can_do "stock.receive" as may_receive %}
+  {% if may_po or may_suppliers or may_receive %}
+  <div class="space-y-0.5">
+    <p class="nav-section">Buying</p>
+    {% if may_receive %}
+    <a href="{% url 'purchasing:receipt_list' %}" title="Goods received" class="nav-link {% if 'receipt' in url_name %}nav-link-active{% endif %}">
+      {% icon "layers" %}<span class="nav-label">Goods received</span>
+    </a>
+    {% endif %}
+    {% if may_po %}
+    <a href="{% url 'purchasing:order_list' %}" title="Orders" class="nav-link {% if 'order' in url_name %}nav-link-active{% endif %}">
+      {% icon "clipboard" %}<span class="nav-label">Orders</span>
+    </a>
+    {% endif %}
+    {% if may_suppliers %}
+    <a href="{% url 'purchasing:supplier_list' %}" title="Suppliers" class="nav-link {% if 'supplier' in url_name %}nav-link-active{% endif %}">
+      {% icon "building" %}<span class="nav-label">Suppliers</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% can_do "customer.manage" as may_customers %}
+  {% can_do "expense.create" as may_expenses %}
+  {% can_do "cashup.approve" as may_cashups %}
+  {% can_do "fiscal.manage" as may_fiscal %}
+  {% can_do "credit.collect" as may_collect %}
+  {% if may_customers or may_expenses or may_cashups or may_fiscal or may_collect %}
+  <div class="space-y-0.5">
+    <p class="nav-section">Money</p>
+    {% if may_customers %}
+    <a href="{% url 'customers:customer_list' %}" title="Customers" class="nav-link {% if app == 'customers' %}nav-link-active{% endif %}">
+      {% icon "users" %}<span class="nav-label">Customers</span>
+    </a>
+    {% elif may_collect %}
+    <a href="{% url 'customers:statements' %}" title="Who owes" class="nav-link {% if app == 'customers' %}nav-link-active{% endif %}">
+      {% icon "wallet" %}<span class="nav-label">Who owes</span>
+    </a>
+    {% endif %}
+    {% if may_expenses %}
+    <a href="{% url 'finance:expense_list' %}" title="Expenses" class="nav-link {% if 'expense' in url_name %}nav-link-active{% endif %}">
+      {% icon "wallet" %}<span class="nav-label">Expenses</span>
+    </a>
+    {% endif %}
+    {% if may_fiscal %}
+    <a href="{% url 'pos:fiscal_receipts' %}" title="Fiscal receipts" class="nav-link {% if url_name == 'fiscal_receipts' %}nav-link-active{% endif %}">
+      {% icon "shield" %}<span class="nav-label">Fiscal receipts</span>
+    </a>
+    {% endif %}
+    {% if may_cashups %}
+    <a href="{% url 'finance:cashups' %}" title="Cash ups" class="nav-link {% if url_name == 'cashups' %}nav-link-active{% endif %}">
+      {% icon "credit-card" %}<span class="nav-label">Cash ups</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% can_do "report.margin" as may_margin %}
+  {% can_do "report.stock" as may_stockreport %}
+  {% can_do "report.staff" as may_staffreport %}
+  {% if may_sales or may_margin or may_stockreport or may_staffreport %}
+  <div class="space-y-0.5">
+    <p class="nav-section">Reports</p>
+    {% if may_sales %}
+    <a href="{% url 'reports:index' %}" title="Sales report" class="nav-link {% if app == 'reports' and url_name == 'index' %}nav-link-active{% endif %}">
+      {% icon "chart" %}<span class="nav-label">Sales</span>
+    </a>
+    {% endif %}
+    {% if may_margin %}
+    <a href="{% url 'reports:margin' %}" title="Profit" class="nav-link {% if url_name == 'margin' %}nav-link-active{% endif %}">
+      {% icon "trending" %}<span class="nav-label">Profit</span>
+    </a>
+    {% endif %}
+    {% if may_stockreport %}
+    <a href="{% url 'reports:stock_value' %}" title="Stock value" class="nav-link {% if url_name == 'stock_value' %}nav-link-active{% endif %}">
+      {% can_do "product.view_cost" as may_cost %}{% icon "box" %}<span class="nav-label">{% if may_cost %}Stock value{% else %}Stock on hand{% endif %}</span>
+    </a>
+    {% endif %}
+    {% if may_staffreport %}
+    <a href="{% url 'reports:staff' %}" title="Staff" class="nav-link {% if app == 'reports' and url_name == 'staff' %}nav-link-active{% endif %}">
+      {% icon "activity" %}<span class="nav-label">Staff</span>
+    </a>
+    <a href="{% url 'accounts:audit_log' %}" title="Activity" class="nav-link {% if 'audit' in url_name %}nav-link-active{% endif %}">
+      {% icon "clipboard" %}<span class="nav-label">Activity</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% can_do "user.manage" as may_users %}
+  {% can_do "role.manage" as may_roles %}
+  {% can_do "billing.manage" as may_billing %}
+  {% can_do "settings.edit" as may_settings %}
+  {% can_do "register.manage" as may_branches %}
+  {% can_do "product.set_price" as may_price %}
+  {% if may_users or may_roles or may_billing or may_settings or may_branches or may_price %}
+  <div class="space-y-0.5">
+    <p class="nav-section">Settings</p>
+    {% if may_users %}
+    <a href="{% url 'accounts:staff' %}" title="Staff" class="nav-link {% if 'staff' in url_name and app == 'accounts' %}nav-link-active{% endif %}">
+      {% icon "user" %}<span class="nav-label">Staff</span>
+    </a>
+    {% endif %}
+    {% if may_roles %}
+    <a href="{% url 'accounts:roles' %}" title="Roles and permissions" class="nav-link {% if 'role' in url_name %}nav-link-active{% endif %}">
+      {% icon "shield" %}<span class="nav-label">Roles &amp; permissions</span>
+    </a>
+    {% endif %}
+    {% if may_branches %}
+    <a href="{% url 'org:branches' %}" title="Branches and tills" class="nav-link {% if 'branch' in url_name or 'register' in url_name %}nav-link-active{% endif %}">
+      {% icon "building" %}<span class="nav-label">Branches &amp; tills</span>
+    </a>
+    <a href="{% url 'org:devices' %}" title="Tills and phones in use" class="nav-link {% if url_name == 'devices' %}nav-link-active{% endif %}">
+      {% icon "cart" %}<span class="nav-label">Devices</span>
+    </a>
+    {% endif %}
+    {% if may_price %}
+    <a href="{% url 'catalog:price_lists' %}" title="Price lists" class="nav-link {% if url_name == 'price_lists' %}nav-link-active{% endif %}">
+      {% icon "tag" %}<span class="nav-label">Price lists</span>
+    </a>
+    {% endif %}
+    {% if may_settings %}
+    <a href="{% url 'notifications:message_log' %}" title="Messages" class="nav-link {% if app == 'notifications' %}nav-link-active{% endif %}">
+      {% icon "activity" %}<span class="nav-label">Messages</span>
+    </a>
+    <a href="{% url 'catalog:tiles' %}" title="Till tiles" class="nav-link {% if url_name == 'tiles' %}nav-link-active{% endif %}">
+      {% icon "layers" %}<span class="nav-label">Till tiles</span>
+    </a>
+    <a href="{% url 'catalog:taxonomy' %}" title="Categories and VAT" class="nav-link {% if 'taxonomy' in url_name %}nav-link-active{% endif %}">
+      {% icon "tag" %}<span class="nav-label">Categories &amp; VAT</span>
+    </a>
+    <a href="{% url 'org:business' %}" title="Business settings" class="nav-link {% if url_name == 'business' %}nav-link-active{% endif %}">
+      {% icon "settings" %}<span class="nav-label">Business</span>
+    </a>
+    {% endif %}
+    {% if may_billing %}
+    <a href="{% url 'tenancy:billing' %}" title="Subscription" class="nav-link {% if url_name == 'billing' %}nav-link-active{% endif %}">
+      {% icon "credit-card" %}<span class="nav-label">Subscription</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if user.is_platform_staff %}
+  <div class="mt-4 space-y-0.5 border-t border-ink-100 pt-4">
+    <a href="{% url 'platform:dashboard' %}" title="Platform admin" class="nav-link">
+      {% icon "settings" %}<span class="nav-label">Platform admin</span>
+    </a>
+  </div>
+  {% endif %}
+</nav>
+{% endwith %}
+
+<div class="shrink-0 border-t border-ink-100 p-3">
+  {% if subscription %}
+  <div class="nav-aside mb-2 rounded-lg bg-ink-50 px-3 py-2.5">
+    <div class="flex items-center justify-between gap-2">
+      <p class="text-xs font-semibold text-ink-900">{{ subscription.plan.name }}</p>
+      {% if subscription.status == "trialing" %}
+        <span class="badge badge-warn">trial</span>
+      {% elif subscription.is_read_only %}
+        <span class="badge badge-danger">read only</span>
+      {% else %}
+        <span class="badge badge-ok">active</span>
+      {% endif %}
+    </div>
+    {% if subscription.status == "trialing" %}
+      <p class="mt-1 text-xs text-ink-500">{{ subscription.days_until_due }} days left</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'accounts:logout' %}">
+    {% csrf_token %}
+    <button type="submit" title="Sign out" class="nav-link w-full">
+      {% icon "logout" %}<span class="nav-label">Sign out</span>
+    </button>
+  </form>
+
+</div>

@@ -1,0 +1,8 @@
+{% comment %}One labelled form field with its hint and error. {% include "catalog/_field.html" with field=form.x label="..." hint="..." %}{% endcomment %}
+<div class="{{ cls }}">
+  <label class="label" for="{{ field.id_for_label }}">{{ label|default:field.label }}</label>
+  {{ field }}
+  {% if field.errors %}<p class="hint text-red-600">{{ field.errors.0 }}</p>
+  {% elif hint %}<p class="hint">{{ hint }}</p>
+  {% elif field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+</div>

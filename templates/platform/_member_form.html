@@ -1,0 +1,96 @@
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-12">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+    <div class="flex items-start justify-between gap-4 border-b border-ink-100 px-5 py-4">
+      <div class="min-w-0">
+        <h2 class="text-base font-semibold tracking-tight text-ink-900">
+          {% if membership %}{{ membership.user.name }}{% else %}Add somebody{% endif %}
+        </h2>
+        <p class="hint truncate">
+          {% if membership %}In {{ tenant.name }}{% else %}To {{ tenant.name }}{% endif %}
+        </p>
+      </div>
+      <button type="button" @click="$root.remove()" class="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-ink-400 hover:bg-ink-100" aria-label="Close">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+{% endif %}
+
+<form {% if modal %}hx-post="{% if membership %}{% url 'platform:tenant_member_edit' tenant.pk membership.pk %}{% else %}{% url 'platform:tenant_member_create' tenant.pk %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %}
+      class="p-5">
+  {% csrf_token %}
+  {% include "platform/_form_errors.html" %}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="label" for="name">Name</label>
+      <input name="name" id="name"
+             value="{% if values.name %}{{ values.name }}{% elif membership %}{{ membership.user.name }}{% endif %}"
+             class="input" required autofocus>
+    </div>
+    <div>
+      <label class="label" for="email">Email</label>
+      <input type="email" name="email" id="email"
+             value="{% if values.email %}{{ values.email }}{% elif membership %}{{ membership.user.email }}{% endif %}"
+             class="input" required>
+    </div>
+
+    <div class="sm:col-span-2">
+      <label class="label" for="role">Role</label>
+      <select name="role" id="role" class="input" required>
+        {% for r in roles %}
+        <option value="{{ r.pk }}" {% if r.pk == membership.role_id %}selected{% endif %}>
+          {{ r.name }}{% if r.is_owner_role %} — full access{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <p class="hint">What they may do is set by this role, in the shop's own settings.</p>
+    </div>
+
+    <div class="sm:col-span-2">
+      <label class="label">Works at</label>
+      <div class="grid gap-1.5 sm:grid-cols-2">
+        {% for b in branches %}
+        <label class="flex items-center gap-2.5 text-sm text-ink-700">
+          <input type="checkbox" name="branches" value="{{ b.pk }}" class="checkbox"
+                 {% for link in membership.branch_links.all %}{% if link.branch_id == b.pk %}checked{% endif %}{% endfor %}>
+          {{ b.name }}
+        </label>
+        {% empty %}
+        <p class="hint">This shop has no branches yet.</p>
+        {% endfor %}
+      </div>
+      <p class="hint">Owners always cover every branch, whatever is ticked.</p>
+    </div>
+
+    <div>
+      <label class="label" for="password">
+        {% if membership %}New password{% else %}Password{% endif %}
+      </label>
+      <input type="text" name="password" id="password" class="input"
+             {% if not membership %}required{% endif %}
+             placeholder="{% if membership %}leave blank to keep it{% endif %}">
+      <p class="hint">At least 8 characters. Nothing is emailed &mdash; tell them.</p>
+    </div>
+
+    <div>
+      <label class="label" for="pin">Approval PIN</label>
+      <input type="text" name="pin" id="pin" class="input" inputmode="numeric"
+             placeholder="{% if membership.pin_hash %}set — blank keeps it{% else %}optional{% endif %}">
+      <p class="hint">Only for people who approve others at the till.</p>
+    </div>
+  </div>
+
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">
+      {% if membership %}Save{% else %}Add to this shop{% endif %}
+    </button>
+  </div>
+</form>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

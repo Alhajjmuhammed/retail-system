@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Expiry{% endblock %}
+{% block heading %}Batches and expiry{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  {% if expired %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title text-red-700">Already expired, still on the shelf</h2><span class="hint">Take them off sale, then write them off from Stock &rarr; Adjust, ticking damage or expiry.</span></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th>Batch</th><th>Expired</th><th class="text-right">On hand</th></tr></thead>
+        <tbody>
+          {% for b in expired %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="text-ink-800">{{ b.variant }}</td>
+            <td class="font-mono text-xs text-ink-600">{{ b.batch_no|default:"—" }}</td>
+            <td class="text-red-600">{{ b.expiry_date|date:"j M Y" }}</td>
+            <td class="tnum text-right font-medium">{{ b.on_hand|floatformat:"-3" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="get" class="flex items-end gap-2">
+    <div>
+      <label class="label" for="days">Expiring within</label>
+      <input type="number" name="days" id="days" value="{{ days }}" min="1" max="3650" class="input w-28">
+    </div>
+    <button type="submit" class="btn btn-secondary">Show</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th>Batch</th><th>Expires</th><th class="text-right">Days left</th><th class="text-right">On hand</th></tr></thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td class="text-ink-800">{{ b.variant }}</td>
+          <td class="font-mono text-xs text-ink-600">{{ b.batch_no|default:"—" }}</td>
+          <td class="text-ink-600">{{ b.expiry_date|date:"j M Y" }}</td>
+          <td class="text-right {% if b.days_to_expiry < 7 %}text-amber-600{% endif %}">{{ b.days_to_expiry }}</td>
+          <td class="tnum text-right font-medium">{{ b.on_hand|floatformat:"-3" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-10 text-center text-sm text-ink-500">Nothing expiring in the next {{ days }} days.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

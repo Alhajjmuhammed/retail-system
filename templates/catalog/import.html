@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Import products{% endblock %}
+{% block heading %}Import products{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-5">
+  <form method="post" enctype="multipart/form-data" class="card card-body space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="label" for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>
+      {{ form.file }}
+      <p class="hint">{{ form.file.help_text }}</p>
+      {% if form.file.errors %}<p class="hint text-red-600">{{ form.file.errors.0 }}</p>{% endif %}
+    </div>
+    <label class="flex items-center gap-2.5 text-sm text-ink-700">
+      {{ form.update_existing }} {{ form.update_existing.label }}
+    </label>
+    <p class="text-sm text-ink-600">
+      A row that cannot be read is reported and skipped &mdash; the rest still import.
+      Stock quantities are set as an opening balance, so re-importing the same file
+      does not double your stock.
+    </p>
+    <button type="submit" class="btn btn-primary self-start">Import</button>
+  </form>
+
+  {% if result %}
+  <div class="card card-body space-y-3">
+    <h2 class="text-sm font-semibold text-ink-900">Result</h2>
+    <div class="flex gap-4 text-sm">
+      <span class="badge badge-ok">{{ result.created }} added</span>
+      <span class="badge badge-muted">{{ result.updated }} updated</span>
+      {% if result.skipped %}<span class="badge badge-warn">{{ result.skipped }} skipped</span>{% endif %}
+    </div>
+    {% if result.errors %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Row</th><th>Problem</th></tr></thead>
+        <tbody>
+          {% for row, message in result.errors %}
+          <tr><td class="text-ink-500">{{ row }}</td><td class="text-red-700">{{ message }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

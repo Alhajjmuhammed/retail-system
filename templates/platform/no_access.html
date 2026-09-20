@@ -1,0 +1,8 @@
+{% extends "platform/base.html" %}
+{% block title %}No access{% endblock %}
+{% block heading %}Platform admin{% endblock %}
+{% block content %}
+<div class="card">
+  {% include "partials/empty.html" with icon="shield" title="Your role gives you nothing to see here yet" text="Ask a Super admin to give your role some permissions under Admin roles." %}
+</div>
+{% endblock %}

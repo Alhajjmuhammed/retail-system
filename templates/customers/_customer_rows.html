@@ -1,0 +1,33 @@
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th class="w-12 text-right">SN</th><th>Name</th><th>Phone</th><th class="text-right">Limit</th><th class="text-right">Owes</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td><a href="{% url 'customers:customer_detail' c.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ c.name }}</a>{% if not c.is_active %} <span class="badge badge-muted">removed</span>{% endif %}</td>
+        <td class="text-ink-600">{{ c.phone|default:"—" }}</td>
+        <td class="tnum text-right text-ink-500">{{ c.credit_limit|floatformat:0|intcomma }}</td>
+        <td class="tnum text-right font-medium {% if c.owed > c.credit_limit and c.owed > 0 %}text-red-600{% elif c.owed > 0 %}text-amber-700{% elif c.owed < 0 %}text-emerald-700{% endif %}">{{ c.owed|floatformat:0|intcomma }}</td>
+        <td class="whitespace-nowrap text-right">
+          <a href="{% url 'customers:customer_detail' c.pk %}" class="btn-icon btn-icon-brand" title="Open {{ c.name }}" aria-label="Open {{ c.name }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
+          <a href="{% url 'customers:customer_edit' c.pk %}" hx-get="{% url 'customers:customer_edit' c.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit {{ c.name }}" aria-label="Edit {{ c.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+          {% if c.is_active %}
+          <form method="post" action="{% url 'customers:customer_delete' c.pk %}" class="inline" x-data
+                @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ c.name|escapejs }}?', body: 'Anyone with sales or an account is switched off, never deleted, so their history stays.', label: 'Remove' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger" title="Remove {{ c.name }}" aria-label="Remove {{ c.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'customers:customer_restore' c.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-brand" title="Bring {{ c.name }} back" aria-label="Bring {{ c.name }} back">{% icon "restore" class="h-4 w-4" %}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="6">{% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try part of the name or the phone number." %}{% else %}{% include "partials/empty.html" with icon="users" title="No customers here" text="Add customers to sell on account and keep a running balance." %}{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% include "partials/pagination.html" %}
+</div>

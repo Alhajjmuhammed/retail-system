@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Business settings{% endblock %}
+{% block heading %}Business settings{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="mx-auto max-w-3xl space-y-5">
+  {% csrf_token %}
+  {% if profile.errors or form.errors %}
+  <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+    <p class="font-medium">Nothing was saved. Fix these first:</p>
+    <ul class="mt-1 list-disc pl-5">
+      {% for f in profile %}{% for e in f.errors %}<li>{{ f.label }}: {{ e }}</li>{% endfor %}{% endfor %}
+      {% for f in form %}{% for e in f.errors %}<li>{{ f.label }}: {{ e }}</li>{% endfor %}{% endfor %}
+      {% for e in profile.non_field_errors %}<li>{{ e }}</li>{% endfor %}{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Your business</h2></div>
+    <div class="card-body grid gap-4 sm:grid-cols-2">
+      {% for field in profile %}
+      <div {% if field.name == "address" %}class="sm:col-span-2"{% endif %}>
+        <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">How the system behaves</h2>
+    </div>
+    <div class="card-body space-y-4">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="label" for="{{ form.cost_method.id_for_label }}">{{ form.cost_method.label }}</label>
+          {{ form.cost_method }}
+          <p class="hint">Decides every profit figure. Changing it later re-bases your history, so pick once.</p>
+        </div>
+        <div>
+          <label class="label" for="{{ form.default_tax_rate.id_for_label }}">{{ form.default_tax_rate.label }}</label>
+          {{ form.default_tax_rate }}
+        </div>
+        <div>
+          <label class="label" for="{{ form.expiry_warning_days.id_for_label }}">Warn about expiry this many days ahead</label>
+          {{ form.expiry_warning_days }}
+        </div>
+        <div>
+          <label class="label" for="{{ form.fiscal_provider.id_for_label }}">Fiscal provider</label>
+          {{ form.fiscal_provider }}
+          <p class="hint">Leave blank until EFD/VFD is connected.</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="space-y-2.5">
+        <label class="flex items-start gap-2.5 text-sm text-ink-700">
+          {{ form.prices_include_tax }}<span>Prices already include VAT<span class="hint block">How shops here normally quote.</span></span>
+        </label>
+        <label class="flex items-start gap-2.5 text-sm text-ink-700">
+          {{ form.negative_stock_allowed }}<span>Let the till sell stock you do not have<span class="hint block">Offline tills can oversell. Blocking it loses real sales.</span></span>
+        </label>
+        <label class="flex items-start gap-2.5 text-sm text-ink-700">
+          {{ form.low_stock_alerts }}<span>Warn me when stock runs low</span>
+        </label>
+        <label class="flex items-start gap-2.5 text-sm text-ink-700">
+          {{ form.show_tin_on_receipt }}<span>Print the TIN on receipts</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Receipt</h2></div>
+    <div class="card-body grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="{{ form.receipt_header.id_for_label }}">Top of the receipt</label>
+        {{ form.receipt_header }}
+      </div>
+      <div>
+        <label class="label" for="{{ form.receipt_footer.id_for_label }}">Bottom of the receipt</label>
+        {{ form.receipt_footer }}
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save settings</button>
+</form>
+{% endblock %}

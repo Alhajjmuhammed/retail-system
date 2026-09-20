@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ sale.number }}{% endblock %}
+{% block heading %}{{ sale.number }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+  <div class="card card-body flex flex-wrap items-start justify-between gap-4">
+    <div class="text-sm">
+      <p class="text-ink-600">{{ sale.sold_at|date:"j F Y, H:i" }} &middot; {{ sale.branch.name }}</p>
+      <p class="text-ink-600">Sold by {{ sale.user.name }}{% if sale.authorised_by %}, approved by {{ sale.authorised_by.name }}{% endif %}</p>
+      {% if sale.customer %}<p class="text-ink-600">{{ sale.customer.name }}</p>{% endif %}
+      {% if sale.void_reason %}<p class="mt-1 text-red-700">Voided {{ sale.voided_at|date:"j M Y, H:i" }}{% if voided.user %} by {{ voided.user.name }}{% endif %}{% if voided.authorised_by %}, approved by {{ voided.authorised_by.name }}{% endif %}: {{ sale.void_reason }}</p>{% endif %}
+      {% if sale.needs_review %}
+      <div class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-red-800 ring-1 ring-inset ring-red-600/15">
+        <p class="font-medium">Needs checking</p>
+        <p class="whitespace-pre-line text-xs">{{ sale.review_notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+    <div class="text-right">
+      <p class="text-2xl font-bold text-ink-900">{{ sale.total|floatformat:0|intcomma }}</p>
+      <span class="badge {% if sale.status == 'completed' %}badge-ok{% else %}badge-warn{% endif %}">{{ sale.get_status_display }}</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Qty</th><th class="text-right">Price</th>{% if can_see_cost %}<th class="text-right">Cost</th>{% endif %}<th class="text-right">Total</th></tr></thead>
+      <tbody>
+        {% for line in sale.lines.all %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td>{{ line.description }}<p class="hint">via {{ line.get_added_via_display }}{% if line.qty_returned %} &middot; {{ line.qty_returned|floatformat:"-3" }} returned{% endif %}</p></td>
+          <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
+          <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
+          {% if can_see_cost %}<td class="text-right text-ink-500">{{ line.unit_cost|floatformat:0 }}</td>{% endif %}
+          <td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="card card-body space-y-1.5 text-sm">
+      <h3 class="font-semibold text-ink-900">Paid</h3>
+      {% for p in sale.payments.all %}
+      <div class="flex justify-between"><span class="text-ink-600">{{ p.get_method_display }}{% if p.reference %} <span class="font-mono text-xs">{{ p.reference }}</span>{% endif %}</span><span>{{ p.amount|floatformat:0|intcomma }}</span></div>
+      {% endfor %}
+    </div>
+    <div class="card card-body space-y-1.5 text-sm">
+      <h3 class="font-semibold text-ink-900">Totals</h3>
+      <div class="flex justify-between"><span class="text-ink-600">Subtotal</span><span>{{ sale.subtotal|floatformat:0|intcomma }}</span></div>
+      {% if sale.discount_total %}<div class="flex justify-between"><span class="text-ink-600">Discount</span><span>&minus;{{ sale.discount_total|floatformat:0|intcomma }}</span></div>{% endif %}
+      <div class="flex justify-between"><span class="text-ink-600">VAT included</span><span>{{ sale.tax_total|floatformat:0|intcomma }}</span></div>
+      {% if can_see_cost %}<div class="flex justify-between border-t border-ink-100 pt-1.5"><span class="text-ink-600">Margin</span><span class="font-medium">{{ sale.margin|floatformat:0 }}</span></div>{% endif %}
+    </div>
+  </div>
+
+  {% if returns %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Refunds</h2></div>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Refund</th><th>When</th><th>By</th><th>What came back</th><th class="text-right">Amount</th></tr></thead>
+        <tbody>
+          {% for r in returns %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="font-mono text-xs text-ink-700">{{ r.number }}<p class="hint font-sans">{{ r.reason }}</p></td>
+            <td class="whitespace-nowrap text-sm text-ink-600">{{ r.created_at|date:"j M Y, H:i" }}</td>
+            <td class="text-sm text-ink-600">{{ r.user.name }}</td>
+            <td class="text-sm text-ink-600">{% for l in r.lines.all %}{{ l.qty|floatformat:"-3" }} &times; {{ l.sale_line.description }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if not r.restock %} <span class="badge badge-muted">not restocked</span>{% endif %}</td>
+            <td class="tnum text-right text-sm">
+              {{ r.total|floatformat:0|intcomma }}
+              <p class="hint">{% if r.cash_amount %}{{ r.cash_amount|floatformat:0|intcomma }} cash {% endif %}{% if r.credit_amount %}{{ r.credit_amount|floatformat:0|intcomma }} off account {% endif %}{% if r.other_amount %}{{ r.other_amount|floatformat:0|intcomma }} mobile/card{% endif %}</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex flex-wrap gap-2">
+    {% can_do "pos.reprint" as may_reprint %}
+    {% if may_reprint %}<a href="{% url 'pos:receipt' sale.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print receipt</a>{% endif %}
+    {% can_do "pos.refund" as may_refund %}
+    {% if may_refund and sale.status != "voided" and sale.status != "refunded" %}<a href="{% url 'pos:sale_return' sale.pk %}" class="btn btn-secondary">Refund</a>{% endif %}
+    {% can_do "pos.void" as may_void %}
+    {% if may_void and sale.status == "completed" %}
+    <form method="post" action="{% url 'pos:sale_void' sale.pk %}" class="flex w-full gap-2 sm:w-auto" x-data
+          @submit.prevent="$store.confirm.ask($el, { title: 'Void {{ sale.number|escapejs }}?', body: 'The whole sale is cancelled and its stock goes back on the shelf. The record stays, marked void.', label: 'Void sale', danger: true })">
+      {% csrf_token %}
+      <input type="text" name="reason" placeholder="Reason for voiding" maxlength="200" class="input w-full sm:w-64" required>
+      <button type="submit" class="btn btn-danger">Void</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

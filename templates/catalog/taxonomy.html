@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Categories, units and VAT{% endblock %}
+{% block heading %}Categories, units and VAT{% endblock %}
+
+{% block content %}
+<p class="section-lead mb-5">Click anything to change or remove it. A rate that has already been charged is switched off rather than deleted, so your returns stay correct.</p>
+<div class="grid gap-5 lg:grid-cols-2">
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">VAT rates</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for tax in taxes %}
+      <a href="{% url 'catalog:taxonomy_edit' 'tax' tax.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'tax' tax.pk %}" hx-target="#modal" class="flex items-center justify-between px-5 py-2.5 text-sm hover:bg-ink-50">
+        <span class="text-ink-800">{{ tax.name }}{% if tax.is_default %}<span class="badge badge-brand ml-2">default</span>{% endif %}</span>
+        <span class="tnum text-ink-600">{{ tax.rate }}%{% if tax.is_inclusive %} incl.{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}<input type="hidden" name="kind" value="tax">
+      <div class="min-w-32 flex-1"><label class="label" for="tax_name">Name</label><input name="name" id="tax_name" class="input" placeholder="VAT 18%" maxlength="40" required></div>
+      <div class="w-24"><label class="label" for="tax_rate">Rate %</label><input type="number" step="0.01" min="0" max="100" name="rate" id="tax_rate" class="input" required></div>
+      <label class="flex items-center gap-2 pb-2.5 text-xs text-ink-600"><input type="checkbox" name="is_inclusive" checked class="checkbox"> included</label>
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Units</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for unit in units %}
+      <a href="{% url 'catalog:taxonomy_edit' 'unit' unit.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'unit' unit.pk %}" hx-target="#modal" class="flex items-center justify-between px-5 py-2.5 text-sm hover:bg-ink-50">
+        <span class="text-ink-800">{{ unit.name }}</span>
+        <span class="text-ink-500">{{ unit.code }}{% if unit.allows_decimal %} &middot; part units{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}<input type="hidden" name="kind" value="unit">
+      <div class="min-w-28 flex-1"><label class="label" for="unit_name">Name</label><input name="name" id="unit_name" class="input" placeholder="Kilogram" maxlength="40" required></div>
+      <div class="w-20"><label class="label" for="unit_code">Short</label><input name="code" id="unit_code" class="input" placeholder="kg" maxlength="10"></div>
+      <label class="flex items-center gap-2 pb-2.5 text-xs text-ink-600"><input type="checkbox" name="allows_decimal" class="checkbox"> half units</label>
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Categories</h2></div>
+    <div class="flex flex-wrap gap-1.5 p-5">
+      {% for category in categories %}<a href="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-target="#modal" class="badge badge-muted hover:bg-ink-200">{{ category.name }}</a>{% empty %}<p class="text-sm text-ink-500">None yet.</p>{% endfor %}
+    </div>
+    <form method="post" class="flex items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}<input type="hidden" name="kind" value="category">
+      <div class="flex-1"><label class="label" for="cat_name">Name</label><input name="name" id="cat_name" class="input" placeholder="Drinks" maxlength="80" required></div>
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Brands</h2></div>
+    <div class="flex flex-wrap gap-1.5 p-5">
+      {% for brand in brands %}<a href="{% url 'catalog:taxonomy_edit' 'brand' brand.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'brand' brand.pk %}" hx-target="#modal" class="badge badge-muted hover:bg-ink-200">{{ brand.name }}</a>{% empty %}<p class="text-sm text-ink-500">None yet.</p>{% endfor %}
+    </div>
+    <form method="post" class="flex items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}<input type="hidden" name="kind" value="brand">
+      <div class="flex-1"><label class="label" for="brand_name">Name</label><input name="name" id="brand_name" class="input" placeholder="Azam" maxlength="80" required></div>
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+  </div>
+</div>
+
+<details class="card mt-5">
+  <summary class="card-head cursor-pointer"><span class="card-title">Switched off</span><span class="hint">Retired because something used them. Switch one back on here.</span></summary>
+  <div class="divide-y divide-ink-100">
+    {% for kind, label, rows in retired %}
+      {% for obj in rows %}
+      <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+        <span class="text-ink-700">{{ obj.name }} <span class="hint">{{ label }}</span></span>
+        <form method="post">{% csrf_token %}
+          <input type="hidden" name="action" value="restore"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="pk" value="{{ obj.pk }}">
+          <button type="submit" class="btn btn-secondary btn-sm">{% icon "restore" class="h-4 w-4" %} Switch on</button>
+        </form>
+      </div>
+      {% endfor %}
+    {% empty %}{% endfor %}
+    <p class="px-5 py-3 text-sm text-ink-500 only:block hidden">Nothing is switched off.</p>
+  </div>
+</details>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Start a trial{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full">
+  <div class="flex w-full flex-col justify-center px-5 py-10 sm:px-10 lg:w-[520px] lg:shrink-0 lg:px-14">
+    <div class="mx-auto w-full max-w-sm">
+      <div class="mb-7">
+        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">R</div>
+        <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Set up your shop</h1>
+        <p class="mt-1.5 text-sm text-ink-500">Free for 14 days. No card needed.</p>
+      </div>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary btn-lg w-full">Create my shop</button>
+      </form>
+
+      <p class="mt-6 text-center text-sm text-ink-500">
+        Already have an account?
+        <a href="{% url 'accounts:login' %}" class="font-medium text-brand-700 hover:underline">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="relative hidden flex-1 overflow-hidden bg-brand-900 lg:block">
+    <div class="absolute inset-0 opacity-[0.07]"
+         style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 28px 28px;"></div>
+    <div class="absolute -right-20 top-1/4 h-96 w-96 rounded-full bg-brand-700/40 blur-3xl"></div>
+    <div class="relative flex h-full flex-col justify-center p-14">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-brand-300">What you get on day one</h2>
+      <ul class="mt-6 space-y-5">
+        {% for title, text in features %}{% endfor %}
+        <li class="flex gap-3.5">
+          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "cart" class="h-4 w-4" %}</span>
+          <div>
+            <p class="font-medium text-white">A till that works offline</p>
+            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Scan, search or tap. Sales queue on the device and send themselves when the line comes back.</p>
+          </div>
+        </li>
+        <li class="flex gap-3.5">
+          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "shield" class="h-4 w-4" %}</span>
+          <div>
+            <p class="font-medium text-white">You decide who can do what</p>
+            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Build your own roles, cap discounts and voids per person, and keep cost prices off the shop floor.</p>
+          </div>
+        </li>
+        <li class="flex gap-3.5">
+          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "credit-card" class="h-4 w-4" %}</span>
+          <div>
+            <p class="font-medium text-white">Know what is missing</p>
+            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Every shift counts the drawer and records the difference against a name.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+  <form method="post" action="{{ target_url }}" class="{% if modal %}space-y-4 p-5{% else %}card card-body space-y-4{% endif %}">
+    {% csrf_token %}
+    <div>
+      <h2 class="text-base font-semibold text-ink-900">A manager must approve this</h2>
+      <p class="mt-1 text-sm text-ink-600">{{ decision.reason }}</p>
+      {% if carried %}
+      <dl class="mt-2 space-y-0.5 rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600">
+        {% for key, item in carried %}{% if item %}<div class="flex justify-between gap-3"><dt>{{ key }}</dt><dd class="font-medium text-ink-800">{{ item }}</dd></div>{% endif %}{% endfor %}
+      </dl>
+      <p class="hint mt-1">What is being approved.</p>
+      {% endif %}
+    </div>
+    {% if error %}
+    <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">{{ error }}</div>
+    {% endif %}
+    <input type="hidden" name="override_permission" value="{{ permission_code }}">
+    <input type="hidden" name="override_method" value="{{ original_method }}">
+    <input type="hidden" name="override_nonce" value="{{ nonce }}">
+    {% for key, item in carried %}<input type="hidden" name="{{ key }}" value="{{ item }}">{% endfor %}
+    <div>
+      <label class="label" for="override_email">Manager's email</label>
+      <input type="email" name="override_email" id="override_email" class="input" autocomplete="off" required autofocus>
+    </div>
+    <div>
+      <label class="label" for="override_pin">Their approval PIN</label>
+      <input type="password" name="override_pin" id="override_pin" inputmode="numeric" class="input" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-full">Approve and continue</button>
+    <p class="hint">Both names are recorded against this.</p>
+  </form>

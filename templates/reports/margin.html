@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Margin{% endblock %}
+{% block heading %}Profit and margin{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">
+    Cost comes from what each item actually cost on the day it was sold, not from
+    today's price. A later price change never rewrites past profit.
+  </p>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="stat"><p class="stat-label">Sales before VAT</p><p class="stat-value">{{ revenue|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Gross profit</p><p class="stat-value">{{ gross|floatformat:0|intcomma }}</p><p class="hint">{% if revenue %}{% widthratio gross revenue 100 %}% margin{% endif %}</p></div>
+    <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value">{{ expenses|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Net profit</p><p class="stat-value {% if net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net|floatformat:0|intcomma }}</p></div>
+  </div>
+  {% if product_count > 100 %}<p class="hint">The table shows your top 100 of {{ product_count }} products by sales; the totals above cover all of them.</p>{% endif %}
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Sold</th><th class="text-right">Revenue</th><th class="text-right">Cost</th><th class="text-right">Profit</th><th class="text-right">%</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td class="text-ink-800">{{ row.item|default:"Items without a product" }}</td>
+          <td class="text-right text-ink-500">{{ row.qty_sold|floatformat:"-3" }}</td>
+          <td class="text-right">{{ row.revenue|floatformat:0|intcomma }}</td>
+          <td class="text-right text-ink-500">{{ row.cost|floatformat:0|intcomma }}</td>
+          <td class="text-right font-medium {% if row.profit < 0 %}text-red-600{% endif %}">{{ row.profit|floatformat:0|intcomma }}</td>
+          <td class="text-right text-ink-600">{{ row.pct|floatformat:1 }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="7" class="py-10 text-center text-sm text-ink-500">No sales in this period.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

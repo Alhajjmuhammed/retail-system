@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Shift report{% endblock %}
+{% block heading %}Shift report{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-4">
+  <div class="card card-body">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium text-ink-900">{{ shift.user.name }} &middot; {{ shift.register.name }}</p>
+        <p class="hint">{{ shift.branch.name }} &middot; {{ shift.opened_at|date:"j M Y H:i" }} &ndash; {% if shift.closed_at %}{{ shift.closed_at|date:"j M Y H:i" }}{% else %}still open{% endif %}</p>
+        {% if shift.approved_by %}<p class="hint">Cash-up approved by {{ shift.approved_by.name }}</p>{% endif %}
+      </div>
+      {% if shift.variance is not None %}
+      <div class="text-right">
+        <p class="text-xs uppercase tracking-wide text-ink-500">Variance</p>
+        <p class="text-2xl font-bold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">
+          {{ shift.variance|floatformat:0|intcomma }}
+        </p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Sales</p><p class="mt-1 text-xl font-semibold">{{ totals.count|default:0 }}</p></div>
+    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Taken</p><p class="mt-1 text-xl font-semibold">{{ totals.value|default:0|floatformat:0|intcomma }}</p>{% if refunds.count %}<p class="hint">{{ refunds.total|floatformat:0|intcomma }} refunded ({{ refunds.cash|default:0|floatformat:0|intcomma }} from the drawer)</p>{% endif %}</div>
+    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">VAT</p><p class="mt-1 text-xl font-semibold">{{ totals.tax|default:0|floatformat:0|intcomma }}</p></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">By payment method</h2></div>
+    <div class="divide-y divide-ink-100 text-sm">
+      {% for row in by_method %}
+      <div class="flex justify-between px-5 py-2.5">
+        <span class="text-ink-600">{{ row.label }} <span class="hint">({{ row.count }})</span>{% if row.on_account %} <span class="badge badge-warn">not money in</span>{% endif %}</span>
+        <span class="font-medium">{{ row.total|default:0|floatformat:0|intcomma }}</span>
+      </div>
+      {% empty %}
+      <p class="px-5 py-4 text-sm text-ink-500">No sales this shift.</p>
+      {% endfor %}
+      {% if by_method %}
+      <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Money actually taken</span><span class="font-semibold">{{ money_in|floatformat:0|intcomma }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">The drawer</h2></div>
+    <div class="divide-y divide-ink-100 text-sm">
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Opening float</span><span class="font-medium">{{ shift.opening_float|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash sales</span><span class="font-medium">{{ cash_taken|floatformat:0|intcomma }}</span></div>
+      {% if refunds.cash %}<div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash refunded</span><span class="font-medium">&minus;{{ refunds.cash|floatformat:0|intcomma }}</span></div>{% endif %}
+      {% for m in movements %}
+      <div class="flex justify-between gap-3 px-5 py-2.5"><span class="min-w-0 text-ink-600">{{ m.get_kind_display }} &mdash; <span class="break-words">{{ m.reason }}</span> <span class="hint">{{ m.created_at|date:"H:i" }}</span></span><span class="shrink-0 font-medium">{{ m.amount|floatformat:0|intcomma }}</span></div>
+      {% endfor %}
+      <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Expected</span><span class="font-semibold">{{ expected|floatformat:0|intcomma }}</span></div>
+      {% if shift.counted_cash is not None %}
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Counted</span><span class="font-medium">{{ shift.counted_cash|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Variance</span><span class="font-semibold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ shift.variance|floatformat:0|intcomma }}</span></div>
+      {% if shift.variance_note %}<p class="px-5 py-2.5 text-ink-600">Note: {{ shift.variance_note }}</p>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Sales</h2>{% if totals.count > 50 %}<span class="hint">Latest 50 of {{ totals.count }}</span>{% endif %}</div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>SN</th><th>Number</th><th>Time</th><th>Status</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+          {% for s in sales %}
+          <tr>
+            <td class="text-ink-500">{{ forloop.counter }}</td>
+            <td><a class="font-medium text-brand-700 hover:underline" href="{% url 'pos:sale_detail' s.pk %}">{{ s.number }}</a></td>
+            <td>{{ s.sold_at|date:"H:i" }}</td>
+            <td>{% if s.status == "refunded" %}<span class="badge badge-warn">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn">Part refunded</span>{% else %}<span class="badge badge-ok">Sold</span>{% endif %}</td>
+            <td class="text-right font-medium">{{ s.total|floatformat:0|intcomma }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="py-6 text-center text-ink-500">No sales this shift.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

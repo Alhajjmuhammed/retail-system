@@ -1,0 +1,26 @@
+{% load static %}<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Something broke</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+{% comment %}
+Standalone: a 500 means something is already wrong, and this page must not
+depend on the context processors or the database to render.
+{% endcomment %}
+<body class="flex min-h-full items-center justify-center bg-ink-50 px-5 py-12">
+  <div class="w-full max-w-md text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>
+    </div>
+    <h1 class="mt-5 text-xl font-semibold tracking-tight text-ink-900">Something broke at our end</h1>
+    <p class="mt-2 text-sm leading-relaxed text-ink-500">
+      Nothing you entered has been lost. Try again in a moment, and if a till is
+      open it keeps working offline in the meantime.
+    </p>
+    <a href="/" class="btn btn-primary mt-6">Try again</a>
+  </div>
+</body>
+</html>

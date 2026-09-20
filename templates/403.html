@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Not allowed{% endblock %}
+{% block body %}
+<div class="flex min-h-full items-center justify-center px-5 py-12">
+  <div class="w-full max-w-md text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink-100 text-ink-400">
+      {% icon "shield" class="h-5 w-5" %}
+    </div>
+    <h1 class="mt-5 text-xl font-semibold tracking-tight text-ink-900">You cannot open this</h1>
+    <p class="mt-2 text-sm leading-relaxed text-ink-500">
+      Your role does not include this screen. If you need it, ask the owner to
+      change your permissions.
+    </p>
+    <a href="/" class="btn btn-primary mt-6">Back to the dashboard</a>
+  </div>
+</div>
+{% endblock %}

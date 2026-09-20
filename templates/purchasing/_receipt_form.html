@@ -1,0 +1,17 @@
+{% include "partials/modal_open.html" with title="Receive goods" subtitle="At "|add:request.branch.name|add:". An order is optional." width="max-w-md" %}
+<form method="post" action="{% url 'purchasing:receipt_create' %}" class="space-y-4 p-5">
+  {% csrf_token %}
+  {% if order %}<input type="hidden" name="order" value="{{ order.pk }}"><p class="rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700">Against order <strong>{{ order.reference }}</strong></p>{% endif %}
+  {% if suppliers %}
+  <div><label class="label" for="supplier">Supplier</label><select name="supplier" id="supplier" class="input" required>{% for s in suppliers %}<option value="{{ s.pk }}" {% if order.supplier_id == s.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+  <div><label class="label" for="supplier_note">Their delivery note or invoice no.</label><input name="supplier_note" id="supplier_note" maxlength="60" class="input"><p class="hint">Becomes the bill number, so you can match their paperwork.</p></div>
+  <div class="flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Start</button>
+  </div>
+  {% else %}
+  <p class="text-sm text-ink-600">Add a supplier first.</p>
+  <a href="{% url 'purchasing:supplier_list' %}" class="btn btn-primary">Go to suppliers</a>
+  {% endif %}
+</form>
+{% include "partials/modal_close.html" %}

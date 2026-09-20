@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Join {{ invitation.tenant.name }}{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full items-center justify-center px-5 py-12">
+  <div class="w-full max-w-sm">
+    <div class="mb-7">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">
+        {{ invitation.tenant.name|slice:":1"|upper }}
+      </div>
+      <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Join {{ invitation.tenant.name }}</h1>
+      <p class="mt-1.5 text-sm text-ink-500">
+        You have been invited as <strong>{{ invitation.role.name }}</strong>.
+        {% if existing %}You already have an account, so you join with it.{% else %}Choose a password and you are in.{% endif %}
+      </p>
+    </div>
+
+    {% if errors %}
+    <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if existing %}
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="label" for="email">Email</label>
+        <input type="email" id="email" value="{{ invitation.email }}" class="input input-lg" disabled>
+      </div>
+      {% if not signed_in_as_them %}
+      <div>
+        <label class="label" for="password">Your current password</label>
+        <input type="password" name="password" id="password" class="input input-lg"
+               autocomplete="current-password" required autofocus>
+        <p class="hint">The one you already sign in with. It does not change.</p>
+      </div>
+      {% endif %}
+      <button type="submit" class="btn btn-primary btn-lg w-full">Join {{ invitation.tenant.name }}</button>
+    </form>
+    {% else %}
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="label" for="email">Email</label>
+        <input type="email" id="email" value="{{ invitation.email }}" class="input input-lg" disabled>
+      </div>
+      <div>
+        <label class="label" for="name">Your name</label>
+        <input name="name" id="name" value="{{ name|default:'' }}" class="input input-lg" required autofocus>
+      </div>
+      <div>
+        <label class="label" for="password">Choose a password</label>
+        <input type="password" name="password" id="password" class="input input-lg"
+               autocomplete="new-password" required>
+        <p class="hint">At least 8 characters. Nobody else will know it.</p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg w-full">Join</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

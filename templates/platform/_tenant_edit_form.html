@@ -1,0 +1,40 @@
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-12">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+    <div class="flex items-start justify-between gap-4 border-b border-ink-100 px-5 py-4">
+      <div>
+        <h2 class="text-base font-semibold tracking-tight text-ink-900">{{ tenant.name }}</h2>
+        <p class="hint">These details print on every receipt the shop issues.</p>
+      </div>
+      <button type="button" @click="$root.remove()" class="-mr-1 -mt-1 rounded-lg p-1.5 text-ink-400 hover:bg-ink-100" aria-label="Close">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+{% endif %}
+
+<form {% if modal %}hx-post="{% url 'platform:tenant_edit' tenant.pk %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %}
+      class="p-5">
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="sm:col-span-2"><label class="label" for="name">Trading name</label><input name="name" id="name" value="{{ tenant.name }}" class="input" required autofocus></div>
+    <div class="sm:col-span-2"><label class="label" for="legal_name">Registered name</label><input name="legal_name" id="legal_name" value="{{ tenant.legal_name }}" class="input"></div>
+    <div><label class="label" for="tin">TIN</label><input name="tin" id="tin" value="{{ tenant.tin }}" class="input"></div>
+    <div><label class="label" for="vrn">VAT number</label><input name="vrn" id="vrn" value="{{ tenant.vrn }}" class="input"></div>
+    <div><label class="label" for="phone">Phone</label><input name="phone" id="phone" value="{{ tenant.phone }}" class="input"></div>
+    <div><label class="label" for="email">Email</label><input type="email" name="email" id="email" value="{{ tenant.email }}" class="input"></div>
+    <div><label class="label" for="currency">Currency</label><input name="currency" id="currency" value="{{ tenant.currency }}" class="input" maxlength="3"></div>
+    <div><label class="label" for="timezone">Time zone</label><input name="timezone" id="timezone" value="{{ tenant.timezone }}" class="input"></div>
+    <div class="sm:col-span-2"><label class="label" for="address">Address</label><textarea name="address" id="address" rows="2" class="input">{{ tenant.address }}</textarea></div>
+  </div>
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

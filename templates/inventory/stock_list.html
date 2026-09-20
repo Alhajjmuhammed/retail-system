@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Stock{% endblock %}
+{% block heading %}Stock &mdash; {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <form hx-get="{% url 'inventory:stock_list' %}" hx-target="#stock-rows"
+          hx-trigger="input changed delay:250ms from:input, change from:select"
+          hx-push-url="true" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <input type="search" name="q" value="{{ q }}" placeholder="Product" aria-label="Find a product" class="input w-full sm:w-56" autocomplete="off">
+      <select name="view" class="input w-full sm:w-48" aria-label="Show">
+        <option value="all" {% if view == "all" %}selected{% endif %}>Everything</option>
+        <option value="low" {% if view == "low" %}selected{% endif %}>Running low</option>
+        <option value="negative" {% if view == "negative" %}selected{% endif %}>Below zero</option>
+        <option value="dead" {% if view == "dead" %}selected{% endif %}>Never counted</option>
+      </select>
+    </form>
+    <div class="flex flex-wrap gap-2">
+      {% can_do "stock.count" as may_count %}
+      {% if may_count %}<a href="{% url 'inventory:count_list' %}" class="btn btn-secondary">Counts</a>{% endif %}
+      {% can_do "stock.transfer" as may_transfer %}
+      {% if may_transfer %}<a href="{% url 'inventory:transfer_list' %}" class="btn btn-secondary">Transfers</a>{% endif %}
+      <a href="{% url 'inventory:movements' %}" class="btn btn-secondary">Ledger</a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {% if can_see_cost %}
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
+    {% else %}
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
+    {% endif %}
+    <a href="?view=low" class="stat transition hover:border-brand-300 {% if view == 'low' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Running low</p><p class="stat-value {% if counts.low %}text-amber-600{% endif %}">{{ counts.low }}</p></a>
+    <a href="?view=negative" class="stat transition hover:border-brand-300 {% if view == 'negative' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Below zero</p><p class="stat-value {% if counts.negative %}text-red-600{% endif %}">{{ counts.negative }}</p></a>
+    <a href="?view=dead" class="stat transition hover:border-brand-300 {% if view == 'dead' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Never counted</p><p class="stat-value">{{ counts.dead }}</p></a>
+  </div>
+
+  <div id="stock-rows">{% include "inventory/_stock_rows.html" %}</div>
+</div>
+{% endblock %}

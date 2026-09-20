@@ -1,0 +1,26 @@
+{% comment %}A small settings form, in the modal or as a page. Needs form, title, action.{% endcomment %}
+{% include "partials/modal_open.html" with width="max-w-lg" %}
+<form {% if modal %}hx-post="{{ action }}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post" action="{{ action }}"{% endif %} class="grid gap-4 p-5 sm:grid-cols-2">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" with errors=form.non_field_errors %}</div>{% endif %}
+  {% for field in form %}
+    {% if field.field.widget.input_type == "checkbox" %}
+    <div class="sm:col-span-2">
+      <label class="flex items-center gap-2.5 text-sm text-ink-700">{{ field }} {{ field.label }}</label>
+      {% if field.help_text %}<p class="hint ml-7">{{ field.help_text }}</p>{% endif %}
+      {% if field.errors %}<p class="hint text-red-600">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+    {% else %}
+    <div class="{% if field.name == 'address' or field.name == 'name' %}sm:col-span-2{% endif %}">
+      <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<p class="hint text-red-600">{{ field.errors.0 }}</p>{% elif field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+    </div>
+    {% endif %}
+  {% endfor %}
+  <div class="flex justify-end gap-2 sm:col-span-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% include "partials/modal_close.html" %}

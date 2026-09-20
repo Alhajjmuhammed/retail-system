@@ -1,0 +1,158 @@
+{% extends "platform/base.html" %}
+{% block title %}Invoices{% endblock %}
+{% block heading %}Invoices{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}border-brand-300{% endif %}">
+      <p class="stat-label">Billed</p>
+      <p class="stat-value">{{ totals.billed|floatformat:0|intcomma }}</p>
+      <p class="hint">Void invoices not counted</p>
+    </a>
+    <a href="?view=paid" class="stat transition hover:border-brand-300 {% if view == 'paid' %}border-brand-300{% endif %}">
+      <p class="stat-label">Collected</p>
+      <p class="stat-value text-emerald-700">{{ totals.collected|floatformat:0|intcomma }}</p>
+    </a>
+    <a href="?view=open" class="stat transition hover:border-brand-300 {% if view == 'open' %}border-brand-300{% endif %}">
+      <p class="stat-label">Still to come in</p>
+      <p class="stat-value {% if totals.outstanding %}text-amber-600{% endif %}">{{ totals.outstanding|floatformat:0|intcomma }}</p>
+    </a>
+    <a href="?view=overdue" class="stat transition hover:border-brand-300 {% if view == 'overdue' %}border-brand-300{% endif %}">
+      <p class="stat-label">Overdue</p>
+      <p class="stat-value {% if totals.overdue %}text-red-600{% endif %}">{{ totals.overdue }}</p>
+      {% if totals.overdue %}<p class="hint">{{ totals.overdue_value|floatformat:0|intcomma }} late</p>{% endif %}
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+          <input type="search" name="q" value="{{ q }}" placeholder="Invoice number or shop" class="input w-60 pl-9" autocomplete="off">
+        </div>
+        <select name="view" class="input w-40">
+          <option value="">Everything</option>
+          <option value="open" {% if view == "open" %}selected{% endif %}>Unpaid</option>
+          <option value="overdue" {% if view == "overdue" %}selected{% endif %}>Overdue</option>
+          <option value="paid" {% if view == "paid" %}selected{% endif %}>Paid</option>
+          <option value="void" {% if view == "void" %}selected{% endif %}>Void</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        {% if q or view %}<a href="{% url 'platform:invoices' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+      </form>
+      {% if "invoices.manage" in pp %}
+      <button type="button" class="btn btn-primary shrink-0"
+              hx-get="{% url 'platform:invoice_create' %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">
+        {% icon "plus" %} Raise an invoice
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Invoice</th>
+            <th>Shop</th>
+            <th>Period</th>
+            <th>Due</th>
+            <th class="text-right">Total</th>
+            <th class="text-right">Paid</th>
+            <th class="text-right">Left</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+            <td>
+              <button type="button" class="font-medium text-ink-900 hover:text-brand-700 hover:underline"
+                      hx-get="{% url 'platform:invoice_detail' inv.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">
+                {{ inv.number }}
+              </button>
+            </td>
+            <td><a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' inv.tenant_id %}"{% endif %} class="text-ink-700 hover:text-brand-700 hover:underline">{{ inv.tenant.name }}</a></td>
+            <td class="whitespace-nowrap text-sm text-ink-600">{{ inv.period_start|date:"j M" }} &ndash; {{ inv.period_end|date:"j M Y" }}</td>
+            <td class="whitespace-nowrap text-sm">
+              {% if inv.status == "open" or inv.status == "draft" %}
+                {% if inv.due_date and inv.due_date < today %}
+                  <span class="font-medium text-red-700">{{ inv.due_date|date:"j M" }}</span>
+                  <p class="hint text-red-600">{{ inv.due_date|timesince:today }} late</p>
+                {% else %}
+                  <span class="text-ink-600">{{ inv.due_date|date:"j M"|default:"—" }}</span>
+                {% endif %}
+              {% else %}<span class="text-ink-400">—</span>{% endif %}
+            </td>
+            <td class="tnum text-right">{{ inv.total|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right text-ink-600">{{ inv.paid|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right {% if inv.left > 0 and inv.status != 'void' %}font-medium text-amber-700{% else %}text-ink-400{% endif %}">
+              {% if inv.status == "void" %}—{% else %}{{ inv.left|floatformat:0|intcomma }}{% endif %}
+            </td>
+            <td class="whitespace-nowrap">
+              <span class="flex items-center gap-1.5 text-sm text-ink-700">
+                <span class="dot {% if inv.status == 'paid' %}bg-emerald-500{% elif inv.status == 'void' %}bg-ink-300{% elif inv.due_date and inv.due_date < today %}bg-red-500{% else %}bg-amber-500{% endif %}"></span>
+                {% if inv.status == "open" and inv.due_date and inv.due_date < today %}Overdue{% else %}{{ inv.get_status_display }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if "invoices.manage" in pp and inv.status == "open" or "invoices.manage" in pp and inv.status == "draft" %}
+                <button type="button" class="btn-icon btn-icon-brand" title="Record a payment"
+                        hx-get="{% url 'platform:invoice_pay' inv.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">
+                  {% icon "wallet" %}
+                </button>
+                {% if not inv.paid %}
+                <button type="button" class="btn-icon btn-icon-brand" title="Correct it"
+                        hx-get="{% url 'platform:invoice_edit' inv.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">
+                  {% icon "pencil" %}
+                </button>
+                <form method="post" action="{% url 'platform:invoice_void' inv.pk %}?next={{ request.get_full_path|urlencode }}" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: 'Void {{ inv.number }}?',
+                        body: 'For an invoice raised in error. The number stays on record, marked void, and {{ inv.tenant.name|escapejs }} no longer owes it.',
+                        label: 'Void it', danger: true })">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-icon btn-icon-danger" title="Void — raised in error">{% icon "trash" %}</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                <button type="button" class="btn-icon" title="Open"
+                        hx-get="{% url 'platform:invoice_detail' inv.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">
+                  {% icon "chevron-right" %}
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10">
+            {% if q or view %}
+              {% include "partials/empty.html" with icon="search" title="No invoice matches" text="Try part of the number or the shop's name." %}
+            {% else %}
+              {% include "partials/empty.html" with icon="receipt" title="No invoices yet" text="They are raised automatically a week before each paid period ends, or raise one yourself." %}
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page.paginator.count %}
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+      <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+      {% if page.has_other_pages %}
+      <div class="flex items-center gap-1.5">
+        {% if page.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+        <span class="px-1">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

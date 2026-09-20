@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Purchase orders{% endblock %}
+{% block heading %}Purchase orders{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <form method="get" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" x-data @change="$el.submit()">
+      <input type="search" name="q" value="{{ q }}" placeholder="Reference or supplier" aria-label="Find an order" class="input col-span-2 w-full sm:w-64">
+      <select name="status" class="input w-full sm:w-44" aria-label="Status">
+        <option value="">Any status</option>
+        {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </form>
+    <a href="{% url 'purchasing:order_create' %}" hx-get="{% url 'purchasing:order_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New order</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Supplier</th><th>Expected</th><th>Status</th><th class="text-right">Value</th><th></th></tr></thead>
+      <tbody>
+        {% for o in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td><a href="{% url 'purchasing:order_detail' o.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ o.reference }}</a><p class="hint">{{ o.created_at|date:"j M Y" }} &middot; {{ o.branch.name }}</p></td>
+          <td class="text-ink-600">{{ o.supplier.name }}</td>
+          <td class="text-ink-600">{{ o.expected_date|date:"j M"|default:"—" }}</td>
+          <td><span class="badge {% if o.status == 'received' %}badge-ok{% elif o.status == 'draft' or o.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ o.get_status_display }}</span></td>
+          <td class="tnum text-right">{{ o.total|floatformat:0|intcomma }}</td>
+          <td class="whitespace-nowrap text-right">
+            <a href="{% url 'purchasing:order_detail' o.pk %}" class="btn-icon btn-icon-brand" title="Open {{ o.reference }}" aria-label="Open {{ o.reference }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
+            {% if o.status != "draft" and o.status != "cancelled" %}<a href="{% url 'purchasing:order_print' o.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print {{ o.reference }}" aria-label="Print {{ o.reference }}">{% icon "download" class="h-4 w-4" %}</a>{% endif %}
+            {% if o.status == "draft" or o.status == "sent" %}
+            <form method="post" action="{% url 'purchasing:order_cancel' o.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Cancel {{ o.reference|escapejs }}?', body: 'Nothing has arrived against it, so no stock changes.', label: 'Cancel order' })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-danger" title="Cancel {{ o.reference }}" aria-label="Cancel {{ o.reference }}">{% icon "trash" class="h-4 w-4" %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="clipboard" title="No orders here" text="Raise an order, then receive against it when the goods arrive." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

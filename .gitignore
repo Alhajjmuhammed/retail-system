@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+*.sqlite3
+# staticfiles/ is collectstatic's output; static/ is source -- the till's
+# JavaScript and the Tailwind input live there.
+/media/
+/staticfiles/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+theme/static/css/dist/
+tailwindcss
+/private/

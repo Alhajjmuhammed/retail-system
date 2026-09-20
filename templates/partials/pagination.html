@@ -1,0 +1,16 @@
+{% comment %}
+Showing X–Y of N, with Previous / Next. Needs `page` (a Django Page) and
+optionally `keep` (the query string without `page`, so filters survive).
+{% endcomment %}
+{% if page.paginator.count %}
+<div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+  <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  {% if page.has_other_pages %}
+  <div class="flex items-center gap-1.5">
+    {% if page.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+    <span class="px-1">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}

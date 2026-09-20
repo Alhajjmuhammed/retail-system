@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}{{ tenant.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  {% can_do "billing.manage" as may_bill %}
+
+  {% if subscription.status == "trialing" and may_bill %}
+  <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-brand-800 to-brand-700 px-5 py-4 shadow-raised">
+    <div class="flex items-center gap-3.5">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">{% icon "clock" class="h-4.5 w-4.5" %}</span>
+      <div>
+        <p class="text-sm font-semibold text-white">{% if subscription.days_until_due is not None and subscription.days_until_due >= 0 %}{{ subscription.days_until_due }} day{{ subscription.days_until_due|pluralize }} left on your trial{% else %}Your trial is ending{% endif %}</p>
+        <p class="text-xs text-brand-200">Nothing is deleted when it ends &mdash; you keep everything you have entered.</p>
+      </div>
+    </div>
+    {% if may_bill %}<a href="{% url 'tenancy:billing' %}" class="btn bg-white text-brand-800 shadow-sm hover:bg-brand-50">Choose a plan</a>{% endif %}
+  </div>
+  {% elif may_bill and subscription.status == "past_due" or may_bill and subscription.status == "grace" %}
+  <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-amber-50 px-5 py-4 ring-1 ring-inset ring-amber-600/20">
+    <div class="flex items-center gap-3.5">
+      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">{% icon "alert" class="h-4.5 w-4.5" %}</span>
+      <div>
+        <p class="text-sm font-semibold text-amber-900">Your subscription payment is overdue</p>
+        <p class="text-xs text-amber-800">{% if subscription.status == "grace" and subscription.grace_ends_at %}Selling stops {{ subscription.grace_ends_at|date:"j M" }} unless it is paid.{% else %}Pay the open invoice to keep selling without interruption.{% endif %} Nothing is ever deleted.</p>
+      </div>
+    </div>
+    {% if may_bill %}<a href="{% url 'tenancy:billing' %}" class="btn btn-primary">See the invoice</a>{% endif %}
+  </div>
+  {% elif subscription.is_read_only %}
+  <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-red-50 px-5 py-4 ring-1 ring-inset ring-red-600/15">
+    <div>
+      <p class="text-sm font-semibold text-red-900">Selling is paused</p>
+      <p class="text-xs text-red-800">You can still see everything. Pay the open invoice and it starts again straight away.</p>
+    </div>
+    {% if may_bill %}<a href="{% url 'tenancy:billing' %}" class="btn btn-primary">See the invoice</a>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if my_shift %}
+  <div class="card card-body flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-wide text-ink-500">Your shift on {{ my_shift.shift.register }}</p>
+      <p class="mt-1 text-2xl font-bold text-ink-900">{{ my_shift.value|floatformat:0|intcomma }} <span class="text-sm font-normal text-ink-500">from {{ my_shift.count }} sale{{ my_shift.count|pluralize }}</span></p>
+      <p class="hint">Open since {{ my_shift.shift.opened_at|date:"H:i" }} ({{ my_shift.shift.opened_at|ago }})</p>
+    </div>
+    <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+      <a href="{% url 'pos:till' %}" class="btn btn-primary flex-1 sm:flex-none">{% icon "cart" %} Back to the till</a>
+      <a href="{% url 'pos:shift_close' %}" class="btn btn-secondary flex-1 sm:flex-none">Close and count</a>
+    </div>
+  </div>
+  {% if my_shift.sales %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Your sales this shift</h2><span class="hint">Latest {{ my_shift.sales|length }}</span></div>
+    <div class="divide-y divide-ink-100">
+      {% for s in my_shift.sales %}
+      <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+        <span class="min-w-0">
+          <span class="font-medium text-ink-900">{{ s.number }}</span>
+          <span class="hint">{{ s.sold_at|date:"H:i" }}{% if s.customer %} &middot; {{ s.customer.name }}{% endif %}</span>
+          {% if s.status == "voided" %}<span class="badge badge-danger ml-1">Voided</span>{% elif s.status == "refunded" %}<span class="badge badge-warn ml-1">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn ml-1">Part refunded</span>{% endif %}
+        </span>
+        <span class="flex shrink-0 items-center gap-1">
+          <span class="tnum font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</span>
+          {% if my_shift.may_reprint %}<a href="{% url 'pos:receipt' s.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print the receipt again" aria-label="Print receipt {{ s.number }} again">{% icon "receipt" class="h-4 w-4" %}</a>{% endif %}
+          {% if s.status != "voided" and s.status != "refunded" %}<a href="{% url 'pos:sale_return' s.pk %}" class="btn-icon btn-icon-brand" title="Refund (a manager may need to approve)" aria-label="Refund {{ s.number }}">{% icon "restore" class="h-4 w-4" %}</a>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% elif may_sell %}
+  <div class="card card-body flex flex-wrap items-center justify-between gap-4">
+    <p class="text-sm text-ink-700">No till open for you yet.</p>
+    <a href="{% url 'pos:till' %}" class="btn btn-primary">{% icon "cart" %} Open a till</a>
+  </div>
+  {% endif %}
+
+  {% if today %}
+  <div class="grid gap-4 sm:grid-cols-3">
+    <a href="{% url 'pos:sale_list' %}" class="stat transition hover:border-brand-300">
+      <p class="stat-label">Sold today</p>
+      <p class="stat-value">{{ today.value|floatformat:0|intcomma }}</p>
+      <p class="hint">{{ today.count }} sale{{ today.count|pluralize }}{% if today.refunded %} &middot; {{ today.refunded|floatformat:0|intcomma }} refunded{% endif %}</p>
+    </a>
+    <div class="stat">
+      <p class="stat-label">Yesterday</p>
+      <p class="stat-value text-ink-700">{{ yesterday.value|floatformat:0|intcomma }}</p>
+      <p class="hint">{{ yesterday.count }} sale{{ yesterday.count|pluralize }}</p>
+    </div>
+    <a href="{% url 'reports:index' %}" class="stat transition hover:border-brand-300">
+      <p class="stat-label">Last 7 days</p>
+      <p class="stat-value text-ink-700">{{ week_total|floatformat:0|intcomma }}</p>
+      <div class="mt-2 flex h-10 items-end gap-1">
+        {% for d in week %}<div class="flex-1 rounded-t {% if forloop.last %}bg-brand-600{% else %}bg-brand-200{% endif %}" style="height: {{ d.pct|default:2 }}%" title="{{ d.day|date:'D j M' }}: {{ d.value|floatformat:0|intcomma }}"></div>{% endfor %}
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-5 lg:grid-cols-3">
+    <div class="space-y-5 lg:col-span-2">
+      {% if no_access %}
+      <div class="card card-body">
+        <p class="text-sm font-medium text-ink-900">Your role does not include anything yet.</p>
+        <p class="hint mt-1">Ask the owner or a manager to give your role what you need, under Settings &rarr; Roles &amp; permissions.</p>
+      </div>
+      {% else %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Needs attention</h2></div>
+        <div class="divide-y divide-ink-100">
+          {% for item in attention %}
+          <a href="{{ item.url }}" class="flex items-center gap-3 px-5 py-3 transition hover:bg-ink-50">
+            <span class="tnum flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-semibold {% if item.level == 'danger' %}bg-red-50 text-red-700{% else %}bg-amber-50 text-amber-700{% endif %}">{{ item.n }}</span>
+            <span class="flex-1 text-sm text-ink-800">{{ item.text }}</span>
+            {% icon "chevron-right" class="h-4 w-4 text-ink-400" %}
+          </a>
+          {% empty %}
+          <p class="flex items-center gap-2 px-5 py-6 text-sm text-ink-500">{% icon "check" class="h-4 w-4 text-emerald-600" %} Nothing needs you right now.</p>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if steps %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Getting started</h2><span class="text-xs text-ink-500">{{ done_count }} of {{ steps|length }} done</span></div>
+        <ol class="divide-y divide-ink-100">
+          {% for step in steps %}
+          <li class="flex items-center gap-3.5 px-5 py-3.5">
+            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold {% if step.done %}bg-emerald-100 text-emerald-700{% else %}bg-ink-100 text-ink-500{% endif %}">
+              {% if step.done %}{% icon "check" class="h-3.5 w-3.5" %}{% else %}{{ forloop.counter }}{% endif %}
+            </span>
+            <span class="flex-1 text-sm {% if step.done %}text-ink-400 line-through{% else %}font-medium text-ink-800{% endif %}">{{ step.label }}</span>
+            {% if not step.done %}<a href="{{ step.url }}" class="btn btn-secondary btn-sm">Do it</a>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-5">
+      {% if today %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Today, by how people paid</h2></div>
+        <div class="divide-y divide-ink-100 text-sm">
+          {% for row in by_method %}
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-700">{{ row.label }}</span><span class="tnum font-medium text-ink-900">{{ row.total|floatformat:0|intcomma }}</span></div>
+          {% empty %}<p class="px-5 py-5 text-center text-ink-500">No sales yet today.</p>{% endfor %}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Selling best today</h2></div>
+        <div class="divide-y divide-ink-100 text-sm">
+          {% for row in top_today %}{% if row.lines__description %}
+          <div class="flex justify-between gap-3 px-5 py-2.5"><span class="truncate text-ink-700">{{ row.lines__description }} <span class="text-ink-400">&times; {{ row.qty|floatformat:"-3" }}</span></span><span class="tnum shrink-0 font-medium text-ink-900">{{ row.value|floatformat:0|intcomma }}</span></div>
+          {% endif %}{% empty %}<p class="px-5 py-5 text-center text-ink-500">Nothing sold yet today.</p>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% can_do "pos.mobile_cart" as may_phone %}{% can_do "product.manage" as may_products %}{% can_do "stock.receive" as may_receive %}{% can_do "expense.create" as may_expense %}{% can_do "report.sales" as may_reports %}
+      {% if may_phone or may_products or may_receive or may_expense or may_reports %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Quick actions</h2></div>
+        <div class="space-y-1 p-3">
+          {% if may_phone %}<a href="{% url 'pos:phone' %}" class="nav-link">{% icon "tag" %} Sell on phone</a>{% endif %}
+          {% if may_products %}<a href="{% url 'catalog:product_create' %}" class="nav-link">{% icon "plus" %} Add a product</a>{% endif %}
+          {% if may_receive %}<a href="{% url 'purchasing:receipt_create' %}" class="nav-link">{% icon "layers" %} Receive goods</a>{% endif %}
+          {% if may_expense %}<a href="{% url 'finance:expense_list' %}" class="nav-link">{% icon "wallet" %} Record an expense</a>{% endif %}
+          {% if may_reports %}<a href="{% url 'reports:index' %}" class="nav-link">{% icon "chart" %} Sales reports</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

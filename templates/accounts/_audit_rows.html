@@ -1,0 +1,41 @@
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th class="w-12 text-right">SN</th><th>When</th><th>What</th><th>Who</th><th>Approved by</th><th>Where</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in page %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td class="whitespace-nowrap text-ink-500">{{ row.created_at|date:"j M H:i" }}</td>
+        <td>
+          <span class="font-medium text-ink-800">{{ row.action }}</span>
+          {% if row.object_type %}<p class="hint">{{ row.object_type }} {{ row.object_id }}</p>{% endif %}
+        </td>
+        <td class="text-ink-700">{{ row.user.name|default:"system" }}</td>
+        <td>
+          {% if row.authorised_by %}
+            <span class="badge badge-warn">{{ row.authorised_by.name }}</span>
+          {% else %}<span class="text-ink-300">&mdash;</span>{% endif %}
+        </td>
+        <td class="text-ink-500">{{ row.branch.name|default:"—" }}</td>
+        <td class="text-right">
+          <a href="{% url 'accounts:audit_entry' row.pk %}" class="text-sm font-medium text-brand-700 hover:underline">Open</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">{% include "partials/empty.html" with icon="clipboard" title="Nothing recorded" text="Discounts, voids, refunds and stock adjustments appear here as they happen." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page.has_other_pages %}
+<div class="mt-3 flex items-center justify-between text-sm text-ink-600">
+  <span>{{ page.start_index }}&ndash;{{ page.end_index }} of {{ page.paginator.count }}</span>
+  <span class="flex gap-2">
+    {% if page.has_previous %}<a href="#" hx-get="?q={{ q }}&action={{ action }}&who={{ who }}&days={{ days }}&page={{ page.previous_page_number }}" hx-target="#audit-rows" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+    {% if page.has_next %}<a href="#" hx-get="?q={{ q }}&action={{ action }}&who={{ who }}&days={{ days }}&page={{ page.next_page_number }}" hx-target="#audit-rows" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+  </span>
+</div>
+{% endif %}

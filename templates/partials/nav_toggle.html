@@ -1,0 +1,20 @@
+{% comment %}
+One button, two jobs, in the place people look for it.
+
+On a phone it opens the drawer; on a desktop it collapses the sidebar to
+icons. Same icon, same corner, which is what every other admin does — a
+toggle hidden at the bottom of the menu is a toggle nobody finds.
+{% endcomment %}
+<button type="button"
+        @click="window.innerWidth < 1024
+                  ? mobileNav = true
+                  : (collapsed = !collapsed, localStorage.setItem('{{ storage_key }}', collapsed))"
+        class="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+               text-ink-500 transition hover:bg-ink-100 hover:text-ink-900"
+        :title="collapsed ? 'Expand menu' : 'Collapse menu'"
+        aria-label="Menu">
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.75" stroke-linecap="round">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>

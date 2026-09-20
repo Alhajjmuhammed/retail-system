@@ -1,0 +1,39 @@
+{% include "partials/modal_open.html" with title=title|default:"Expense" subtitle="Rent, transport, wages — anything that is not stock." width="max-w-lg" %}
+{% with v=values %}
+<form {% if modal %}hx-post="{% if expense %}{% url 'finance:expense_edit' expense.pk %}{% else %}{% url 'finance:expense_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML" hx-encoding="multipart/form-data"{% else %}method="post" enctype="multipart/form-data"{% endif %}
+      class="grid gap-4 p-5 sm:grid-cols-2" x-data="{ newCat: {% if v.category_name %}true{% else %}false{% endif %}, method: '{% if v %}{{ v.method|default:"cash"|escapejs }}{% else %}{{ expense.method|default:"cash"|escapejs }}{% endif %}' }">
+  {% csrf_token %}
+  {% if errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" %}</div>{% endif %}
+  {% if expense.cash_movement_id %}<p class="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600 sm:col-span-2">Paid out of a till: the amount and payment method are fixed.</p>{% endif %}
+  <div class="sm:col-span-2">
+    <div class="flex items-center justify-between"><label class="label" for="category">Category</label>
+      <button type="button" class="text-xs font-medium text-brand-700 hover:underline" @click="newCat = !newCat" x-text="newCat ? 'Pick from the list' : 'New category'"></button></div>
+    <select name="category" id="category" class="input" x-show="!newCat" :disabled="newCat">
+      {% for c in categories %}<option value="{{ c.pk }}" {% if v %}{% if v.category == c.pk|stringformat:"s" %}selected{% endif %}{% elif expense.category_id == c.pk %}selected{% endif %}>{{ c.name }}</option>{% empty %}<option value="">No categories yet — add one</option>{% endfor %}
+    </select>
+    <input name="category_name" maxlength="80" class="input" placeholder="Rent, transport, wages" x-show="newCat" x-cloak :disabled="!newCat" value="{{ v.category_name|default:'' }}">
+  </div>
+  <div><label class="label" for="amount">Amount</label><input type="number" step="0.01" min="0.01" name="amount" id="amount" value="{% if v %}{{ v.amount }}{% else %}{{ expense.amount|floatformat:'-2'|default:'' }}{% endif %}" class="input" required autofocus></div>
+  <div><label class="label" for="spent_at">When</label><input type="date" name="spent_at" id="spent_at" max="{{ today|date:'Y-m-d' }}" value="{% if v %}{{ v.spent_at }}{% elif expense %}{{ expense.spent_at|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" class="input" required></div>
+  <div><label class="label" for="method">Paid by</label>
+    <select name="method" id="method" class="input" x-model="method">
+      {% for value, label in methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div><label class="label" for="reference">Reference</label><input name="reference" id="reference" maxlength="60" value="{% if v %}{{ v.reference }}{% else %}{{ expense.reference|default:'' }}{% endif %}" class="input" placeholder="Receipt no."></div>
+  <div class="sm:col-span-2"><label class="label" for="description">What for</label><input name="description" id="description" maxlength="200" value="{% if v %}{{ v.description }}{% else %}{{ expense.description|default:'' }}{% endif %}" class="input"></div>
+  <div class="sm:col-span-2"><label class="label" for="attachment">Receipt photo</label><input type="file" name="attachment" id="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" class="block w-full text-sm text-ink-600 file:mr-3 file:rounded-lg file:border-0 file:bg-ink-100 file:px-3 file:py-2 file:text-sm file:font-medium">
+    {% if expense.attachment %}<p class="hint">One is attached; choosing another replaces it.</p>{% else %}<p class="hint">Optional. JPG, PNG or PDF up to 5 MB.</p>{% endif %}</div>
+  {% if drawer %}
+  <label class="flex items-start gap-2.5 text-sm text-ink-700 sm:col-span-2" x-show="method === 'cash'">
+    <input type="checkbox" name="from_drawer" class="checkbox mt-0.5" {% if not v or v.from_drawer %}checked{% endif %}>
+    <span>Taken from my till drawer ({{ drawer.register.name }}) <span class="hint block">So your cash-up expects less cash, instead of you looking short.</span></span>
+  </label>
+  {% endif %}
+  <div class="flex justify-end gap-2 sm:col-span-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">{% if expense %}Save{% else %}Record{% endif %}</button>
+  </div>
+</form>
+{% endwith %}
+{% include "partials/modal_close.html" %}

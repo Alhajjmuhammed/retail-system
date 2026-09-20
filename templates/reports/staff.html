@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Staff{% endblock %}
+{% block heading %}Staff performance{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">
+    What each person sold, and what their drawer was short by. The second column is
+    why this report exists.
+  </p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Cashier</th><th class="text-right">Sales</th><th class="text-right">Kept after refunds</th><th class="text-right">Shifts</th><th class="text-right">Cash difference</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td class="font-medium text-ink-900">{{ row.user__name }}</td>
+          <td class="text-right text-ink-600">{{ row.count }}</td>
+          <td class="tnum text-right font-medium">{{ row.value|floatformat:0|intcomma }}{% if row.refunded %}<p class="hint">{{ row.refunded|floatformat:0|intcomma }} refunded</p>{% endif %}</td>
+          <td class="text-right text-ink-500">{{ row.shifts }}</td>
+          <td class="text-right font-semibold {% if row.variance < 0 %}text-red-600{% elif row.variance > 0 %}text-amber-600{% endif %}">{% if row.shifts %}{{ row.variance|default:0|floatformat:0|intcomma }}{% else %}<span class="font-normal text-ink-400">no shifts</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="py-10 text-center text-sm text-ink-500">No sales in this period.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

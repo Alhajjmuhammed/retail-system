@@ -1,0 +1,288 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ tenant.name }}{% endblock %}
+{% block heading %}{{ tenant.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {# Identity and the three numbers that decide whether to worry. #}
+  <div class="card">
+    <div class="flex flex-wrap items-start justify-between gap-5 p-5">
+      <div class="flex min-w-0 items-center gap-4">
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-xl font-semibold text-brand-800">
+          {{ tenant.name|slice:":1"|upper }}
+        </span>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="truncate text-lg font-semibold tracking-tight text-ink-900">{{ tenant.name }}</h2>
+            {% with s=tenant.subscription.status %}
+            <span class="badge
+              {% if s == 'active' %}badge-ok
+              {% elif s == 'trialing' %}badge-brand
+              {% elif s == 'suspended' or s == 'cancelled' %}badge-danger
+              {% else %}badge-warn{% endif %}">
+              {{ tenant.subscription.get_status_display|default:"No plan" }}
+            </span>
+            {% endwith %}
+            <span class="badge badge-muted">{{ tenant.subscription.plan.name|default:"—" }}</span>
+          </div>
+          <p class="hint">
+            {{ tenant.slug }}
+            {% if tenant.tin %} &middot; TIN {{ tenant.tin }}{% endif %}
+            &middot; joined {{ tenant.created_at|date:"j M Y" }}
+            {% if tenant.phone %} &middot; {{ tenant.phone }}{% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex shrink-0 flex-wrap gap-2">
+        {% if "shops.support" in pp %}<form method="post" action="{% url 'platform:impersonate' tenant.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">{% icon "enter" %} Open for support</button>
+        </form>{% endif %}
+        {% if "shops.edit" in pp %}<button type="button" class="btn btn-secondary"
+                hx-get="{% url 'platform:tenant_edit' tenant.pk %}?next={{ request.path|urlencode }}" hx-target="#modal">
+          {% icon "pencil" %} Edit details
+        </button>{% endif %}
+        {% if "invoices.manage" in pp %}<button type="button" class="btn btn-secondary"
+                hx-get="{% url 'platform:invoice_create' %}?tenant={{ tenant.pk }}&next={{ request.path|urlencode }}" hx-target="#modal">
+          Raise an invoice
+        </button>{% endif %}
+      </div>
+    </div>
+
+    <div class="grid divide-ink-100 border-t border-ink-100 sm:grid-cols-4 sm:divide-x">
+      <div class="px-5 py-3.5">
+        <p class="text-xs text-ink-500">Sales</p>
+        <p class="tnum mt-0.5 text-xl font-semibold text-ink-900">{{ sales_count|intcomma }}</p>
+      </div>
+      <div class="px-5 py-3.5">
+        <p class="text-xs text-ink-500">Turnover</p>
+        <p class="tnum mt-0.5 text-xl font-semibold text-ink-900">{{ sales_value|floatformat:0|intcomma }}</p>
+      </div>
+      <div class="px-5 py-3.5">
+        <p class="text-xs {% if outstanding %}text-amber-700{% else %}text-ink-500{% endif %}">Owes you</p>
+        <p class="tnum mt-0.5 text-xl font-semibold {% if outstanding %}text-amber-700{% else %}text-ink-900{% endif %}">
+          {{ outstanding|floatformat:0|intcomma }}
+        </p>
+      </div>
+      <div class="px-5 py-3.5">
+        <p class="text-xs text-ink-500">Last sale</p>
+        <p class="mt-0.5 text-sm font-medium text-ink-900">
+          {% if last_sale %}{{ last_sale|ago }}{% else %}<span class="text-amber-700">never</span>{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# People: the reason this page gets opened during a support call. #}
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">People</h2>
+        <p class="hint">{{ members|length }} in this shop. Changing anything here takes effect on their next request.</p>
+      </div>
+      {% if "shops.staff" in pp %}<button type="button" class="btn btn-primary btn-sm"
+              hx-get="{% url 'platform:tenant_member_create' tenant.pk %}" hx-target="#modal">
+        {% icon "plus" %} Add person
+      </button>{% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Person</th>
+            <th>Role</th>
+            <th>Works at</th>
+            <th>Last signed in</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in members %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td>
+              <div class="flex items-center gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-100 text-xs font-semibold text-ink-600">
+                  {{ m.user.name|slice:":1"|upper }}
+                </span>
+                <span class="min-w-0">
+                  <a {% if "people.view" in pp %}href="{% url 'platform:user_detail' m.user_id %}"{% endif %}
+                     class="block truncate font-medium text-ink-900 hover:text-brand-700 hover:underline">{{ m.user.name }}</a>
+                  <span class="hint">{{ m.user.email }}</span>
+                </span>
+              </div>
+            </td>
+            <td class="whitespace-nowrap">
+              <span class="badge {% if m.role.is_owner_role %}badge-brand{% else %}badge-muted{% endif %}">{{ m.role.name }}</span>
+              {% if m.pin_hash %}<p class="hint">has an approval PIN</p>{% endif %}
+            </td>
+            <td class="text-ink-600">
+              {% if m.role.is_owner_role %}All branches
+              {% else %}
+                {% for link in m.branch_links.all %}{{ link.branch.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-amber-700">none set</span>{% endfor %}
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap text-ink-600">
+              {% if m.user.last_login %}{{ m.user.last_login|ago }}
+              {% else %}<span class="badge badge-warn">never</span>{% endif %}
+            </td>
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if "shops.staff" in pp %}
+                <button type="button" class="btn-icon btn-icon-brand"
+                        hx-get="{% url 'platform:tenant_member_edit' tenant.pk m.pk %}" hx-target="#modal"
+                        title="Change role, branches or password">
+                  {% icon "pencil" %}
+                </button>
+                <form method="post" action="{% url 'platform:tenant_member_remove' tenant.pk m.pk %}" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: 'Remove {{ m.user.name|escapejs }} from {{ tenant.name|escapejs }}?',
+                        body: 'Everything they recorded stays exactly as it is. Only their access goes.',
+                        label: 'Remove' })">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-icon btn-icon-danger" title="Remove from this shop">
+                    {% icon "trash" %}
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">
+            {% include "partials/empty.html" with icon="users" title="Nobody in this shop" text="Not even an owner — nobody can sign in until you add one." %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid gap-5 lg:grid-cols-3">
+
+    <div class="card lg:col-span-1">
+      <div class="card-head"><h2 class="card-title">Subscription</h2></div>
+      {% if "shops.edit" in pp %}
+      <form method="post" action="{% url 'platform:tenant_change_plan' tenant.pk %}" class="space-y-3 p-5">
+        {% csrf_token %}
+        <div>
+          <label class="label" for="plan">Plan</label>
+          <div class="flex gap-2">
+            <select name="plan" id="plan" class="input">
+              {% for p in plans %}<option value="{{ p.pk }}" {% if p.pk == tenant.subscription.plan_id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary shrink-0">Change</button>
+          </div>
+          <p class="hint">A downgrade never removes anything. They keep what they have and cannot add more.</p>
+        </div>
+      </form>
+      {% else %}
+      <div class="p-5">
+        <p class="text-xs text-ink-500">Plan</p>
+        <p class="mt-0.5 font-medium text-ink-900">{{ tenant.subscription.plan.name|default:"none" }}</p>
+      </div>
+      {% endif %}
+
+      {% if "shops.suspend" in pp %}
+      <form method="post" action="{% url 'platform:tenant_suspend' tenant.pk %}" x-data
+            @submit.prevent="$store.confirm.ask($el, {
+              title: '{% if tenant.status == "active" %}Suspend{% else %}Reactivate{% endif %} {{ tenant.name|escapejs }}?',
+              body: '{% if tenant.status == "active" %}They keep every record and can still sign in to look. They simply cannot sell until you reactivate them.{% else %}They can trade again immediately.{% endif %}',
+              label: '{% if tenant.status == "active" %}Suspend{% else %}Reactivate{% endif %}',
+              danger: {% if tenant.status == "active" %}true{% else %}false{% endif %} })"
+            class="border-t border-ink-100 px-5 py-4">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary w-full">
+          {% if tenant.status == "active" %}{% icon "suspend" %} Suspend{% else %}{% icon "restore" %} Reactivate{% endif %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="card lg:col-span-1">
+      <div class="card-head"><h2 class="card-title">Usage against limits</h2></div>
+      <div class="divide-y divide-ink-100">
+        {% for row in usage %}
+        <div class="px-5 py-3">
+          <div class="mb-1.5 flex items-baseline justify-between text-sm">
+            <span class="text-ink-600">{{ row.label }}</span>
+            <span class="tnum font-medium {% if row.allowed and row.used >= row.allowed %}text-amber-700{% else %}text-ink-900{% endif %}">
+              {{ row.used }}{% if row.allowed %} <span class="font-normal text-ink-400">of {{ row.allowed }}</span>{% else %} <span class="font-normal text-ink-400">unlimited</span>{% endif %}
+            </span>
+          </div>
+          {% if row.allowed %}
+          <div class="h-1.5 overflow-hidden rounded-full bg-ink-100">
+            <div class="h-full rounded-full {% if row.used >= row.allowed %}bg-amber-500{% else %}bg-brand-600{% endif %}"
+                 style="width: {% widthratio row.used row.allowed 100 %}%"></div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if "invoices.view" in pp %}
+    <div class="card lg:col-span-1">
+      <div class="card-head">
+        <h2 class="card-title">Invoices</h2>
+        {% if "invoices.view" in pp %}<a {% if "invoices.view" in pp %}href="{% url 'platform:invoices' %}"{% endif %} class="text-xs font-medium text-brand-700 hover:underline">All</a>{% endif %}
+      </div>
+      <div class="divide-y divide-ink-100 text-sm">
+        {% for inv in invoices %}
+        <div class="flex items-center justify-between gap-3 px-5 py-2.5">
+          <span class="min-w-0">
+            <span class="block truncate text-ink-800">{{ inv.number }}</span>
+            <span class="hint">{{ inv.period_start|date:"M Y" }}</span>
+          </span>
+          <span class="flex shrink-0 items-center gap-2">
+            <span class="tnum text-ink-900">{{ inv.total|floatformat:0|intcomma }}</span>
+            <span class="badge {% if inv.status == 'paid' %}badge-ok{% elif inv.status == 'void' %}badge-muted{% else %}badge-warn{% endif %}">
+              {{ inv.get_status_display }}
+            </span>
+          </span>
+        </div>
+        {% empty %}
+        <p class="px-5 py-8 text-center text-ink-500">Nothing billed yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Deletion lives at the bottom, behind a typed name, and only when it is possible at all. #}
+  {% if "shops.delete" in pp %}
+  <div class="card border-red-200/70">
+    <div class="card-head border-red-100">
+      <h2 class="card-title text-red-800">Delete this shop</h2>
+    </div>
+    <div class="p-5">
+      {% if can_delete %}
+      <form method="post" action="{% url 'platform:tenant_delete' tenant.pk %}"
+            class="flex flex-wrap items-end gap-3">
+        {% csrf_token %}
+        <div class="min-w-64 flex-1">
+          <p class="mb-2 text-sm text-ink-600">
+            This shop has never rung up a sale, so it can be removed entirely.
+            Everything in it goes with it and cannot be recovered.
+          </p>
+          <input name="confirm" class="input" placeholder="Type &ldquo;{{ tenant.name }}&rdquo; to confirm">
+        </div>
+        <button type="submit" class="btn btn-danger shrink-0">Delete permanently</button>
+      </form>
+      {% else %}
+      <p class="text-sm leading-relaxed text-ink-600">
+        <strong class="text-ink-800">{{ tenant.name }} has {{ sales_count|intcomma }} sale{{ sales_count|pluralize }} on record</strong>
+        and cannot be deleted &mdash; those are documents somebody may still be
+        answerable for. Suspend the subscription instead: they keep every record
+        and you stop billing them.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

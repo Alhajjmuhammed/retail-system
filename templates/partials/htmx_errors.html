@@ -1,0 +1,14 @@
+<script>
+  // A server error or a lost connection inside a pop-up used to do nothing
+  // visible. Say so, in the pop-up, instead of leaving the button dead.
+  document.addEventListener("htmx:responseError", (event) => {
+    const modal = document.getElementById("modal");
+    if (!modal) return;
+    const status = event.detail.xhr ? event.detail.xhr.status : 0;
+    modal.innerHTML = '<div x-data class="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/50 p-3 sm:items-start sm:p-6 sm:pt-16" @click.self="$root.remove()" @keydown.escape.window="$root.remove()">' +
+      '<div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-float"><p class="text-base font-semibold text-ink-900">That did not go through</p>' +
+      '<p class="mt-1 text-sm text-ink-600">' + (status >= 500 ? "Something went wrong on our side." : status === 403 ? "You are not allowed to do that." : "The server refused it.") +
+      ' Nothing was saved. Reload the page and try again.</p>' +
+      '<div class="mt-4 flex justify-end"><button type="button" class="btn btn-secondary" onclick="this.closest(\'[x-data]\').remove()">Close</button></div></div></div>';
+  });
+</script>

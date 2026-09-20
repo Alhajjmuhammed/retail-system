@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block heading %}{{ customer.name }}{% endblock %}
+{% block content %}
+{% can_do "credit.collect" as may_collect %}
+<div class="mx-auto max-w-4xl space-y-4">
+  <div class="card card-body flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0 text-sm text-ink-600">
+      {% if not customer.is_active %}<span class="badge badge-muted mb-1">removed</span>{% endif %}
+      <p>{{ customer.phone|default:"No phone" }}{% if customer.email %} &middot; {{ customer.email }}{% endif %}{% if customer.tin %} &middot; TIN {{ customer.tin }}{% endif %}</p>
+      <p class="hint">Limit {{ customer.credit_limit|floatformat:0|intcomma }} &middot; available {{ customer.credit_available|floatformat:0|intcomma }}{% if customer.price_list %} &middot; {{ customer.price_list.name }} prices{% endif %}</p>
+      {% if customer.note %}<p class="mt-1 text-ink-700">{{ customer.note }}</p>{% endif %}
+      <div class="mt-3 flex flex-wrap gap-2">
+        {% if may_manage %}<a href="{% url 'customers:customer_edit' customer.pk %}" hx-get="{% url 'customers:customer_edit' customer.pk %}" hx-target="#modal" class="btn btn-secondary btn-sm">{% icon "pencil" class="h-4 w-4" %} Edit</a>{% endif %}
+        {% if may_collect %}<a href="{% url 'customers:customer_statement' customer.pk %}" target="_blank" class="btn btn-secondary btn-sm">{% icon "download" class="h-4 w-4" %} Statement</a>{% endif %}
+        {% if not customer.is_active and may_manage %}
+        <form method="post" action="{% url 'customers:customer_restore' customer.pk %}">{% csrf_token %}<button type="submit" class="btn btn-secondary btn-sm">{% icon "restore" class="h-4 w-4" %} Bring back</button></form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="text-xs uppercase tracking-wide text-ink-500">{% if customer.balance < 0 %}In credit{% else %}Owes{% endif %}</p>
+      <p class="text-2xl font-bold {% if customer.balance > customer.credit_limit and customer.balance > 0 %}text-red-600{% elif customer.balance > 0 %}text-amber-700{% else %}text-ink-900{% endif %}">{{ customer.balance|floatformat:0|intcomma }}</p>
+    </div>
+  </div>
+
+  {% if may_collect and customer.balance > 0 %}
+  <form method="post" action="{% url 'customers:customer_payment' customer.pk %}" class="card card-body grid gap-3 sm:grid-cols-6"
+        x-data @submit.prevent="$store.confirm.ask($el, { title: 'Record ' + (Number($el.amount.value)||0).toLocaleString() + ' from {{ customer.name|escapejs }}?', body: 'Cash goes into your open till drawer.', label: 'Record payment', danger: false })">
+    {% csrf_token %}
+    <div class="sm:col-span-2"><label class="label" for="amount">Payment received</label><input type="number" step="0.01" min="0.01" max="{{ customer.balance|floatformat:'-2' }}" name="amount" id="amount" class="input" required></div>
+    <div class="sm:col-span-2"><label class="label" for="method">How</label><select name="method" id="method" class="input">{% for value, label in methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="sm:col-span-2"><label class="label" for="reference">Reference</label><input name="reference" id="reference" maxlength="60" class="input" placeholder="Transaction no."></div>
+    <div class="sm:col-span-4"><label class="label" for="pay_note">Note</label><input name="note" id="pay_note" maxlength="200" class="input"></div>
+    <div class="flex items-end sm:col-span-2"><button type="submit" class="btn btn-primary w-full">Record payment</button></div>
+  </form>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Account</h2></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>When</th><th>What</th><th class="text-right">Amount</th><th class="text-right">Balance</th><th></th></tr></thead>
+        <tbody>
+          {% for t in transactions %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="whitespace-nowrap text-ink-500">{{ t.created_at|date:"j M Y H:i" }}</td>
+            <td>{{ t.get_kind_display }}{% if t.method %} <span class="hint">({{ t.method }})</span>{% endif %}{% if t.sale %} <a href="{% url 'pos:sale_detail' t.sale.pk %}" class="text-brand-700 hover:underline">{{ t.sale.number }}</a>{% endif %}{% if t.reference and not t.reference|slice:":5" == "undo:" %}<p class="hint">{{ t.reference }}</p>{% endif %}{% if t.note %}<p class="hint">{{ t.note }}</p>{% endif %}</td>
+            <td class="tnum text-right font-medium {% if t.amount < 0 %}text-emerald-700{% endif %}">{{ t.amount|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right text-ink-500">{{ t.balance_after|floatformat:0|intcomma }}</td>
+            <td class="text-right">
+              {% if may_collect and t.kind == "payment" %}
+              <form method="post" action="{% url 'customers:customer_payment_reverse' t.pk %}" class="inline" x-data
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Undo this payment of {{ t.amount|floatformat:0|intcomma|cut:'-' }}?', body: 'For a payment typed by mistake. The amount goes back on the account; both lines stay visible.', label: 'Undo' })">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon btn-icon-danger" title="Undo this payment" aria-label="Undo this payment">{% icon "restore" class="h-4 w-4" %}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}<tr><td colspan="6" class="py-8 text-center text-sm text-ink-500">Nothing on the account.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">What they bought</h2>{% if sales_count > sales|length %}<a href="{% url 'pos:sale_list' %}?q={{ customer.name|urlencode }}" class="text-sm font-medium text-brand-700 hover:underline">All {{ sales_count }} sales</a>{% endif %}</div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Sale</th><th>When</th><th>Status</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+          {% for s in sales %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td><a href="{% url 'pos:sale_detail' s.pk %}" class="font-medium text-brand-700 hover:underline">{{ s.number }}</a><p class="hint">{{ s.branch.name }}</p></td>
+            <td class="text-ink-600">{{ s.sold_at|date:"j M Y H:i" }}</td>
+            <td>{% if s.status == "voided" %}<span class="badge badge-danger">Voided</span>{% elif s.status == "refunded" %}<span class="badge badge-warn">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn">Part refunded</span>{% else %}<span class="badge badge-ok">Sold</span>{% endif %}</td>
+            <td class="tnum text-right font-medium">{{ s.total|floatformat:0|intcomma }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="py-8 text-center text-sm text-ink-500">No sales to this customer yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if has_loyalty and may_manage %}
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Loyalty</h2>
+      <span class="tnum text-lg font-semibold text-brand-700">{{ customer.loyalty_points }} points</span>
+    </div>
+    {% if customer.loyalty_points > 0 %}
+    <form method="post" action="{% url 'customers:customer_redeem' customer.pk %}"
+          class="flex flex-wrap items-end gap-3 border-b border-ink-100 p-4" x-data
+          @submit.prevent="$store.confirm.ask($el, { title: 'Redeem ' + $el.points.value + ' points?', label: 'Redeem', danger: false })">
+      {% csrf_token %}
+      <div class="w-32"><label class="label" for="points">Redeem</label><input type="number" name="points" id="points" class="input" min="1" max="{{ customer.loyalty_points }}" required></div>
+      <div class="min-w-40 flex-1"><label class="label" for="note">What for</label><input name="note" id="note" maxlength="200" class="input" placeholder="Discount on today's basket"></div>
+      <button type="submit" class="btn btn-secondary">Redeem</button>
+    </form>
+    {% endif %}
+    <div class="divide-y divide-ink-100 text-sm">
+      {% for t in loyalty %}
+      <div class="flex items-center justify-between gap-3 px-5 py-2">
+        <span class="min-w-0 text-ink-600">{{ t.created_at|date:"j M" }} &middot; {{ t.note|default:t.get_kind_display }}</span>
+        <span class="tnum font-medium {% if t.points < 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ t.points }}</span>
+      </div>
+      {% empty %}
+      <p class="px-5 py-4 text-center text-ink-500">No points yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

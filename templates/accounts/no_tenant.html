@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}No shop yet{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full items-center justify-center px-5 py-12">
+  <div class="w-full max-w-md text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink-100 text-ink-400">
+      {% icon "building" class="h-5 w-5" %}
+    </div>
+    <h1 class="mt-5 text-xl font-semibold tracking-tight text-ink-900">You are not part of a shop yet</h1>
+    <p class="mt-2 text-sm leading-relaxed text-ink-500">
+      Ask the owner to invite you with this email address, or set up your own shop
+      and start a free trial.
+    </p>
+    <div class="mt-7 flex items-center justify-center gap-3">
+      <a href="{% url 'signup' %}" class="btn btn-primary">{% icon "plus" %} Set up a shop</a>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+        <button class="btn btn-secondary">Sign out</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

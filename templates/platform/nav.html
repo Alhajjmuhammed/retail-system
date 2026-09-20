@@ -1,0 +1,37 @@
+<div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-ink-800 px-4">
+  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-sm font-bold text-white">R</div>
+  <div class="nav-label min-w-0">
+    <p class="truncate text-sm font-semibold text-white">Platform</p>
+    <p class="truncate text-xs text-ink-400">Administration</p>
+  </div>
+</div>
+
+<nav class="sidebar-scroll space-y-0.5 px-2.5 py-4">
+  {% for label, name, icon_name in nav_items %}
+  <a href="{% url name %}" title="{{ label }}"
+     class="nav-link
+     {% if request.resolver_match.url_name in name %}bg-ink-800 text-white{% else %}text-ink-400 hover:bg-ink-800/60 hover:text-white{% endif %}">
+    {% icon icon_name %}<span class="nav-label">{{ label }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+<div class="shrink-0 border-t border-ink-800 p-3">
+  <div class="nav-aside mb-2 px-2.5">
+    <p class="truncate text-xs font-medium text-white">{{ user.name }}</p>
+    <p class="truncate text-xs text-ink-500">{{ user.email }}</p>
+  </div>
+
+  <a href="{% url 'accounts:password_change' %}" title="Change password"
+     class="nav-link w-full text-ink-400 hover:bg-ink-800 hover:text-white">
+    {% icon "key" %}<span class="nav-label">Change password</span>
+  </a>
+  <form method="post" action="{% url 'accounts:logout' %}">
+    {% csrf_token %}
+    <button type="submit" title="Sign out"
+            class="nav-link w-full text-ink-400 hover:bg-ink-800 hover:text-white">
+      {% icon "logout" %}<span class="nav-label">Sign out</span>
+    </button>
+  </form>
+
+</div>

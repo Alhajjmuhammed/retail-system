@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Stock ledger{% endblock %}
+{% block heading %}Stock ledger{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <p class="text-sm text-ink-600">
+    Every change to every quantity, in order. Nothing here is ever edited or removed.
+  </p>
+  <form hx-get="{% url 'inventory:movements' %}" hx-target="#movement-rows"
+        hx-trigger="input changed delay:250ms from:input, change from:select" hx-push-url="true" class="grid grid-cols-2 gap-2 sm:flex">
+    <input type="search" name="q" value="{{ q }}" placeholder="Product" aria-label="Find a product" class="input w-full sm:w-56" autocomplete="off">
+    <select name="reason" class="input w-full sm:w-48" aria-label="Reason">
+      <option value="">Any reason</option>
+      {% for value, label in reasons %}<option value="{{ value }}" {% if reason == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </form>
+  <div id="movement-rows">{% include "inventory/_movement_rows.html" %}</div>
+</div>
+{% endblock %}

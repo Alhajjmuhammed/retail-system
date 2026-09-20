@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Sell on phone{% endblock %}
+
+{% block body %}
+{% comment %}
+Built for one hand on the shop floor: find things at the top, the basket in
+the middle, the two ways to finish at the bottom. Prices always come from the
+server; the phone only says what and how many.
+{% endcomment %}
+<div x-data="phoneSale({{ config }})" class="flex min-h-full flex-col bg-ink-50">
+
+  <header class="sticky top-0 z-20 border-b border-ink-200 bg-white/95 px-3 py-2.5 backdrop-blur">
+    <div class="flex items-center gap-2">
+      <a href="{% url 'core:dashboard' %}" class="btn-icon" title="Back">&larr;</a>
+      <div class="relative flex-1">
+        <input type="search" x-model="query" @input.debounce.250ms="search()" placeholder="Search products"
+               class="input w-full" autocomplete="off" enterkeyhint="search">
+        <div x-show="results.length" x-cloak @click.outside="results = []"
+             class="absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border border-ink-200 bg-white shadow-float">
+          <template x-for="item in results" :key="item.id">
+            <button type="button" @click="add(item); results = []; query = ''"
+                    class="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left hover:bg-ink-50">
+              <span class="text-sm text-ink-900" x-text="item.name"></span>
+              <span class="tnum shrink-0 text-sm font-medium text-ink-700" x-text="money(item.price)"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+      <button type="button" @click="startScan()" class="btn btn-primary shrink-0" title="Scan a barcode">
+        {% icon "search" %}<span>Scan</span>
+      </button>
+    </div>
+    <div class="mt-2">
+      <button type="button" x-show="!customer" @click="openCustomers()" class="btn btn-secondary btn-sm w-full">
+        {% icon "user" class="h-4 w-4" %} Customer
+      </button>
+      <div x-show="customer" x-cloak class="flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 ring-1 ring-inset ring-brand-600/15">
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-ink-900" x-text="customer && customer.name"></p>
+          <p class="truncate text-xs text-ink-600" x-text="customer ? ((customer.price_list ? customer.price_list + ' prices · ' : '') + 'Credit left ' + money(customer.credit_left)) : ''"></p>
+        </div>
+        <button type="button" @click="openCustomers()" class="text-xs font-medium text-brand-700">Change</button>
+        <button type="button" @click="clearCustomer()" class="px-1 text-ink-400" aria-label="No customer">&times;</button>
+      </div>
+    </div>
+    <p x-show="status" x-cloak x-text="status" class="mt-1.5 text-xs font-medium text-amber-700"></p>
+  </header>
+
+  <!-- Choose a customer -->
+  <div x-show="picking" x-cloak @click.self="picking = false"
+       class="fixed inset-0 z-40 flex items-end justify-center bg-ink-950/50 p-3 backdrop-blur-sm">
+    <div class="flex max-h-[80vh] w-full max-w-sm flex-col rounded-2xl bg-white p-5 shadow-float">
+      <h2 class="text-base font-semibold text-ink-900">Who is buying?</h2>
+      <input type="search" x-model="customerQuery" @input.debounce.250ms="findCustomers()"
+             placeholder="Name or phone" class="input input-lg mt-3" autocomplete="off">
+      <div class="mt-2 flex-1 divide-y divide-ink-100 overflow-y-auto">
+        <template x-for="c in customerResults" :key="c.id">
+          <button type="button" @click="chooseCustomer(c)" class="flex w-full items-center justify-between gap-3 px-1 py-3 text-left">
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-medium text-ink-900" x-text="c.name"></span>
+              <span class="block truncate text-xs text-ink-500" x-text="(c.phone || 'No phone') + (c.price_list ? ' · ' + c.price_list : '')"></span>
+            </span>
+            <span class="tnum shrink-0 text-xs text-ink-500" x-text="'Credit ' + money(c.credit_left)"></span>
+          </button>
+        </template>
+        <p x-show="!customerResults.length" class="py-6 text-center text-sm text-ink-500">Nobody matches that.</p>
+      </div>
+      <button type="button" @click="picking = false" class="btn btn-secondary mt-3 w-full">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Camera -->
+  <div x-show="scanning" x-cloak class="fixed inset-0 z-40 flex flex-col bg-black">
+    <video x-ref="video" playsinline muted class="flex-1 object-cover"></video>
+    <div class="space-y-2 bg-ink-950 p-3">
+      <p class="text-center text-sm text-white" x-text="scanHint"></p>
+      <form @submit.prevent="typedCode()" class="flex gap-2">
+        <input x-model="code" inputmode="numeric" placeholder="Or type the barcode" class="input flex-1">
+        <button type="submit" class="btn btn-secondary">Add</button>
+      </form>
+      <button type="button" @click="stopScan()" class="btn btn-secondary w-full">Done scanning</button>
+    </div>
+  </div>
+
+  <!-- Basket -->
+  <main class="flex-1 space-y-2 p-3 pb-44">
+    <template x-for="(line, i) in lines" :key="line.variant_id">
+      <div class="flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 shadow-sm ring-1 ring-ink-100">
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-medium text-ink-900" x-text="line.name"></p>
+          <p class="tnum text-xs text-ink-500" x-text="money(line.price) + ' each'"></p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" @click="change(line, -1)" class="btn-icon" aria-label="One less">&minus;</button>
+          <span class="tnum w-10 text-center text-sm font-semibold" x-text="line.qty"></span>
+          <button type="button" @click="change(line, 1)" class="btn-icon" aria-label="One more">+</button>
+        </div>
+        <p class="tnum w-20 text-right text-sm font-semibold text-ink-900" x-text="money(line.qty * line.price)"></p>
+      </div>
+    </template>
+    <div x-show="!lines.length && !done" class="py-16 text-center">
+      <p class="text-sm font-medium text-ink-700">The basket is empty</p>
+      <p class="mt-1 text-sm text-ink-500">Scan a barcode or search to start.</p>
+    </div>
+
+    <!-- Finished: a code for the till, or a paid sale -->
+    <div x-show="done" x-cloak class="rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-ink-100">
+      <template x-if="done && done.code">
+        <div>
+          <p class="text-sm text-ink-600">At the till, collect basket</p>
+          <p class="mt-2 font-mono text-5xl font-bold tracking-[0.3em] text-ink-900" x-text="done.code"></p>
+          <p class="mt-2 text-sm text-ink-600" x-text="money(done.total) + ' to pay at the till'"></p>
+        </div>
+      </template>
+      <template x-if="done && done.number">
+        <div>
+          <p class="text-sm font-medium text-emerald-700" x-text="done.onAccount ? 'Put on account' : 'Paid'"></p>
+          <p class="mt-1 text-2xl font-bold text-ink-900" x-text="money(done.total)"></p>
+          <p class="mt-1 text-sm text-ink-600" x-text="'Sale ' + done.number + (done.onAccount ? ' · on ' + done.onAccount + '’s account' : '')"></p>
+        </div>
+      </template>
+      <button type="button" @click="reset()" class="btn btn-primary mt-5 w-full">New basket</button>
+    </div>
+  </main>
+
+  <!-- Finish -->
+  <footer x-show="lines.length && !done" x-cloak class="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t border-ink-200 bg-white p-3">
+    <div class="flex items-baseline justify-between">
+      <span class="text-sm text-ink-600" x-text="count + (count === 1 ? ' item' : ' items')"></span>
+      <span class="tnum text-2xl font-bold text-ink-900" x-text="money(total)"></span>
+    </div>
+    <div class="grid gap-2" :class="canPay ? 'grid-cols-2' : 'grid-cols-1'">
+      <button type="button" @click="handoff()" :disabled="busy" class="btn btn-secondary btn-lg">Send to till</button>
+      <button type="button" x-show="canPay" @click="paying = true" :disabled="busy" class="btn btn-primary btn-lg">Take payment</button>
+    </div>
+    <p x-show="config.may_pay && !canPay && config.pay_limit" class="text-center text-xs text-ink-500"
+       x-text="'Over your phone limit of ' + money(config.pay_limit) + ' — send it to a till.'"></p>
+  </footer>
+
+  <!-- Payment -->
+  <div x-show="paying" x-cloak @click.self="paying = false"
+       class="fixed inset-0 z-40 flex items-end justify-center bg-ink-950/50 p-3 backdrop-blur-sm">
+    <form @submit.prevent="pay()" class="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-float">
+      <div class="flex items-baseline justify-between">
+        <h2 class="text-base font-semibold text-ink-900">Take payment</h2>
+        <span class="tnum text-xl font-bold text-ink-900" x-text="money(total)"></span>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <template x-for="m in methods" :key="m.value">
+          <button type="button" @click="method = m.value"
+                  :class="method === m.value ? 'ring-2 ring-brand-500 bg-brand-50' : 'ring-1 ring-ink-200'"
+                  :disabled="m.value === 'cash' && !config.has_drawer"
+                  class="rounded-xl px-3 py-3 text-sm font-medium text-ink-800 disabled:opacity-40" x-text="m.label"></button>
+        </template>
+      </div>
+      <p x-show="!config.has_drawer" class="text-xs text-ink-500">Cash needs an open till shift, so it is not offered here.</p>
+      <p x-show="method === 'credit'" class="rounded-lg px-3 py-2 text-sm"
+         :class="customer && total > parseFloat(customer.credit_left) ? 'bg-amber-50 text-amber-900' : 'bg-ink-50 text-ink-700'"
+         x-text="customer ? ('Goes on ' + customer.name + '\'s account.' + (total > parseFloat(customer.credit_left) ? ' Over their credit left: the owner is told.' : '')) : ''"></p>
+      <div x-show="method && method !== 'cash' && method !== 'credit'">
+        <label class="label" for="ref">Transaction reference</label>
+        <input id="ref" x-model="reference" class="input input-lg" placeholder="From the payment message" autocomplete="off">
+      </div>
+      <p x-show="error" x-text="error" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"></p>
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" @click="paying = false" class="btn btn-secondary btn-lg">Back</button>
+        <button type="submit" :disabled="busy || !method || (method !== 'cash' && method !== 'credit' && reference.trim().length < 4)"
+                class="btn btn-primary btn-lg col-span-2 disabled:opacity-50">Confirm paid</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'js/phone.js' %}"></script>
+{% endblock %}

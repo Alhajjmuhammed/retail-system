@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Refund {{ sale.number }}{% endblock %}
+{% block heading %}Refund {{ sale.number }}{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-2xl space-y-4" x-data="{ q: {} , get total() { return Object.values(this.q).reduce((a, b) => a + b, 0) } }">
+  {% csrf_token %}
+  <p class="text-sm text-ink-600">
+    The original sale stays exactly as it is. This refund stands beside it.
+  </p>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Sold</th><th class="text-right">Already back</th><th class="text-right">Returning</th></tr></thead>
+      <tbody>
+        {% for line in sale.lines.all %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td>{{ line.description }}</td>
+          <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
+          <td class="text-right text-ink-500">{{ line.qty_returned|floatformat:"-3" }}</td>
+          <td class="text-right">
+            <input type="number" step="0.001" min="0" max="{{ line.returnable|floatformat:'-3' }}" name="qty:{{ line.pk }}"
+                   class="input w-24 py-1.5 text-right text-sm" placeholder="0" {% if not line.returnable %}disabled{% endif %}
+                   @input="q['{{ line.pk }}'] = (parseFloat($event.target.value) || 0) * {{ line.unit_refund|stringformat:'s' }}">
+            <p class="hint">up to {{ line.returnable|floatformat:"-3" }}</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-body space-y-4">
+    <div>
+      <label class="label" for="reason">Why</label>
+      <input type="text" name="reason" id="reason" class="input" required>
+    </div>
+    <div>
+      <label class="label" for="method">Refund as</label>
+      <select name="method" id="method" class="input">
+        {% for p in sale.payments.all %}{% ifchanged p.method %}
+        <option value="{{ p.method }}">{{ p.get_method_display }}</option>
+        {% endifchanged %}{% endfor %}
+      </select>
+      <p class="hint">Refunded the way it was paid. A cash refund comes out of your open drawer.</p>
+    </div>
+    <label class="flex items-center gap-2.5 text-sm text-ink-700">
+      <input type="checkbox" name="restock" checked class="checkbox">
+      Put it back on the shelf
+      <span class="hint ml-1">Leave unticked for damaged goods.</span>
+    </label>
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-sm text-ink-600">Refund <strong class="tnum text-ink-900" x-text="new Intl.NumberFormat('en-US', {maximumFractionDigits: 0}).format(total)">0</strong></p>
+      <span class="flex gap-2">
+        <a href="{{ back }}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary" :disabled="total <= 0">Refund</button>
+      </span>
+    </div>
+  </div>
+</form>
+{% endblock %}

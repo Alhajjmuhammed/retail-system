@@ -1,0 +1,16 @@
+{% comment %}Radio list of platform roles. Needs: roles [(role, allowed)], current (role pk or "").{% endcomment %}
+<div class="space-y-2">
+  {% for role, allowed in roles %}
+  <label class="flex items-start gap-3 rounded-xl px-3.5 py-3 ring-1 ring-ink-200 {% if allowed %}cursor-pointer hover:bg-ink-50 has-[:checked]:bg-brand-50 has-[:checked]:ring-brand-400{% else %}opacity-60{% endif %}">
+    <input type="radio" name="role" value="{{ role.pk }}" class="mt-0.5"
+           {% if current|stringformat:"s" == role.pk|stringformat:"s" %}checked{% endif %} {% if not allowed %}disabled{% endif %} required>
+    <span class="min-w-0 flex-1">
+      <span class="flex items-center justify-between gap-2">
+        <span class="text-sm font-medium text-ink-900">{{ role.name }}</span>
+        <span class="text-xs text-ink-500">{% if role.is_super %}everything{% else %}{{ role.permission_set|length }} permission{{ role.permission_set|length|pluralize }}{% endif %}</span>
+      </span>
+      <span class="hint block">{{ role.description }}{% if not allowed %} &middot; <em>can do things you cannot</em>{% endif %}</span>
+    </span>
+  </label>
+  {% endfor %}
+</div>

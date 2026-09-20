@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Open shift{% endblock %}
+{% block heading %}Open your shift{% endblock %}
+
+{% block content %}
+{% if not registers %}
+<div class="mx-auto max-w-sm card card-body text-center">
+  {% include "partials/empty.html" with icon="cart" title="No till at "|add:request.branch.name text="A shift runs on a till, and this branch has none yet." %}
+  {% can_do "branch.manage" as may_branch %}
+  {% if may_branch %}<a href="{% url 'org:branches' %}" class="btn btn-primary mt-3">Add a till</a>
+  {% else %}<p class="hint mt-3">Ask the owner or a manager to add one.</p>{% endif %}
+</div>
+{% else %}
+<form method="post" class="mx-auto max-w-sm space-y-4">
+  {% csrf_token %}
+  <div class="card card-body space-y-4">
+    <div>
+      <label class="label" for="register">Till</label>
+      <select name="register" id="register" class="input" required>
+        {% for r in registers %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="label" for="opening_float">Cash in the drawer now</label>
+      <input type="number" step="0.01" min="0" name="opening_float" id="opening_float" value="0"
+             inputmode="numeric" class="input py-3 text-lg" required>
+      <p class="hint">Count it before you start. This is what the end-of-day figure is measured against.</p>
+    </div>
+    <button type="submit" class="btn btn-primary w-full btn-lg">Start selling</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

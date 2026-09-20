@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Expenses{% endblock %}
+{% block heading %}Expenses{% endblock %}
+{% block content %}
+{% can_do "expense.approve" as may_approve %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="stat"><p class="stat-label">This month</p><p class="stat-value">{{ month_total|floatformat:0|intcomma }}</p></div>
+    <a href="?state=waiting" class="stat transition hover:border-brand-300 {% if f.state == 'waiting' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Waiting for approval</p><p class="stat-value {% if waiting %}text-amber-700{% endif %}">{{ waiting }}</p></a>
+    <div class="stat"><p class="stat-label">Shown below</p><p class="stat-value">{{ shown_total|floatformat:0|intcomma }}</p></div>
+    <div class="flex items-center justify-end">
+      <a href="{% url 'finance:expense_create' %}" hx-get="{% url 'finance:expense_create' %}" hx-target="#modal" class="btn btn-primary w-full sm:w-auto">{% icon "plus" %} Record an expense</a>
+    </div>
+  </div>
+
+  <form method="get" class="card card-body grid grid-cols-2 gap-2 {% if branches|length > 1 %}lg:grid-cols-8{% else %}lg:grid-cols-7{% endif %}" x-data @change="$el.submit()">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="What for, reference" aria-label="Search" class="input col-span-2">
+    <select name="category" class="input" aria-label="Category"><option value="">Any category</option>{% for c in categories %}<option value="{{ c.pk }}" {% if f.category == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="method" class="input" aria-label="Paid by"><option value="">Any method</option>{% for value, label in methods %}<option value="{{ value }}" {% if f.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <select name="state" class="input" aria-label="Approval"><option value="">Approved or not</option><option value="waiting" {% if f.state == "waiting" %}selected{% endif %}>Waiting</option><option value="approved" {% if f.state == "approved" %}selected{% endif %}>Approved</option></select>
+    <input type="date" name="from" value="{{ f.from|date:'Y-m-d' }}" class="input" aria-label="From">
+    <input type="date" name="to" value="{{ f.to|date:'Y-m-d' }}" class="input" aria-label="To">
+    {% if branches|length > 1 %}<select name="branch" class="input col-span-2 lg:col-span-1" aria-label="Branch"><option value="">All branches</option>{% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Date</th><th>Category</th><th>What for</th><th>By</th><th class="text-right">Amount</th><th></th></tr></thead>
+      <tbody>
+        {% for e in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td class="whitespace-nowrap text-ink-500">{{ e.spent_at|date:"j M Y" }}{% if branches|length > 1 %}<p class="hint">{{ e.branch.name }}</p>{% endif %}</td>
+          <td class="text-ink-800">{{ e.category.name }}<p class="hint">{% if e.method == "mpesa" %}Mobile money{% else %}{{ e.method|capfirst }}{% endif %}{% if e.reference %} &middot; {{ e.reference }}{% endif %}</p></td>
+          <td class="max-w-xs break-words text-ink-600">{{ e.description|default:"—" }}{% if e.attachment %} <a href="{% url 'finance:expense_attachment' e.pk %}" target="_blank" class="row-link text-brand-700 hover:underline">receipt</a>{% endif %}</td>
+          <td class="text-ink-500">{{ e.created_by.name|default:"—" }}</td>
+          <td class="tnum text-right font-medium">{{ e.amount|floatformat:0|intcomma }}
+            {% if e.approved_by_id %}<p class="hint text-emerald-700">approved by {{ e.approved_by.name }}</p>{% else %}<p class="hint text-amber-700">waiting</p>{% endif %}
+          </td>
+          <td class="whitespace-nowrap text-right">
+            {% if may_approve and not e.approved_by_id and e.created_by_id != request.user.pk %}
+            <form method="post" action="{% url 'finance:expense_approve' e.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ e.amount|floatformat:0|intcomma }} for {{ e.category.name|escapejs }}?', body: 'An approved expense can no longer be edited.', label: 'Approve', danger: false })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-brand" title="Approve" aria-label="Approve">{% icon "check" class="h-4 w-4" %}</button>
+            </form>
+            {% endif %}
+            {% if not e.approved_by_id %}
+            <a href="{% url 'finance:expense_edit' e.pk %}" hx-get="{% url 'finance:expense_edit' e.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit" aria-label="Edit">{% icon "pencil" class="h-4 w-4" %}</a>
+            {% endif %}
+            {% if may_approve %}
+            <form method="post" action="{% url 'finance:expense_delete' e.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Remove this expense?', body: 'Only for one entered by mistake. It is kept in the activity log.', label: 'Remove' })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-danger" title="Remove" aria-label="Remove">{% icon "trash" class="h-4 w-4" %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="wallet" title="No expenses here" text="Rent, transport, wages — anything that is not stock." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+
+  {% if may_approve and categories %}
+  <details class="card">
+    <summary class="card-head cursor-pointer"><span class="card-title">Categories</span><span class="hint">One already used is switched off rather than deleted.</span></summary>
+    <div class="flex flex-wrap gap-1.5 p-5">
+      {% for c in categories %}
+      <span class="badge badge-muted gap-1.5">
+        {{ c.name }}
+        <form method="post" action="{% url 'finance:expense_category_delete' c.pk %}" class="inline" x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ c.name|escapejs }}?', label: 'Remove' })">
+          {% csrf_token %}
+          <button type="submit" class="-my-1.5 -mr-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full opacity-50 transition hover:bg-ink-200 hover:opacity-100" title="Remove {{ c.name }}" aria-label="Remove {{ c.name }}">&times;</button>
+        </form>
+      </span>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

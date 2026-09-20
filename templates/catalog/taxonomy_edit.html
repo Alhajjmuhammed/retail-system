@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ label }}{% endblock %}
+{% block heading %}{{ label }}: {{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-md card">
+  {% include "catalog/_taxonomy_form.html" with modal=False %}
+</div>
+{% endblock %}

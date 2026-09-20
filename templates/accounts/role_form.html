@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{% if role %}{{ role.name }}{% else %}New role{% endif %}{% endblock %}
+{% block heading %}{% if role %}{{ role.name }}{% else %}New role{% endif %}{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-4xl space-y-6">
+  {% csrf_token %}
+
+  <div class="card">
+    <div class="card-body space-y-4">
+      <div>
+        <label class="label" for="{{ form.name.id_for_label }}">Role name</label>
+        {{ form.name }}
+        {% if form.name.errors %}<p class="hint text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="label" for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+      </div>
+    </div>
+  </div>
+
+  {% if groups %}
+  <div class="space-y-5">
+    <div>
+      <h2 class="text-base font-semibold text-ink-900">What this role can do</h2>
+      <p class="mt-1 text-sm text-ink-600">
+        Tick what they may do. Where a limit is offered, leaving it blank means no limit.
+      </p>
+    </div>
+
+    {% for module, items in groups.items %}
+    <div class="card">
+      <div class="border-b border-ink-200 px-5 py-3">
+        <h3 class="text-sm font-semibold text-ink-900">{{ module }}</h3>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for item in items %}
+        <div x-data="{ on: {{ item.granted|yesno:'true,false' }} }"
+             class="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3 {% if not item.available %}opacity-60{% endif %}">
+
+          <label class="flex flex-1 min-w-0 items-center gap-3 {% if item.available %}cursor-pointer{% endif %}">
+            <input type="checkbox" name="grant:{{ item.permission.code }}"
+                   x-model="on"
+                   {% if not item.available %}disabled{% endif %}
+                   class="checkbox">
+            <span class="min-w-0">
+              <span class="block text-sm text-ink-800">{{ item.permission.label }}</span>
+              {% if not item.available %}
+                <span class="hint">Not included in your plan</span>
+              {% elif item.permission.is_dangerous %}
+                <span class="hint">A manager can approve this on the spot if withheld</span>
+              {% endif %}
+            </span>
+          </label>
+
+          {% if item.takes_limit and item.available %}
+          <div x-show="on" x-cloak class="flex items-center gap-2">
+            <span class="text-xs text-ink-500">up to</span>
+            <input type="number" step="0.01" min="0"
+                   name="limit:{{ item.permission.code }}"
+                   value="{{ item.limit|default_if_none:'' }}"
+                   placeholder="{% if item.permission.value_type == 'percent' %}%{% else %}no limit{% endif %}"
+                   class="input w-32 py-1.5 text-sm">
+            {% if item.permission.value_type == "percent" %}
+              <span class="text-xs text-ink-500">%</span>
+            {% else %}
+              <span class="text-xs text-ink-500">{{ tenant.currency }}</span>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if item.takes_options and item.available %}
+          <div x-show="on" x-cloak class="flex flex-wrap items-center gap-3">
+            {% for choice in item.choices %}
+            <label class="flex items-center gap-1.5 text-xs text-ink-600">
+              <input type="checkbox" name="options:{{ item.permission.code }}" value="{{ choice }}"
+                     {% if choice in item.options %}checked{% endif %}
+                     class="h-3.5 w-3.5 rounded border-ink-300 text-brand-700 focus:ring-brand-600">
+              {{ choice }}
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="flex items-center gap-3">
+    <button type="submit" class="btn btn-primary">
+      {% if role %}Save changes{% else %}Create role{% endif %}
+    </button>
+    <a href="{% url 'accounts:roles' %}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% comment %}
+The platform admin is yours, not a shop's. A dark sidebar so it is never
+mistaken for a tenant screen during a support session, and the same shape as
+the app so moving between them is not jarring.
+{% endcomment %}
+
+{% block body %}
+<div class="flex min-h-full bg-ink-50"
+     x-data="{
+       mobileNav: false,
+       collapsed: localStorage.getItem('platform-nav-collapsed') === 'true',
+     }">
+
+  {# Sticky and full height, so sign-out stays reachable on a long page. #}
+  <aside class="sidebar hidden bg-ink-900 lg:flex"
+         :class="collapsed ? 'w-16 nav-collapsed' : 'w-60'">
+    {% include "platform/nav.html" %}
+  </aside>
+
+  <div x-show="mobileNav" x-cloak class="fixed inset-0 z-40 lg:hidden">
+    <div @click="mobileNav = false" class="absolute inset-0 bg-ink-950/50"></div>
+    <div class="absolute inset-y-0 left-0 flex w-64 flex-col bg-ink-900 shadow-float">
+      {% include "platform/nav.html" %}
+    </div>
+  </div>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-ink-200/80 bg-white/90 px-4 backdrop-blur sm:px-6">
+      <div class="flex min-w-0 items-center gap-3">
+        {% include "partials/nav_toggle.html" with storage_key="platform-nav-collapsed" %}
+        <h1 class="page-title">{% block heading %}{% endblock %}</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="hidden text-xs text-ink-500 sm:block">{{ user.email }}</span>
+        <a href="{% url 'core:dashboard' %}" class="btn btn-secondary btn-sm">Back to app</a>
+      </div>
+    </header>
+
+    <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      {% include "partials/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+
+    {% comment %}
+    Every add and edit form loads in here. Emptied whenever one closes, so a
+    stale form is never left behind the next one.
+    {% endcomment %}
+    <div id="modal"></div>
+    {% include "partials/confirm.html" %}
+  </div>
+</div>
+{% endblock %}

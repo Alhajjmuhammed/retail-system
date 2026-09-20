@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Activity{% endblock %}
+{% block heading %}Who did what{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <p class="section-lead">
+    Every discount, void, refund, stock adjustment and permission change, with
+    the name of who did it and &mdash; when it needed approval &mdash; who
+    approved it. Nothing here can be edited or removed.
+  </p>
+
+  <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    {% for item in highlights %}
+    <a href="?action={{ item.code }}&days={{ days }}"
+       class="stat transition hover:border-brand-300 hover:shadow-raised">
+      <p class="stat-label">{{ item.label }}</p>
+      <p class="stat-value {% if item.count %}text-ink-900{% else %}text-ink-300{% endif %}">{{ item.count }}</p>
+    </a>
+    {% endfor %}
+  </div>
+
+  <form hx-get="{% url 'accounts:audit_log' %}" hx-target="#audit-rows"
+        hx-trigger="input changed delay:250ms from:input, change from:select"
+        class="flex flex-wrap gap-2">
+    <input type="search" name="q" value="{{ q }}" placeholder="Action, person or record" class="input w-56" autocomplete="off">
+    <select name="action" class="input w-56">
+      <option value="">Anything</option>
+      {% for row in actions %}
+        <option value="{{ row.action }}" {% if action == row.action %}selected{% endif %}>{{ row.action }} ({{ row.count }})</option>
+      {% endfor %}
+    </select>
+    <select name="who" class="input w-44">
+      <option value="">Anyone</option>
+      {% for person in people %}
+        <option value="{{ person.pk }}" {% if who == person.pk %}selected{% endif %}>{{ person.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="days" class="input w-36">
+      <option value="7" {% if days == 7 %}selected{% endif %}>Last week</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>Last month</option>
+      <option value="90" {% if days == 90 %}selected{% endif %}>Last 3 months</option>
+      <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+    </select>
+  </form>
+
+  <div id="audit-rows">{% include "accounts/_audit_rows.html" %}</div>
+</div>
+{% endblock %}

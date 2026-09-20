@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Switch business{% endblock %}
+{% block heading %}Switch business{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-lg space-y-2.5">
+  {% csrf_token %}
+  <p class="section-lead mb-4">You belong to more than one business. Pick the one to work in.</p>
+  {% for membership in memberships %}
+  <button type="submit" name="tenant_id" value="{{ membership.tenant_id }}"
+          class="card flex w-full items-center gap-3.5 p-4 text-left transition hover:border-brand-300 hover:shadow-raised">
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-sm font-bold text-brand-800">
+      {{ membership.tenant.name|slice:":1"|upper }}
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block truncate font-medium text-ink-900">{{ membership.tenant.name }}</span>
+      <span class="text-xs text-ink-500">{{ membership.role.name }}</span>
+    </span>
+    {% if membership.tenant_id == tenant.id %}<span class="badge badge-ok">current</span>{% endif %}
+  </button>
+  {% endfor %}
+</form>
+{% endblock %}

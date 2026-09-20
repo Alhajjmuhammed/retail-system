@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Subscription{% endblock %}
+{% block heading %}Subscription{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-5">
+  {% if not subscription %}
+  <div class="card card-body text-sm text-ink-600">This shop has no plan yet. Contact support to choose one.</div>
+  {% endif %}
+  {% if unpaid %}
+  <div class="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/20">
+    {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
+    <span><strong>{{ owed|floatformat:0|intcomma }}</strong> to pay on {{ unpaid|length }} invoice{{ unpaid|length|pluralize }}.
+      Pay by mobile money or bank using the invoice number as the reference; it is marked paid once received.</span>
+  </div>
+  {% endif %}
+
+  {% if subscription %}
+  <div class="card card-body">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide text-ink-500">Current plan</p>
+        <p class="mt-1 text-xl font-semibold text-ink-900">{{ subscription.plan.name }}</p>
+        {% if subscription.plan.description %}<p class="hint">{{ subscription.plan.description }}</p>{% endif %}
+        <p class="mt-2 text-sm text-ink-600">
+          {% if subscription.status == "trialing" and subscription.trial_ends_at %}Free trial until {{ subscription.trial_ends_at|date:"j M Y" }}
+          {% elif subscription.period_end %}Paid up to {{ subscription.period_end|date:"j M Y" }}
+          {% endif %}
+          {% if subscription.get_cycle_display %} &middot; billed {{ subscription.get_cycle_display|lower }}{% endif %}
+        </p>
+      </div>
+      <span class="badge {% if subscription.is_read_only %}badge-danger{% elif subscription.status == 'trialing' or subscription.status == 'past_due' %}badge-warn{% else %}badge-ok{% endif %}">
+        {{ subscription.get_status_display }}
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Usage</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for row in usage %}
+      <div class="px-5 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-ink-700">{{ row.label }}</span>
+          <span class="text-sm font-medium text-ink-900">{{ row.used }} <span class="text-ink-400">of {% if row.unlimited %}unlimited{% else %}{{ row.allowed }}{% endif %}</span></span>
+        </div>
+        {% if not row.unlimited %}<div class="mt-1.5 h-1.5 overflow-hidden rounded bg-ink-100"><div class="h-full rounded {% if row.pct >= 100 %}bg-red-500{% elif row.pct >= 80 %}bg-amber-500{% else %}bg-brand-600{% endif %}" style="width: {{ row.pct }}%"></div></div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Invoices</h2></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Number</th><th>Period</th><th>Due</th><th>Status</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="font-mono text-xs text-ink-800">{{ inv.number }}</td>
+            <td class="whitespace-nowrap text-ink-600">{{ inv.period_start|date:"j M" }} &ndash; {{ inv.period_end|date:"j M Y" }}</td>
+            <td class="{% if inv.status == 'open' and inv.due_date and inv.due_date < today %}text-red-600{% else %}text-ink-600{% endif %}">{{ inv.due_date|date:"j M Y"|default:"—" }}</td>
+            <td><span class="badge {% if inv.status == 'paid' %}badge-ok{% elif inv.status == 'open' %}badge-warn{% else %}badge-muted{% endif %}">{{ inv.get_status_display }}</span></td>
+            <td class="tnum text-right font-medium">{{ inv.currency }} {{ inv.total|floatformat:0|intcomma }}{% if inv.status == 'open' and inv.left != inv.total %}<p class="hint">{{ inv.left|floatformat:0|intcomma }} left</p>{% endif %}</td>
+          </tr>
+          {% empty %}<tr><td colspan="6" class="py-8 text-center text-sm text-ink-500">No invoices yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Included in your plan</h2></div>
+    <div class="flex flex-wrap gap-2 p-5">
+      {% for feature in features %}<span class="badge badge-muted">{{ feature }}</span>{% empty %}<p class="text-sm text-ink-500">The basics only.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Bad request{% endblock %}
+{% block body %}
+<div class="flex min-h-full items-center justify-center px-5 py-12">
+  <div class="w-full max-w-md text-center">
+    <h1 class="text-xl font-semibold tracking-tight text-ink-900">That request did not make sense</h1>
+    <p class="mt-2 text-sm text-ink-500">Go back and try again.</p>
+    <a href="/" class="btn btn-primary mt-6">Back to the dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% include "partials/modal_open.html" with title="You cannot do that" width="max-w-md" %}
+<div class="space-y-4 p-5">
+  <p class="text-sm text-ink-700">{{ decision.reason }}</p>
+  <p class="hint">Nothing was saved.</p>
+  <div class="flex justify-end"><button type="button" @click="$root.remove()" class="btn btn-secondary">Close</button></div>
+</div>
+{% include "partials/modal_close.html" %}

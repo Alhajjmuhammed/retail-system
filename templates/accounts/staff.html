@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Staff{% endblock %}
+{% block heading %}Staff{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <form method="get" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" x-data @change="$el.submit()">
+      <input type="search" name="q" value="{{ q }}" placeholder="Name, email or role" aria-label="Find someone" class="input col-span-2 w-full sm:w-64">
+      <select name="status" class="input w-full sm:w-40" aria-label="Status">
+        <option value="">Everyone</option>
+        <option value="active" {% if status == "active" %}selected{% endif %}>Can sign in</option>
+        <option value="suspended" {% if status == "suspended" %}selected{% endif %}>Suspended{% if suspended %} ({{ suspended }}){% endif %}</option>
+      </select>
+    </form>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'accounts:staff_invite' %}" class="btn btn-secondary">{% icon "users" %} Invite by link</a>
+      <a href="{% url 'accounts:staff_create' %}" class="btn btn-primary">{% icon "plus" %} Add staff</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th class="w-12 text-right">SN</th><th>Name</th><th>Role</th><th>Works at</th><th>Exceptions</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for m in memberships %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td>
+            <span class="font-medium text-ink-900">{{ m.user.name }}</span>{% if m.user_id == request.user.pk %} <span class="hint">(you)</span>{% endif %}
+            <p class="hint">{{ m.user.email }}</p>
+          </td>
+          <td class="text-ink-600">{{ m.role.name }}</td>
+          <td class="text-ink-600">
+            {% if m.role.is_owner_role or m.all_branches %}All branches
+            {% else %}
+              {% for link in m.branch_links.all %}{{ link.branch.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-ink-400">None set</span>{% endfor %}
+            {% endif %}
+          </td>
+          <td>{% if m.exceptions %}<span class="badge badge-warn">{{ m.exceptions }}</span>{% else %}<span class="text-ink-400">&mdash;</span>{% endif %}</td>
+          <td>{% if m.is_active %}<span class="badge badge-ok">Active</span>{% else %}<span class="badge badge-danger">Suspended</span>{% endif %}</td>
+          <td class="whitespace-nowrap text-right">
+            {% if m.may_manage or m.user_id == request.user.pk %}
+            <a href="{% url 'accounts:staff_edit' m.pk %}" class="btn-icon btn-icon-brand" title="Edit {{ m.user.name }}" aria-label="Edit {{ m.user.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+            {% endif %}
+            {% if m.may_manage %}
+            <form method="post" action="{% url 'accounts:staff_toggle' m.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: '{% if m.is_active %}Suspend{% else %}Reactivate{% endif %} {{ m.user.name|escapejs }}?', body: '{% if m.is_active %}They cannot sign in here until you reactivate them. Nothing they recorded changes.{% else %}They can sign in again with their existing password.{% endif %}', label: '{% if m.is_active %}Suspend{% else %}Reactivate{% endif %}', danger: {% if m.is_active %}true{% else %}false{% endif %} })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon {% if m.is_active %}btn-icon-danger{% else %}btn-icon-brand{% endif %}" title="{% if m.is_active %}Suspend{% else %}Reactivate{% endif %} {{ m.user.name }}" aria-label="{% if m.is_active %}Suspend{% else %}Reactivate{% endif %} {{ m.user.name }}">{% if m.is_active %}{% icon "suspend" class="h-4 w-4" %}{% else %}{% icon "restore" class="h-4 w-4" %}{% endif %}</button>
+            </form>
+            <form method="post" action="{% url 'accounts:staff_remove' m.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ m.user.name|escapejs }} from the team?', body: 'Everything they recorded stays.', label: 'Remove' })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-danger" title="Remove {{ m.user.name }}" aria-label="Remove {{ m.user.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+            </form>
+            {% endif %}
+            {% if not m.may_manage and m.user_id != request.user.pk %}<span class="hint" title="They can do things you cannot. Ask an owner.">owner only</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">{% include "partials/empty.html" with icon="users" title="Nobody matches" text="Try another name or clear the filter." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pending %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Invitations not yet accepted</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for inv in pending %}
+      <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 text-sm">
+        <span class="min-w-0"><span class="font-medium text-ink-800">{{ inv.email }}</span> <span class="hint">as {{ inv.role.name }} &middot; expires {{ inv.expires_at|date:"j M" }}</span></span>
+        <span class="flex items-center gap-1">
+          <a href="{% url 'accounts:staff_invite_sent' inv.pk %}" class="btn-icon btn-icon-brand" title="Show the link" aria-label="Show the link for {{ inv.email }}">{% icon "enter" class="h-4 w-4" %}</a>
+          <form method="post" action="{% url 'accounts:staff_invite_cancel' inv.pk %}" class="inline" x-data
+                @submit.prevent="$store.confirm.ask($el, { title: 'Cancel the invitation to {{ inv.email|escapejs }}?', body: 'The link stops working.', label: 'Cancel it' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger" title="Cancel invitation" aria-label="Cancel invitation to {{ inv.email }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Stock counts{% endblock %}
+{% block heading %}Stock counts{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <p class="text-sm text-ink-600">
+      Starting a count freezes what the system believes right now, so the counter is
+      measured against that rather than against an hour of later trading.
+    </p>
+    {% if open_count %}
+    <a href="{% url 'inventory:count_detail' open_count.pk %}" class="btn btn-primary shrink-0">Continue {{ open_count.reference }}</a>
+    {% else %}
+    <form method="post" action="{% url 'inventory:count_create' %}" class="shrink-0" x-data
+          @submit.prevent="$store.confirm.ask($el, { title: 'Start a count now?', body: 'What the system holds for every product here is frozen as of this moment.', label: 'Start', danger: false })">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">{% icon "plus" %} Start a count</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <form method="get" class="flex gap-2" x-data @change="$el.submit()">
+    <select name="status" class="input w-full sm:w-44" aria-label="Status">
+      <option value="">Any status</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Started</th><th>Status</th><th class="text-right">Value difference</th><th></th></tr></thead>
+      <tbody>
+        {% for c in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td class="font-medium text-ink-900">{{ c.reference }}</td>
+          <td class="text-ink-600">{{ c.created_at|date:"j M H:i" }}</td>
+          <td><span class="badge {% if c.status == 'applied' %}badge-ok{% elif c.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ c.get_status_display }}</span>{% if c.applied_by %}<p class="hint">by {{ c.applied_by.name }}</p>{% endif %}</td>
+          <td class="text-right {% if c.total_variance_value < 0 %}text-red-600{% endif %}">{{ c.total_variance_value|floatformat:0|intcomma }}</td>
+          <td class="text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <a href="{% url 'inventory:count_detail' c.pk %}" class="btn-icon btn-icon-brand" title="Open {{ c.reference }}" aria-label="Open {{ c.reference }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
+              {% if c.status == "open" %}
+              <form method="post" action="{% url 'inventory:count_cancel' c.pk %}"
+                    x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Abandon {{ c.reference|escapejs }}?', body: 'What was typed is kept for the record; nothing is applied to stock.', label: 'Abandon' })">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon btn-icon-danger" title="Abandon {{ c.reference }}" aria-label="Abandon {{ c.reference }}">{% icon "trash" class="h-4 w-4" %}</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="clipboard" title="No counts yet" text="A count freezes what the system believes, then records every difference." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

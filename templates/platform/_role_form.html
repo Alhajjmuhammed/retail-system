@@ -1,0 +1,59 @@
+{% comment %}Create or edit a platform role by ticking what it may do.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-12">
+  <div class="w-full max-w-2xl rounded-2xl bg-white shadow-float">
+{% endif %}
+{% include "platform/_modal_head.html" with title=role.name|default:"New role" subtitle="Tick what somebody with this role may do. You can only tick what you can do yourself." %}
+
+<form {% if modal %}hx-post="{% if role %}{% url 'platform:role_edit' role.pk %}{% else %}{% url 'platform:role_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %}
+      class="p-5">
+  {% csrf_token %}
+  {% include "platform/_form_errors.html" %}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="label" for="name">Name</label>
+      <input name="name" id="name" value="{% if values %}{{ values.name }}{% else %}{{ role.name|default:'' }}{% endif %}" class="input" required autofocus placeholder="e.g. Support">
+    </div>
+    <div>
+      <label class="label" for="description">What it is for</label>
+      <input name="description" id="description" value="{% if values %}{{ values.description }}{% else %}{{ role.description|default:'' }}{% endif %}" class="input" placeholder="Optional">
+    </div>
+  </div>
+
+  <div class="mt-5 space-y-3">
+    {% for group, perms in catalogue %}
+    <fieldset class="rounded-xl ring-1 ring-ink-100" x-data>
+      <div class="flex items-center justify-between gap-3 border-b border-ink-100 bg-ink-50/60 px-3.5 py-2">
+        <legend class="text-xs font-semibold uppercase tracking-wide text-ink-600">{{ group }}</legend>
+        <button type="button" class="text-xs font-medium text-brand-700 hover:underline"
+                @click="const boxes = [...$root.querySelectorAll('input:not(:disabled)')]; const on = !boxes.every(b => b.checked); boxes.forEach(b => b.checked = on)">
+          All / none
+        </button>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for code, label, help in perms %}
+        <label class="flex items-start gap-3 px-3.5 py-2.5 {% if code in mine %}cursor-pointer hover:bg-ink-50/60{% else %}opacity-60{% endif %}">
+          <input type="checkbox" name="perms" value="{{ code }}" class="checkbox mt-0.5"
+                 {% if code in held %}checked{% endif %} {% if code not in mine %}disabled{% endif %}>
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-ink-800">{{ label }}</span>
+            <span class="hint block">{{ help }}{% if code not in mine %} &middot; <em>you do not hold this{% if code in held %}, so it is kept as it is{% endif %}</em>{% endif %}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save role</button>
+  </div>
+</form>
+{% if modal %}
+  </div>
+</div>
+{% endif %}

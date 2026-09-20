@@ -1,0 +1,71 @@
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-12">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+    <div class="flex items-start justify-between gap-4 border-b border-ink-100 px-5 py-4">
+      <div>
+        <h2 class="text-base font-semibold tracking-tight text-ink-900">Set up a shop</h2>
+        <p class="hint">They can sign in the moment you finish &mdash; tell them the password directly.</p>
+      </div>
+      <button type="button" @click="$root.remove()" class="-mr-1 -mt-1 rounded-lg p-1.5 text-ink-400 hover:bg-ink-100" aria-label="Close">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+{% endif %}
+
+<form {% if modal %}hx-post="{% url 'platform:tenant_create' %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %}
+      class="p-5">
+  {% csrf_token %}
+  {% include "platform/_form_errors.html" %}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="sm:col-span-2">
+      <label class="label" for="business_name">Business name</label>
+      <input name="business_name" id="business_name" value="{{ values.business_name|default:'' }}"
+             class="input" placeholder="Duka la Salma" required autofocus>
+    </div>
+    <div>
+      <label class="label" for="branch_name">First branch</label>
+      <input name="branch_name" id="branch_name" value="{{ values.branch_name|default:'Main' }}" class="input">
+    </div>
+    <div>
+      <label class="label" for="plan">Plan</label>
+      <select name="plan" id="plan" class="input">
+        {% for p in plans %}<option value="{{ p.pk }}" {% if p.code == "business" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="divider my-5"></div>
+  <p class="mb-4 text-sm font-medium text-ink-700">The owner</p>
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="label" for="name">Their name</label>
+      <input name="name" id="name" value="{{ values.name|default:'' }}" class="input" required>
+    </div>
+    <div>
+      <label class="label" for="phone">Phone</label>
+      <input name="phone" id="phone" value="{{ values.phone|default:'' }}" class="input">
+    </div>
+    <div class="sm:col-span-2">
+      <label class="label" for="email">Email</label>
+      <input type="email" name="email" id="email" value="{{ values.email|default:'' }}" class="input" required>
+    </div>
+    <div class="sm:col-span-2">
+      <label class="label" for="password">Password</label>
+      <input type="text" name="password" id="password" class="input" required>
+      <p class="hint">At least 8 characters. Nothing is emailed.</p>
+    </div>
+  </div>
+
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Create the shop</button>
+  </div>
+</form>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

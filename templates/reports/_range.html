@@ -1,0 +1,20 @@
+<form method="get" class="card card-body flex flex-wrap items-end gap-2" x-data>
+  <div class="flex flex-wrap gap-1.5 basis-full">
+    {% for value, label in presets %}<a href="?preset={{ value }}{% if branch_id %}&amp;branch={{ branch_id }}{% endif %}" class="rounded-full px-3 py-2 text-xs font-medium ring-1 ring-inset sm:py-1 {% if preset == value %}bg-brand-600 text-white ring-brand-600{% else %}text-ink-600 ring-ink-200 hover:bg-ink-50{% endif %}">{{ label }}</a>{% endfor %}
+  </div>
+  {% if not hide_dates %}
+  <div><label class="label" for="from">From</label><input type="date" name="from" id="from" value="{{ start|date:'Y-m-d' }}" class="input"></div>
+  <div><label class="label" for="to">To</label><input type="date" name="to" id="to" value="{{ end|date:'Y-m-d' }}" class="input"></div>
+  {% endif %}
+  {% if all_branches|length > 1 %}
+  <div><label class="label" for="branch">Branch</label>
+    <select name="branch" id="branch" class="input" @change="$el.form.submit()">
+      <option value="">All my branches</option>
+      {% for b in all_branches %}<option value="{{ b.pk }}" {% if branch_id == b.pk %}selected{% endif %}>{{ b.name }}{% if not b.is_active %} (closed){% endif %}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <button type="submit" class="btn btn-secondary">Show</button>
+  {% can_do "report.export" as may_export %}
+  {% if may_export and not hide_dates %}<a href="{% url 'reports:export' %}?{{ keep }}" class="btn btn-secondary">{% icon "download" %} Download CSV</a>{% endif %}
+</form>

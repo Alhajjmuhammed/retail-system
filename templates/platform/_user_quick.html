@@ -1,0 +1,77 @@
+{% comment %}A person at a glance, opened from the People list.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+{% endif %}
+
+<div class="flex items-start justify-between gap-4 border-b border-ink-100 px-5 py-4">
+  <div class="flex min-w-0 items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold
+      {% if person.is_platform_staff %}bg-brand-600 text-white{% else %}bg-brand-100 text-brand-800{% endif %}">
+      {{ person.name|default:person.email|slice:":1"|upper }}
+    </span>
+    <div class="min-w-0">
+      <h2 class="truncate text-base font-semibold tracking-tight text-ink-900">{{ person.name|default:person.email }}</h2>
+      <p class="hint truncate">{{ person.email }}{% if person.phone %} &middot; {{ person.phone }}{% endif %}</p>
+    </div>
+  </div>
+  {% if modal %}
+  <button type="button" @click="$root.remove()" class="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-ink-400 hover:bg-ink-100" aria-label="Close">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  {% endif %}
+</div>
+
+<div class="space-y-4 p-5">
+  <div class="grid grid-cols-3 gap-3">
+    <div class="rounded-xl px-3 py-2.5 {% if person.is_active %}bg-ink-50{% else %}bg-red-50{% endif %}">
+      <p class="text-xs text-ink-500">Status</p>
+      <p class="mt-0.5 text-sm font-semibold {% if person.is_active %}text-emerald-700{% else %}text-red-700{% endif %}">
+        {% if person.is_active %}Active{% else %}Deactivated{% endif %}
+      </p>
+    </div>
+    <div class="rounded-xl px-3 py-2.5 {% if person.last_login %}bg-ink-50{% else %}bg-amber-50{% endif %}">
+      <p class="text-xs text-ink-500">Last signed in</p>
+      <p class="mt-0.5 text-sm font-semibold text-ink-900">{% if person.last_login %}{{ person.last_login|ago }}{% else %}Never{% endif %}</p>
+    </div>
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5">
+      <p class="text-xs text-ink-500">Joined</p>
+      <p class="mt-0.5 text-sm font-semibold text-ink-900">{{ person.created_at|date:"j M Y" }}</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">
+      {% if person.is_platform_staff %}{{ person.platform_role.name|default:"Super admin" }} &middot; {% endif %}Shops
+    </p>
+    <div class="divide-y divide-ink-100 rounded-xl ring-1 ring-ink-100">
+      {% for m in memberships %}
+      <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+        <div class="min-w-0">
+          <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' m.tenant_id %}"{% endif %} class="block truncate text-sm font-medium text-ink-900 hover:text-brand-700 hover:underline">{{ m.tenant.name }}</a>
+          <p class="hint">
+            {{ m.role.name }}
+            {% with links=m.branch_links.all %}&middot; {% if links %}{% for l in links %}{{ l.branch.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}every branch{% endif %}{% endwith %}
+          </p>
+        </div>
+        {% if not m.is_active %}<span class="badge badge-danger">off in this shop</span>{% endif %}
+      </div>
+      {% empty %}
+      <p class="px-3.5 py-3 text-sm text-ink-500">
+        {% if person.is_platform_staff %}Belongs to no shop — normal for the platform team.{% else %}Belongs to no shop, so signing in leads nowhere.{% endif %}
+      </p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="flex flex-wrap items-center justify-between gap-2 border-t border-ink-100 px-5 py-3">
+  {% include "platform/_user_actions.html" with row=person shops=memberships|length next=request.GET.next|default:"/platform/users/" hide_open=True %}
+  <a {% if "people.view" in pp %}href="{% url 'platform:user_detail' person.pk %}"{% endif %} class="btn btn-secondary btn-sm">Full page {% icon "chevron-right" %}</a>
+</div>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

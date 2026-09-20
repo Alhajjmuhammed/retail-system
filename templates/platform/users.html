@@ -1,0 +1,160 @@
+{% extends "platform/base.html" %}
+{% block title %}People{% endblock %}
+{% block heading %}People{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}border-brand-300{% endif %}">
+      <p class="stat-label">All accounts</p>
+      <p class="stat-value">{{ counts.total }}</p>
+    </a>
+    <a href="?view=platform" class="stat transition hover:border-brand-300 {% if view == 'platform' %}border-brand-300{% endif %}">
+      <p class="stat-label">Platform admins</p>
+      <p class="stat-value text-brand-700">{{ counts.platform }}</p>
+    </a>
+    <a href="?view=never" class="stat transition hover:border-brand-300 {% if view == 'never' %}border-brand-300{% endif %}">
+      <p class="stat-label">Never signed in</p>
+      <p class="stat-value {% if counts.never %}text-amber-600{% endif %}">{{ counts.never }}</p>
+    </a>
+    <a href="?view=orphaned" class="stat transition hover:border-brand-300 {% if view == 'orphaned' %}border-brand-300{% endif %}">
+      <p class="stat-label">In no shop</p>
+      <p class="stat-value {% if counts.orphaned %}text-amber-600{% endif %}">{{ counts.orphaned }}</p>
+    </a>
+    <a href="?view=inactive" class="stat transition hover:border-brand-300 {% if view == 'inactive' %}border-brand-300{% endif %}">
+      <p class="stat-label">Deactivated</p>
+      <p class="stat-value {% if counts.inactive %}text-red-600{% endif %}">{{ counts.inactive }}</p>
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
+            {% icon "search" class="h-4 w-4" %}
+          </span>
+          <input type="search" name="q" value="{{ q }}" placeholder="Name, email, phone or shop"
+                 class="input w-64 pl-9" autocomplete="off">
+        </div>
+        <select name="view" class="input w-44">
+          <option value="">Everyone</option>
+          <option value="platform" {% if view == "platform" %}selected{% endif %}>Platform admins</option>
+          <option value="never" {% if view == "never" %}selected{% endif %}>Never signed in</option>
+          <option value="orphaned" {% if view == "orphaned" %}selected{% endif %}>In no shop</option>
+          <option value="inactive" {% if view == "inactive" %}selected{% endif %}>Deactivated</option>
+        </select>
+        <select name="order" class="input w-44">
+          <option value="name" {% if order == "name" %}selected{% endif %}>By name</option>
+          <option value="recent" {% if order == "recent" %}selected{% endif %}>Recently signed in</option>
+          <option value="newest" {% if order == "newest" %}selected{% endif %}>Newest accounts</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        {% if q or view or order != "name" %}<a {% if "people.view" in pp %}href="{% url 'platform:user_list' %}"{% endif %} class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+      </form>
+
+      {% if "admins.manage" in pp %}
+      <button type="button" class="btn btn-primary shrink-0"
+              hx-get="{% url 'platform:user_create' %}" hx-target="#modal">
+        {% icon "plus" %} New platform admin
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Person</th>
+            <th>Shops &amp; roles</th>
+            <th>Status</th>
+            <th>Last signed in</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in users %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+            <td>
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold
+                  {% if row.is_platform_staff %}bg-brand-600 text-white{% else %}bg-brand-100 text-brand-800{% endif %}">
+                  {{ row.name|default:row.email|slice:":1"|upper }}
+                </span>
+                <span class="min-w-0">
+                  <a {% if "people.view" in pp %}href="{% url 'platform:user_detail' row.pk %}"{% endif %}
+                     class="block truncate font-medium text-ink-900 hover:text-brand-700 hover:underline">
+                    {{ row.name|default:row.email }}{% if row.pk == request.user.pk %} <span class="text-xs font-normal text-ink-400">(you)</span>{% endif %}
+                  </a>
+                  <span class="hint block truncate">{{ row.email }}{% if row.phone %} &middot; {{ row.phone }}{% endif %}</span>
+                </span>
+              </div>
+            </td>
+
+            <td>
+              <div class="flex max-w-xs flex-wrap gap-1">
+                {% for m in row.memberships.all %}
+                  <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' m.tenant_id %}"{% endif %}
+                     class="badge {% if m.is_active %}badge-muted{% else %}badge-danger{% endif %} hover:ring-brand-300"
+                     title="{% if not m.is_active %}Switched off in this shop{% endif %}">
+                    {{ m.tenant.name }} &middot; {{ m.role.name }}
+                  </a>
+                {% empty %}
+                  {% if row.is_platform_staff %}<span class="text-sm text-ink-400">Platform team</span>
+                  {% else %}<span class="badge badge-warn">in no shop</span>{% endif %}
+                {% endfor %}
+              </div>
+            </td>
+
+            <td class="whitespace-nowrap">
+              <span class="flex items-center gap-1.5 text-sm text-ink-700">
+                <span class="dot {% if row.is_active %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>
+                {% if row.is_active %}Active{% else %}Deactivated{% endif %}
+              </span>
+              {% if row.is_platform_staff %}<p class="hint">{{ row.platform_role.name|default:"Super admin" }}</p>{% endif %}
+            </td>
+
+            <td class="whitespace-nowrap">
+              {% if row.last_login %}
+                <span class="text-sm text-ink-700">{{ row.last_login|ago }}</span>
+              {% else %}
+                <span class="badge badge-warn">never</span>
+              {% endif %}
+              <p class="hint">Joined {{ row.created_at|date:"j M Y" }}</p>
+            </td>
+
+            <td>
+              {% include "platform/_user_actions.html" with shops=row.shop_count next=request.get_full_path %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">
+            {% if q or view %}
+              {% include "partials/empty.html" with icon="search" title="Nobody matches" text="Try part of a name, an email address, a phone number or a shop." %}
+            {% else %}
+              {% include "partials/empty.html" with icon="users" title="No accounts yet" text="People appear here when a shop signs up or adds staff. Shop staff are added from the shop's page." %}
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page.paginator.count %}
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+      <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}{% if page.paginator.count != counts.total %} matching ({{ counts.total }} in all){% endif %}</span>
+      {% if page.has_other_pages %}
+      <div class="flex items-center gap-1.5">
+        {% if page.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+        <span class="px-1">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

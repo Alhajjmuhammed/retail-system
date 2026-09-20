@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ receipt.reference }}{% endblock %}
+{% block heading %}{{ receipt.reference }}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+  <div class="card card-body flex flex-wrap items-center justify-between gap-3">
+    <div class="text-sm"><a href="{% url 'purchasing:supplier_detail' receipt.supplier_id %}" class="font-medium text-ink-900 hover:text-brand-700">{{ receipt.supplier.name }}</a>{% if receipt.order_id %}<p class="hint">Against <a class="hover:underline" href="{% url 'purchasing:order_detail' receipt.order_id %}">{{ receipt.order.reference }}</a></p>{% endif %}<p class="hint">{{ receipt.received_at|date:"j M Y H:i" }}{% if receipt.supplier_note %} &middot; note {{ receipt.supplier_note }}{% endif %}</p></div>
+    <div class="text-right">{% if posted %}<span class="badge badge-ok">In stock</span>{% else %}<span class="badge badge-warn">Not yet posted</span>{% endif %}<p class="mt-1 text-xl font-bold">{{ receipt.total|floatformat:0|intcomma }}</p></div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th>Batch</th><th>Expires</th><th class="text-right">Qty</th><th class="text-right">Cost</th><th class="text-right">Total</th></tr></thead>
+      <tbody>
+        {% for line in receipt.lines.all %}
+        <tr><td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td><td class="text-ink-800">
+          {{ line.variant }}
+          {% if not posted %}
+          <form method="post" action="{% url 'purchasing:receipt_line_delete' line.pk %}" class="inline"
+                x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ line.variant|escapejs }}?', label: 'Confirm' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger ml-1 h-7 w-7 align-middle" title="Remove {{ line.variant }}" aria-label="Remove {{ line.variant }}">{% icon "trash" class="h-3.5 w-3.5" %}</button>
+          </form>
+          {% endif %}
+        </td><td class="font-mono text-xs text-ink-600">{{ line.batch_no|default:"—" }}</td><td class="text-ink-600">{{ line.expiry_date|date:"j M Y"|default:"—" }}</td><td class="text-right">{{ line.qty|floatformat:"-3" }}</td><td class="text-right">{{ line.unit_cost|floatformat:0|intcomma }}</td><td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td></tr>
+        {% empty %}<tr><td colspan="7" class="py-8 text-center text-sm text-ink-500">Nothing added yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if not posted %}
+  <form method="post" class="card card-body flex flex-wrap items-end gap-3">
+    {% csrf_token %}<input type="hidden" name="action" value="add_line">
+    <div class="min-w-56 flex-1"><label class="label" for="variant">Product</label>{% include "partials/variant_select.html" %}</div>
+    <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" step="0.001" name="qty" id="qty" class="input" min="0.001" required></div>
+    <div class="w-28"><label class="label" for="unit_cost">Unit cost</label><input type="number" step="0.01" name="unit_cost" id="unit_cost" class="input" min="0" required></div>
+    <div class="w-28"><label class="label" for="batch_no">Batch</label><input name="batch_no" id="batch_no" maxlength="40" class="input"></div>
+    <div class="w-36"><label class="label" for="expiry_date">Expires</label><input type="date" name="expiry_date" id="expiry_date" class="input"></div>
+    <button type="submit" class="btn btn-secondary">Add</button>
+  </form>
+
+  <div class="flex flex-wrap items-center gap-3">
+    {% if receipt.order_id and not receipt.lines.count %}
+    <form method="post">
+      {% csrf_token %}<input type="hidden" name="action" value="fill_from_order">
+      <button type="submit" class="btn btn-secondary">Fill in everything outstanding on {{ receipt.order.reference }}</button>
+    </form>
+    {% endif %}
+    {% if receipt.lines.count %}
+    <form method="post" x-data
+          @submit.prevent="$store.confirm.ask($el, { title: 'Put {{ receipt.reference|escapejs }} into stock?', body: 'Adds these quantities, updates cost prices and records a bill of {{ receipt.total|floatformat:0|intcomma }} from {{ receipt.supplier.name|escapejs }}. This cannot be undone.', label: 'Put into stock', danger: false })">
+      {% csrf_token %}<input type="hidden" name="action" value="post">
+      <button type="submit" class="btn btn-primary">{% icon "check" class="h-4 w-4" %} Put it into stock</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{% url 'purchasing:receipt_delete' receipt.pk %}"
+          x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Delete {{ receipt.reference|escapejs }}?', body: 'Nothing has gone into stock yet, so nothing else changes.', label: 'Delete', danger: true })">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-secondary">Delete this delivery</button>
+    </form>
+  </div>
+  <p class="hint">Putting it into stock raises quantities and re-bases cost price. It can only be done once, and afterwards the delivery cannot be deleted.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% can_do "pos.reprint" as may_reprint %}
+<div class="flex flex-wrap gap-x-6 gap-y-1 border-b border-ink-100 px-5 py-2.5 text-sm">
+  <span class="text-ink-600">{{ totals.n|default:0 }} sale{{ totals.n|pluralize }}</span>
+  <span class="text-ink-600">Total <strong class="tnum text-ink-900">{{ totals.value|default:0|floatformat:0|intcomma }}</strong></span>
+  <span class="hint">Voided sales not counted</span>
+</div>
+<div class="overflow-x-auto">
+  <table class="table">
+    <thead><tr><th class="w-12 text-right">SN</th><th>Receipt</th><th>When</th><th>Cashier</th><th>Customer</th><th class="text-right">Total</th><th class="text-right">Actions</th></tr></thead>
+    <tbody>
+      {% for sale in sales %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td>
+          <a href="{% url 'pos:sale_detail' sale.pk %}" class="row-link font-medium text-ink-900 hover:text-brand-700 hover:underline">{{ sale.number }}</a>
+          {% if sale.status != "completed" %}<span class="badge {% if sale.status == 'voided' %}badge-danger{% else %}badge-warn{% endif %} ml-1">{{ sale.get_status_display }}</span>{% endif %}
+          {% if sale.is_offline_origin %}<span class="badge badge-muted ml-1">offline</span>{% endif %}
+          {% if sale.needs_review %}<span class="badge badge-danger ml-1" title="{{ sale.review_notes }}">check</span>{% endif %}
+          {% if branches %}<p class="hint">{{ sale.branch.name }}</p>{% endif %}
+        </td>
+        <td class="whitespace-nowrap text-sm text-ink-600">{{ sale.sold_at|date:"j M Y, H:i" }}</td>
+        <td class="text-sm text-ink-600">{{ sale.user.name }}</td>
+        <td class="text-sm text-ink-600">{{ sale.customer.name|default:"—" }}</td>
+        <td class="tnum text-right font-medium {% if sale.status == 'voided' %}text-ink-400 line-through{% else %}text-ink-900{% endif %}">{{ sale.total|floatformat:0|intcomma }}</td>
+        <td>
+          <div class="flex items-center justify-end gap-0.5">
+            {% if may_reprint %}<a href="{% url 'pos:receipt' sale.pk %}" target="_blank" class="btn-icon" title="Print the receipt again">{% icon "receipt" %}</a>{% endif %}
+            <a href="{% url 'pos:sale_detail' sale.pk %}" class="btn-icon" title="Open">{% icon "chevron-right" %}</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">{% include "partials/empty.html" with icon="receipt" title="No sales match" text="Sales appear here the moment a till records one. Try clearing the filters." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" %}

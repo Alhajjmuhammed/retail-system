@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Price lists{% endblock %}
+{% block heading %}Price lists{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-5">
+  <p class="section-lead">
+    A second list is how you sell the same product to a bulk buyer at a
+    different price without duplicating it in the catalogue. Assign one to a
+    customer, and choosing that customer at the till prices the basket from it.
+  </p>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Your lists</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for pl in price_lists %}
+      <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <div class="min-w-0">
+          <p class="font-medium text-ink-900">
+            {{ pl.name }}
+            {% if pl.is_default %}<span class="badge badge-brand ml-1.5">default</span>{% endif %}
+            {% if not pl.is_active %}<span class="badge badge-muted ml-1.5">off</span>{% endif %}
+          </p>
+          <p class="hint">{{ pl.get_kind_display }} &middot; {{ pl.items }} price{{ pl.items|pluralize:"s" }}{% if not pl.is_default and pl.is_active %} &middot; set them in each product's Edit{% endif %}</p>
+        </div>
+        <div class="flex items-center gap-1" x-data="{ rename: false }">
+          {% if pl.is_active and not pl.is_default %}
+          <form method="post" x-data @submit.prevent="$store.confirm.ask($el, { title: 'Make {{ pl.name|escapejs }} the default?', body: 'Every sale without a customer list is priced from it.', label: 'Make default', danger: false })">{% csrf_token %}
+            <input type="hidden" name="action" value="default">
+            <input type="hidden" name="price_list" value="{{ pl.pk }}">
+            <button type="submit" class="btn btn-secondary btn-sm">Make default</button>
+          </form>
+          {% endif %}
+          <button type="button" class="btn-icon btn-icon-brand" title="Rename {{ pl.name }}" aria-label="Rename {{ pl.name }}" @click="rename = true">{% icon "pencil" class="h-4 w-4" %}</button>
+          {% if not pl.is_active %}
+          <form method="post">{% csrf_token %}
+            <input type="hidden" name="action" value="restore">
+            <input type="hidden" name="price_list" value="{{ pl.pk }}">
+            <button type="submit" class="btn-icon btn-icon-brand" title="Switch {{ pl.name }} back on" aria-label="Switch {{ pl.name }} back on">{% icon "restore" class="h-4 w-4" %}</button>
+          </form>
+          {% elif not pl.is_default %}
+          <form method="post" x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ pl.name|escapejs }}?', body: 'If customers or prices use it, it is switched off instead.', label: 'Remove' })">{% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="price_list" value="{{ pl.pk }}">
+            <button type="submit" class="btn-icon btn-icon-danger" title="Remove {{ pl.name }}" aria-label="Remove {{ pl.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+          {% endif %}
+
+          <template x-teleport="body">
+            <div x-show="rename" x-cloak @keydown.escape.window="rename = false" @click.self="rename = false"
+                 class="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+              <form method="post" class="w-full max-w-md rounded-2xl bg-white shadow-float">
+                {% include "platform/_modal_head.html" with title="Rename "|add:pl.name modal=False %}
+                <div class="space-y-4 p-5">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="rename">
+                  <input type="hidden" name="price_list" value="{{ pl.pk }}">
+                  <div>
+                    <label class="label" for="rename-{{ pl.pk }}">Name</label>
+                    <input name="name" id="rename-{{ pl.pk }}" value="{{ pl.name }}" maxlength="60" class="input" required>
+                  </div>
+                  <div class="flex justify-end gap-2">
+                    <button type="button" class="btn btn-secondary" @click="rename = false">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </template>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="min-w-40 flex-1">
+        <label class="label" for="name">New list</label>
+        <input name="name" id="name" class="input" placeholder="Wholesale" maxlength="60" required>
+      </div>
+      <div class="w-40">
+        <label class="label" for="kind">Kind</label>
+        <select name="kind" id="kind" class="input">
+          <option value="retail">Retail</option>
+          <option value="wholesale">Wholesale</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-secondary">Create</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

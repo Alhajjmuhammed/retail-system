@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.action }}{% endblock %}
+{% block heading %}{{ entry.action }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-4">
+  <div class="card card-body space-y-1.5 text-sm">
+    <div class="flex justify-between"><span class="text-ink-600">When</span><span class="font-medium">{{ entry.created_at|date:"j F Y, H:i:s" }}</span></div>
+    <div class="flex justify-between"><span class="text-ink-600">Who</span><span class="font-medium">{{ entry.user.name|default:"system" }}</span></div>
+    {% if entry.authorised_by %}
+    <div class="flex justify-between"><span class="text-ink-600">Approved by</span><span class="font-medium text-amber-700">{{ entry.authorised_by.name }}</span></div>
+    {% endif %}
+    {% if entry.branch %}<div class="flex justify-between"><span class="text-ink-600">Branch</span><span class="font-medium">{{ entry.branch.name }}</span></div>{% endif %}
+    {% if entry.object_type %}<div class="flex justify-between"><span class="text-ink-600">Record</span><span class="font-medium">{{ entry.object_type }} {{ entry.object_id }}</span></div>{% endif %}
+    {% if entry.ip %}<div class="flex justify-between"><span class="text-ink-600">From</span><span class="font-mono text-xs">{{ entry.ip }}</span></div>{% endif %}
+  </div>
+
+  {% if changed %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Field</th><th>Was</th><th>Became</th></tr></thead>
+      <tbody>
+        {% for row in changed %}
+        <tr>
+          <td class="font-medium text-ink-800">{{ row.field }}</td>
+          <td class="text-ink-500">{{ row.was|default:"—" }}</td>
+          <td class="text-ink-900">{{ row.now|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if entry.extra %}
+  <div class="card card-body">
+    <h2 class="card-title mb-2">Extra</h2>
+    <pre class="overflow-x-auto text-xs text-ink-600">{{ entry.extra|pprint }}</pre>
+  </div>
+  {% endif %}
+
+  <a href="{% url 'accounts:audit_log' %}" class="btn btn-secondary">Back to activity</a>
+</div>
+{% endblock %}

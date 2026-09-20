@@ -1,0 +1,89 @@
+{% extends "platform/base.html" %}
+{% block title %}{{ user_row.name|default:user_row.email }}{% endblock %}
+{% block heading %}{{ user_row.name|default:user_row.email }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <a {% if "people.view" in pp %}href="{% url 'platform:user_list' %}"{% endif %} class="inline-flex items-center gap-1 text-sm text-ink-500 hover:text-brand-700">&larr; People</a>
+
+  <div class="card card-body flex flex-wrap items-center justify-between gap-4">
+    <div class="flex min-w-0 items-center gap-3.5">
+      <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold
+        {% if user_row.is_platform_staff %}bg-brand-600 text-white{% else %}bg-brand-100 text-brand-800{% endif %}">
+        {{ user_row.name|default:user_row.email|slice:":1"|upper }}
+      </div>
+      <div class="min-w-0">
+        <p class="truncate font-medium text-ink-900">{{ user_row.email }}{% if user_row.pk == request.user.pk %} <span class="text-xs font-normal text-ink-400">(you)</span>{% endif %}</p>
+        <p class="hint">
+          {{ user_row.phone|default:"no phone" }} &middot;
+          joined {{ user_row.created_at|date:"j M Y" }} &middot;
+          {% if user_row.last_login %}last in {{ user_row.last_login|ago }}{% else %}never signed in{% endif %}
+        </p>
+        <div class="mt-1.5 flex gap-1.5">
+          <span class="flex items-center gap-1.5 text-xs text-ink-600">
+            <span class="dot {% if user_row.is_active %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>
+            {% if user_row.is_active %}Active{% else %}Deactivated{% endif %}
+          </span>
+          {% if user_row.is_platform_staff %}<span class="badge badge-brand">{{ user_row.platform_role.name|default:"Super admin" }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% include "platform/_user_actions.html" with row=user_row shops=memberships|length next=request.get_full_path hide_open=True %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Shops they belong to</h2>
+      <span class="hint">Roles and branches are changed from the shop's own page.</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Shop</th><th>Role</th><th>Branches</th><th>Joined</th><th class="text-right">Actions</th></tr></thead>
+        <tbody>
+          {% for m in memberships %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td>
+              <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' m.tenant_id %}"{% endif %} class="font-medium text-ink-900 hover:text-brand-700 hover:underline">{{ m.tenant.name }}</a>
+              {% if not m.is_active %}<span class="badge badge-danger ml-1">off in this shop</span>{% endif %}
+            </td>
+            <td><span class="badge badge-muted">{{ m.role.name }}</span>{% if m.role.is_owner_role %} <span class="badge badge-brand">owner</span>{% endif %}</td>
+            <td class="text-sm text-ink-600">
+              {% with links=m.branch_links.all %}{% if links %}{% for l in links %}{{ l.branch.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}Every branch{% endif %}{% endwith %}
+            </td>
+            <td class="whitespace-nowrap text-sm text-ink-600">{{ m.joined_at|date:"j M Y" }}</td>
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if "shops.staff" in pp %}
+                <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' m.tenant_id %}"{% endif %} class="btn-icon btn-icon-brand" title="Change role or branches in {{ m.tenant.name }}">{% icon "pencil" %}</a>
+                {% endif %}
+                {% if "people.manage" in pp %}
+                <form method="post" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: 'Remove {{ user_row.name|default:user_row.email|escapejs }} from {{ m.tenant.name|escapejs }}?',
+                        body: 'They lose access to this shop straight away. Their sales and records there stay.',
+                        label: 'Remove', danger: true })">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove_membership">
+                  <input type="hidden" name="membership" value="{{ m.pk }}">
+                  <button type="submit" class="btn-icon btn-icon-danger" title="Remove from {{ m.tenant.name }}">{% icon "trash" %}</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">
+            {% if user_row.is_platform_staff %}
+              {% include "partials/empty.html" with icon="shield" title="Platform team" text="Platform staff belong to no shop. That is normal." %}
+            {% else %}
+              {% include "partials/empty.html" with icon="building" title="In no shop" text="Signing in leads nowhere. Add them from a shop's page, or delete the account if it was never used." %}
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

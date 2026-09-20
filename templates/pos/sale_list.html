@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Sales{% endblock %}
+{% block heading %}Sales{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="card">
+    <form hx-get="{% url 'pos:sale_list' %}" hx-target="#sale-rows" hx-push-url="true"
+          hx-trigger="input changed delay:300ms from:input[type=search], change"
+          class="card-head flex-wrap gap-2">
+      <div class="relative w-full sm:w-auto">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Receipt or customer" class="input w-full pl-9 sm:w-52" autocomplete="off">
+      </div>
+      <input type="date" name="from" value="{{ start|date:'Y-m-d' }}" class="input w-[9.5rem]" aria-label="From">
+      <input type="date" name="to" value="{{ end|date:'Y-m-d' }}" class="input w-[9.5rem]" aria-label="To">
+      <select name="status" class="input w-36" aria-label="Status">
+        <option value="">Any status</option>
+        {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <select name="method" class="input w-36" aria-label="Paid by">
+        <option value="">Any payment</option>
+        {% for value, label in methods %}<option value="{{ value }}" {% if method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <select name="cashier" class="input w-40" aria-label="Cashier">
+        <option value="">Every cashier</option>
+        {% for u in cashiers %}<option value="{{ u.pk }}" {% if cashier == u.pk %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+      </select>
+      {% if branches %}
+      <select name="branch" class="input w-40" aria-label="Branch">
+        <option value="">Every branch</option>
+        {% for b in branches %}<option value="{{ b.pk }}" {% if branch_id == b.pk %}selected{% endif %}>{{ b.name }}{% if not b.is_active %} (closed){% endif %}</option>{% endfor %}
+      </select>
+      {% endif %}
+      <label class="flex min-h-11 items-center gap-2 text-sm text-ink-700 sm:min-h-0">
+        <input type="checkbox" name="review" value="1" class="checkbox" {% if request.GET.review == "1" %}checked{% endif %}>
+        Needs checking only
+      </label>
+      <a href="{% url 'pos:sale_list' %}" class="btn btn-ghost btn-sm">Clear</a>
+    </form>
+    <div id="sale-rows">{% include "pos/_sale_rows.html" %}</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "platform/base.html" %}
+{% block title %}Devices{% endblock %}
+{% block heading %}Tills and phones{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}border-brand-300{% endif %}">
+      <p class="stat-label">Devices</p><p class="stat-value">{{ counts.total }}</p>
+    </a>
+    <a href="?view=silent" class="stat transition hover:border-brand-300 {% if view == 'silent' %}border-brand-300{% endif %}">
+      <p class="stat-label">Silent over a day</p>
+      <p class="stat-value {% if counts.silent %}text-amber-600{% endif %}">{{ counts.silent }}</p>
+    </a>
+    <a href="?view=holding" class="stat transition hover:border-brand-300 {% if view == 'holding' %}border-brand-300{% endif %}">
+      <p class="stat-label">Holding unsent sales</p>
+      <p class="stat-value {% if counts.holding %}text-red-600{% endif %}">{{ counts.holding }}</p>
+    </a>
+    <a href="?view=retired" class="stat transition hover:border-brand-300 {% if view == 'retired' %}border-brand-300{% endif %}">
+      <p class="stat-label">Switched off</p><p class="stat-value">{{ counts.retired }}</p>
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+          <input type="search" name="q" value="{{ q }}" placeholder="Name, id, shop or branch" class="input w-64 pl-9" autocomplete="off">
+        </div>
+        {% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if q or view %}<a href="{% url 'platform:devices' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+      </form>
+      <p class="hint max-w-sm">Tills and phones list themselves the first time they are used. Switching one off stops it sending sales.</p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr><th class="w-12 text-right">SN</th><th>Device</th><th>Shop &middot; branch</th><th>Last heard from</th><th>Status</th><th class="text-right">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for d in devices %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+            <td>
+              <span class="font-medium text-ink-900">{{ d.label|default:"Unnamed" }}</span>
+              <span class="badge badge-muted ml-1">{{ d.get_kind_display }}</span>
+              <p class="hint font-mono">{{ d.device_id|truncatechars:28 }}{% if d.app_version %} &middot; v{{ d.app_version }}{% endif %}</p>
+            </td>
+            <td>
+              <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' d.tenant_id %}"{% endif %} class="text-ink-800 hover:text-brand-700 hover:underline">{{ d.tenant.name }}</a>
+              <p class="hint">{{ d.branch.name }}</p>
+            </td>
+            <td class="whitespace-nowrap">
+              {% if d.last_sync_at %}
+                <span class="text-sm {% if d.is_active and d.last_sync_at < stale_before %}font-medium text-amber-700{% else %}text-ink-700{% endif %}">{{ d.last_sync_at|ago }}</span>
+                {% if d.last_seen_ip %}<p class="hint font-mono">{{ d.last_seen_ip }}</p>{% endif %}
+              {% else %}<span class="badge badge-warn">never</span>{% endif %}
+            </td>
+            <td class="whitespace-nowrap">
+              <span class="flex items-center gap-1.5 text-sm text-ink-700">
+                <span class="dot {% if not d.is_active %}bg-ink-300{% elif d.queued %}bg-red-500{% elif not d.last_sync_at or d.last_sync_at < stale_before %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
+                {% if not d.is_active %}Switched off{% elif d.queued %}{{ d.queued }} unsent sale{{ d.queued|pluralize }}{% elif not d.last_sync_at or d.last_sync_at < stale_before %}Silent{% else %}Fine{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if "devices.manage" in pp %}
+                <button type="button" class="btn-icon btn-icon-brand" title="Name it"
+                        hx-get="{% url 'platform:device_edit' d.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal">{% icon "pencil" %}</button>
+                <form method="post" action="{% url 'platform:device_retire' d.pk %}?next={{ request.get_full_path|urlencode }}" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: '{% if d.is_active %}Switch off{% else %}Bring back{% endif %} {{ d.label|default:d.device_id|escapejs }}?',
+                        body: '{% if d.is_active %}For a lost, stolen or replaced device. It can no longer send sales; any it holds stay on it.{% else %}It can send sales again.{% endif %}',
+                        label: '{% if d.is_active %}Switch off{% else %}Bring back{% endif %}',
+                        danger: {% if d.is_active %}true{% else %}false{% endif %} })">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-icon {% if d.is_active %}btn-icon-danger{% endif %}"
+                          title="{% if d.is_active %}Switch off — lost or stolen{% else %}Bring back into use{% endif %}">
+                    {% if d.is_active %}{% icon "suspend" %}{% else %}{% icon "restore" %}{% endif %}
+                  </button>
+                </form>
+                {% if not d.is_active or not d.queued %}
+                <form method="post" action="{% url 'platform:device_delete' d.pk %}?next={{ request.get_full_path|urlencode }}" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: 'Forget {{ d.label|default:d.device_id|escapejs }}?',
+                        body: 'It holds no records here. If it is used again it simply lists itself again. To stop it selling, switch it off instead.',
+                        label: 'Forget it', danger: true })">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-icon btn-icon-danger" title="Forget this device">{% icon "trash" %}</button>
+                </form>
+                {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">
+            {% if q or view %}
+              {% include "partials/empty.html" with icon="search" title="No device matches" text="Try a shop, a branch or part of the name." %}
+            {% else %}
+              {% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone lists itself the first time somebody sells on it." %}
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page.paginator.count %}
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+      <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+      {% if page.has_other_pages %}
+      <div class="flex items-center gap-1.5">
+        {% if page.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+        <span class="px-1">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

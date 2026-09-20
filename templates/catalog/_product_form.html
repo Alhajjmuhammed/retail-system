@@ -1,0 +1,97 @@
+{% comment %}
+The product form. In the modal from the Products list, or inside
+product_form.html as a page. Barcodes and delete sit outside the <form>:
+forms inside forms are ignored by browsers.
+{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-10">
+  <div class="w-full max-w-3xl rounded-2xl bg-white shadow-float">
+{% include "platform/_modal_head.html" with title=product.name|default:"New product" subtitle="Price, barcode and stock on one screen." %}
+{% endif %}
+
+<div class="{% if modal %}max-h-[75vh] overflow-y-auto{% endif %}">
+<form {% if modal %}hx-post="{% if product %}{% url 'catalog:product_edit' product.pk %}{% else %}{% url 'catalog:product_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML" hx-encoding="multipart/form-data"{% else %}method="post" enctype="multipart/form-data"{% endif %}
+      class="space-y-5 p-5">
+  {% csrf_token %}
+  {% if saved %}
+  <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-600/15">
+    {% icon "check" class="h-4 w-4" %} {{ saved }} added. Next one:
+  </div>
+  {% endif %}
+  {% include "platform/_form_errors.html" with errors=form.non_field_errors %}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include "catalog/_field.html" with field=form.name label="Name" cls="sm:col-span-2" %}
+    {% if form.barcode %}{% include "catalog/_field.html" with field=form.barcode label="Barcode" hint="Scan it into this box, or leave empty for loose goods." %}{% endif %}
+    {% include "catalog/_field.html" with field=form.sku label="Your own code" %}
+    {% include "catalog/_field.html" with field=form.category label="Category" %}
+    {% include "catalog/_field.html" with field=form.brand label="Brand" %}
+    {% include "catalog/_field.html" with field=form.base_unit label="Sold by" %}
+    {% include "catalog/_field.html" with field=form.tax_rate label="VAT" %}
+  </div>
+
+  <div>
+    <h3 class="mb-3 border-t border-ink-100 pt-4 text-sm font-semibold text-ink-900">Price and stock</h3>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {% include "catalog/_field.html" with field=form.price label="Selling price" %}
+      {% if form.cost %}{% include "catalog/_field.html" with field=form.cost label="Cost price" %}
+      {% elif avg_cost is not None %}
+      <div>
+        <p class="label">Average cost here</p>
+        <p class="input flex items-center bg-ink-50 text-ink-600">{{ avg_cost|floatformat:0|intcomma }}</p>
+        <p class="hint">Set by what you receive. Change stock from Stock, not here.</p>
+      </div>
+      {% endif %}
+      {% if form.opening_qty %}{% include "catalog/_field.html" with field=form.opening_qty label="Stock on hand" %}{% endif %}
+      {% if form.reorder_level %}{% include "catalog/_field.html" with field=form.reorder_level label="Warn me at" hint="At this branch. Leave empty for no warning." %}{% endif %}
+      {% include "catalog/_field.html" with field=form.min_price label="Never sell below" hint="Stops staff discounting under cost." %}
+    </div>
+  </div>
+
+  {% if other_lists %}
+  <div>
+    <h3 class="mb-1 border-t border-ink-100 pt-4 text-sm font-semibold text-ink-900">Other price lists</h3>
+    <p class="hint mb-3">Charged at the till when the cashier picks a customer on that list. Leave empty to charge them the selling price above.</p>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {% for row in other_lists %}
+      <div>
+        <label class="label" for="{{ row.field }}">{{ row.list.name }} <span class="hint">({{ row.list.get_kind_display|lower }})</span></label>
+        <input type="number" step="0.01" min="0" name="{{ row.field }}" id="{{ row.field }}" value="{{ row.value }}" class="input">
+        {% if row.error %}<p class="hint text-red-600">{{ row.error }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-2.5 border-t border-ink-100 pt-4 sm:grid-cols-2">
+    {% for field in form %}
+      {% if field.field.widget.input_type == "checkbox" %}
+      <label class="flex items-center gap-2.5 text-sm text-ink-700">{{ field }} {{ field.label }}</label>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% include "catalog/_field.html" with field=form.description label="Description" %}
+  {% include "catalog/_field.html" with field=form.image label="Picture" %}
+
+  <div class="flex flex-wrap justify-end gap-2 border-t border-ink-100 pt-4">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>
+    {% else %}<a href="{% url 'catalog:product_list' %}" class="btn btn-secondary">Cancel</a>{% endif %}
+    {% if not product %}<button type="submit" name="save_and_new" value="1" class="btn btn-secondary">Save and add another</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+
+{% if product and variant %}
+<div class="border-t border-ink-100 p-5">
+  <h3 class="mb-3 text-sm font-semibold text-ink-900">Barcodes</h3>
+  <div id="barcode-box">{% include "catalog/_barcodes.html" %}</div>
+</div>
+{% endif %}
+</div>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

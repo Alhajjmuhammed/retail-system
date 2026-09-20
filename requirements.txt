@@ -1,0 +1,17 @@
+# --- core ---
+Django>=5.2,<6.0
+psycopg[binary]>=3.2
+django-environ>=0.12
+
+# --- ui ---
+django-htmx>=1.23
+Pillow>=11.0
+
+# --- async / jobs ---
+celery>=5.5
+redis>=5.2
+
+# --- serving ---
+whitenoise>=6.9
+gunicorn>=23.0
+python-dateutil>=2.9

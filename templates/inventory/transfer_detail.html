@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ transfer.reference }}{% endblock %}
+{% block heading %}{{ transfer.reference }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+  <div class="card card-body flex flex-wrap items-center justify-between gap-3">
+    <div class="text-sm">
+      <p class="font-medium text-ink-900">{{ transfer.from_branch.name }} &rarr; {{ transfer.to_branch.name }}</p>
+      <p class="hint">
+        {% if transfer.sent_at %}Sent {{ transfer.sent_at|date:"j M H:i" }} by {{ transfer.sent_by.name }}{% endif %}
+        {% if transfer.received_at %} &middot; received {{ transfer.received_at|date:"j M H:i" }} by {{ transfer.received_by.name }}{% endif %}
+      </p>
+    </div>
+    <span class="badge {% if transfer.status == 'received' %}badge-ok{% elif transfer.status == 'sent' %}badge-warn{% else %}badge-muted{% endif %}">{{ transfer.get_status_display }}</span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="{% if can_receive %}receive{% else %}send{% endif %}">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Sent</th>{% if transfer.status != "draft" %}<th class="text-right">Received</th><th class="text-right">Short</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for line in transfer.lines.all %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="text-ink-800">
+              {{ line.variant }}
+              {% if transfer.status == "draft" %}
+              <button type="submit" form="drop-line-{{ line.pk }}"
+                      class="btn-icon btn-icon-danger ml-1 h-7 w-7 align-middle"
+                      title="Remove {{ line.variant }}" aria-label="Remove {{ line.variant }}">{% icon "trash" class="h-3.5 w-3.5" %}</button>
+              {% endif %}
+            </td>
+            <td class="text-right">{{ line.qty_sent|floatformat:"-3" }}</td>
+            {% if transfer.status != "draft" %}
+            <td class="text-right">
+              {% if can_receive %}
+                <input type="number" step="0.001" name="qty:{{ line.pk }}" value="{{ line.qty_sent|floatformat:'-3' }}" class="input w-24 py-1 text-right text-sm">
+              {% else %}{{ line.qty_received|floatformat:"-3"|default:"—" }}{% endif %}
+            </td>
+            <td class="text-right {% if line.shortfall %}text-red-600{% endif %}">{{ line.shortfall|floatformat:"-3"|default:"—" }}</td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="py-8 text-center text-sm text-ink-500">Nothing added yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if can_send and transfer.lines.count %}
+      <button type="submit" class="btn btn-primary mt-3" x-data
+              @click.prevent="$store.confirm.ask($el.form, { title: 'Send {{ transfer.reference|escapejs }} to {{ transfer.to_branch.name|escapejs }}?', body: 'The stock leaves {{ transfer.from_branch.name|escapejs }} now and arrives when they accept it.', label: 'Send', danger: false })">Send transfer</button>
+    {% elif can_receive %}
+      <button type="submit" class="btn btn-primary mt-3" x-data
+              @click.prevent="$store.confirm.ask($el.form, { title: 'Accept what arrived?', body: 'The counts you typed go into stock here. Any shortfall is recorded.', label: 'Accept', danger: false })">Accept what arrived</button>
+      <p class="hint mt-2">Count it before accepting. A difference is recorded, not hidden.</p>
+    {% endif %}
+  </form>
+
+  {% if transfer.status == "draft" %}
+  {% comment %}
+  One form per line, declared outside the table: a form cannot be nested
+  inside another, and the send form wraps the whole table.
+  {% endcomment %}
+  {% for line in transfer.lines.all %}
+  <form method="post" id="drop-line-{{ line.pk }}"
+        action="{% url 'inventory:transfer_line_delete' line.pk %}"
+        x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ line.variant|escapejs }}?', label: 'Confirm' })">{% csrf_token %}</form>
+  {% endfor %}
+
+  <form method="post" class="card card-body flex flex-wrap items-end gap-3">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_line">
+    <div class="min-w-48 flex-1">
+      <label class="label" for="variant">Add item</label>
+      <select name="variant" id="variant" class="input" required>
+        <option value="">Choose what to send&hellip;</option>
+        {% for item in candidates %}<option value="{{ item.variant_id }}">{{ item.variant }} &mdash; {{ item.qty_on_hand|floatformat:"-3" }} {{ item.variant.product.base_unit.code }} here</option>{% endfor %}
+      </select>
+      {% if not candidates %}<p class="hint">Nothing in stock at {{ transfer.from_branch.name }} that is not already on this transfer.</p>{% endif %}
+    </div>
+    <div class="w-32">
+      <label class="label" for="qty">Quantity</label>
+      <input type="number" step="0.001" min="0.001" name="qty" id="qty" class="input" required>
+    </div>
+    <button type="submit" class="btn btn-secondary">{% icon "plus" class="h-4 w-4" %} Add</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

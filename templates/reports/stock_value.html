@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{% if can_see_cost %}Stock value{% else %}Stock on hand{% endif %}{% endblock %}
+{% block heading %}{% if can_see_cost %}Stock value{% else %}Stock on hand{% endif %}{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" with presets=None hide_dates=True %}
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+    {% if can_see_cost %}<div class="stat"><p class="stat-label">On the shelves at cost</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p><p class="hint">{% if branch_id %}One branch{% else %}All your branches{% endif %}, today</p></div>{% endif %}
+    <div class="stat"><p class="stat-label">Lines in stock</p><p class="stat-value">{{ page.paginator.count|intcomma }}</p></div>
+    {% if no_cost and can_see_cost %}<div class="stat"><p class="stat-label">With no cost price</p><p class="stat-value text-amber-700">{{ no_cost }}</p><p class="hint">Counted as zero. Receive them with a cost to fix.</p></div>{% endif %}
+  </div>
+  <form method="get" class="flex gap-2">
+    {% if branch_id %}<input type="hidden" name="branch" value="{{ branch_id }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Product" aria-label="Find a product" class="input w-full sm:w-64">
+  </form>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th>{% if all_branches|length > 1 %}<th>Branch</th>{% endif %}<th class="text-right">On hand</th>{% if can_see_cost %}<th class="text-right">Unit cost</th><th class="text-right">Value</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for item in page %}
+        <tr><td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td><td class="text-ink-800">{{ item.variant }}</td>{% if all_branches|length > 1 %}<td class="text-ink-600">{{ item.branch.name }}</td>{% endif %}<td class="tnum text-right">{{ item.qty_on_hand|floatformat:"-3" }}</td>{% if can_see_cost %}<td class="tnum text-right {% if not item.avg_cost %}text-amber-700{% else %}text-ink-500{% endif %}">{{ item.avg_cost|floatformat:0|intcomma }}</td><td class="tnum text-right font-medium">{{ item.value|floatformat:0|intcomma }}</td>{% endif %}</tr>
+        {% empty %}<tr><td colspan="6">{% include "partials/empty.html" with icon="box" title="No stock on hand" text="Receive goods to see what your shelves are worth." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

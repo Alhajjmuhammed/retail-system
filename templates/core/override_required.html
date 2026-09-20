@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Needs approval{% endblock %}
+{% block heading %}Needs approval{% endblock %}
+
+{% block content %}
+{% comment %}
+A denial on a dangerous action is not a dead end. A manager approves it here
+and the audit row names both people: who acted, who authorised. Whatever was
+being submitted is carried along, so nothing has to be typed twice.
+{% endcomment %}
+<div class="mx-auto max-w-md">
+  {% include "core/_approval_form.html" %}
+</div>
+{% endblock %}

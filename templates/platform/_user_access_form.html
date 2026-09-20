@@ -1,0 +1,41 @@
+{% comment %}Give, change or remove a person's platform access.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+{% endif %}
+{% include "platform/_modal_head.html" with title="Platform access" subtitle=person.email %}
+
+{% if roles %}
+<form {% if modal %}hx-post="{% url 'platform:user_platform_access' person.pk %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post" action="{% url 'platform:user_platform_access' person.pk %}"{% endif %}
+      class="p-5">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "platform/_form_errors.html" %}
+  <p class="mb-3 text-sm text-ink-600">
+    {% if person.is_platform_staff %}Currently <strong>{{ person.platform_role.name|default:"Super admin" }}</strong>. Choose another role, or take access away.
+    {% else %}Choose what {{ person.name|default:person.email }} may do in the platform admin.{% endif %}
+  </p>
+  {% include "platform/_role_choices.html" with current=person.platform_role_id %}
+  {% if person.is_platform_staff %}
+  <label class="mt-2 flex cursor-pointer items-start gap-3 rounded-xl px-3.5 py-3 ring-1 ring-red-200 hover:bg-red-50 has-[:checked]:bg-red-50 has-[:checked]:ring-red-400">
+    <input type="radio" name="role" value="" class="mt-0.5">
+    <span><span class="block text-sm font-medium text-red-700">No platform access</span>
+      <span class="hint block">They lose the admin area. Any shop they belong to is unaffected.</span></span>
+  </label>
+  {% endif %}
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% else %}
+<div class="p-5">
+  {% include "platform/_form_errors.html" %}
+  <div class="flex justify-end">{% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Close</button>{% endif %}</div>
+</div>
+{% endif %}
+{% if modal %}
+  </div>
+</div>
+{% endif %}

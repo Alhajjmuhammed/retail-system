@@ -1,0 +1,26 @@
+{% include "partials/modal_open.html" with title=customer.name|default:"New customer" subtitle="A phone number lets the till find them fast." width="max-w-lg" %}
+<form {% if modal %}hx-post="{% if customer %}{% url 'customers:customer_edit' customer.pk %}{% else %}{% url 'customers:customer_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %} class="grid gap-4 p-5 sm:grid-cols-2">
+  {% csrf_token %}
+  {% if errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" %}</div>{% endif %}
+  <div class="sm:col-span-2"><label class="label" for="name">Name</label><input name="name" id="name" maxlength="120" value="{% if values %}{{ values.name }}{% else %}{{ customer.name|default:'' }}{% endif %}" class="input" required autofocus></div>
+  <div><label class="label" for="phone">Phone</label><input type="tel" name="phone" id="phone" maxlength="30" value="{% if values %}{{ values.phone }}{% else %}{{ customer.phone|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="email">Email</label><input type="email" name="email" id="email" maxlength="254" value="{% if values %}{{ values.email }}{% else %}{{ customer.email|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="credit_limit">Credit limit</label><input type="number" step="0.01" min="0" name="credit_limit" id="credit_limit" value="{% if values %}{{ values.credit_limit }}{% else %}{{ customer.credit_limit|default:0|floatformat:'-2' }}{% endif %}" class="input"><p class="hint">0 means cash only. Raising it needs credit rights.</p></div>
+  <div><label class="label" for="tin">TIN</label><input name="tin" id="tin" maxlength="30" value="{% if values %}{{ values.tin }}{% else %}{{ customer.tin|default:'' }}{% endif %}" class="input"></div>
+  {% if price_lists|length > 1 %}
+  <div class="sm:col-span-2"><label class="label" for="price_list">Prices</label>
+    <select name="price_list" id="price_list" class="input">
+      <option value="">The usual prices</option>
+      {% for pl in price_lists %}{% if not pl.is_default %}<option value="{{ pl.pk }}" {% if values %}{% if values.price_list == pl.pk|stringformat:"s" %}selected{% endif %}{% elif customer.price_list_id == pl.pk %}selected{% endif %}>{{ pl.name }}</option>{% endif %}{% endfor %}
+    </select>
+    <p class="hint">Picked at the till, the basket is priced from this list.</p>
+  </div>
+  {% endif %}
+  <div class="sm:col-span-2"><label class="label" for="address">Address</label><textarea name="address" id="address" rows="2" maxlength="500" class="input">{% if values %}{{ values.address }}{% else %}{{ customer.address|default:'' }}{% endif %}</textarea></div>
+  <div class="sm:col-span-2"><label class="label" for="note">Note</label><input name="note" id="note" maxlength="1000" value="{% if values %}{{ values.note }}{% else %}{{ customer.note|default:'' }}{% endif %}" class="input" placeholder="Only staff see this"></div>
+  <div class="flex justify-end gap-2 sm:col-span-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% include "partials/modal_close.html" %}

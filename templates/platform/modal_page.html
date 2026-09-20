@@ -1,0 +1,15 @@
+{% extends "platform/base.html" %}
+{% comment %}
+The same forms as their own page, for when a modal is not available -- opened
+in a new tab, or with scripting blocked. A form that only exists inside a
+modal is a form that cannot be reached when something goes wrong.
+{% endcomment %}
+{% block heading %}{{ title|default:"Edit" }}{% endblock %}
+{% block content %}
+<div class="max-w-lg">
+  <div class="card">
+    {% include inner with modal=False %}
+  </div>
+  <a href="{% url back %}" class="btn btn-secondary mt-4">Back</a>
+</div>
+{% endblock %}

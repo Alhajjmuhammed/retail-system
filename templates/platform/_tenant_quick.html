@@ -1,0 +1,110 @@
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+{% endif %}
+
+<div class="flex items-start justify-between gap-4 border-b border-ink-100 px-5 py-4">
+  <div class="flex min-w-0 items-center gap-3">
+    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-base font-semibold text-brand-800">
+      {{ tenant.name|slice:":1"|upper }}
+    </span>
+    <div class="min-w-0">
+      <h2 class="truncate text-base font-semibold tracking-tight text-ink-900">{{ tenant.name }}</h2>
+      <p class="hint">
+        {{ tenant.subscription.plan.name|default:"No plan" }} &middot;
+        joined {{ tenant.created_at|date:"j M Y" }}
+      </p>
+    </div>
+  </div>
+  {% if modal %}
+  <button type="button" @click="$root.remove()" class="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-ink-400 hover:bg-ink-100" aria-label="Close">
+    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  {% endif %}
+</div>
+
+<div class="space-y-4 p-5">
+
+  <div class="grid grid-cols-3 gap-3">
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5">
+      <p class="text-xs text-ink-500">Sales</p>
+      <p class="tnum mt-0.5 text-lg font-semibold text-ink-900">{{ sales_count|intcomma }}</p>
+    </div>
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5">
+      <p class="text-xs text-ink-500">Turnover</p>
+      <p class="tnum mt-0.5 text-lg font-semibold text-ink-900">{{ sales_value|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="rounded-xl px-3 py-2.5 {% if outstanding %}bg-amber-50{% else %}bg-ink-50{% endif %}">
+      <p class="text-xs {% if outstanding %}text-amber-700{% else %}text-ink-500{% endif %}">Owes you</p>
+      <p class="tnum mt-0.5 text-lg font-semibold {% if outstanding %}text-amber-800{% else %}text-ink-900{% endif %}">
+        {{ outstanding|floatformat:0|intcomma }}
+      </p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 text-sm">
+    {% with s=tenant.subscription.status %}
+    <span class="dot
+      {% if s == 'active' %}bg-emerald-500
+      {% elif s == 'trialing' %}bg-brand-500
+      {% elif s == 'suspended' or s == 'cancelled' %}bg-red-500
+      {% else %}bg-amber-500{% endif %}"></span>
+    <span class="font-medium text-ink-800">{{ tenant.subscription.get_status_display|default:"No plan" }}</span>
+    {% if s == "trialing" and tenant.subscription.trial_ends_at %}
+      <span class="text-ink-500">&middot; {{ tenant.subscription.trial_ends_at|timeuntil }} left</span>
+    {% endif %}
+    {% endwith %}
+    {% if last_sale %}
+      <span class="ml-auto text-xs text-ink-500">Last sale {{ last_sale|ago }}</span>
+    {% else %}
+      <span class="badge badge-warn ml-auto">never used it</span>
+    {% endif %}
+  </div>
+
+  <div class="divide-y divide-ink-100 rounded-xl border border-ink-200">
+    {% for row in usage %}
+    <div class="flex items-center justify-between px-3.5 py-2 text-sm">
+      <span class="text-ink-600">{{ row.label }}</span>
+      <span class="tnum font-medium {% if row.allowed and row.used >= row.allowed %}text-amber-700{% else %}text-ink-900{% endif %}">
+        {{ row.used }}{% if row.allowed %} <span class="font-normal text-ink-400">of {{ row.allowed }}</span>{% else %} <span class="font-normal text-ink-400">of unlimited</span>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if owners %}
+  <div>
+    <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-500">Owner</p>
+    {% for m in owners %}
+    <a {% if "people.view" in pp %}href="{% url 'platform:user_detail' m.user_id %}"{% endif %}
+       class="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-ink-50">
+      <span class="min-w-0">
+        <span class="block truncate font-medium text-ink-800">{{ m.user.name }}</span>
+        <span class="hint">{{ m.user.email }}</span>
+      </span>
+      <span class="hint shrink-0">{% if m.user.last_login %}in {{ m.user.last_login|ago }}{% else %}never signed in{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="flex flex-wrap gap-2 border-t border-ink-100 px-5 py-4">
+  <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' tenant.pk %}"{% endif %} class="btn btn-primary">Full page</a>
+  {% if "shops.support" in pp %}<form method="post" action="{% url 'platform:impersonate' tenant.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-secondary">{% icon "enter" %} Support</button>
+  </form>{% endif %}
+  {% if modal and "shops.edit" in pp %}
+  <button type="button" class="btn btn-secondary"
+          hx-get="{% url 'platform:tenant_edit' tenant.pk %}?next={{ request.path|urlencode }}" hx-target="#modal">
+    {% icon "pencil" %} Edit
+  </button>
+  {% endif %}
+</div>
+
+{% if modal %}
+  </div>
+</div>
+{% endif %}

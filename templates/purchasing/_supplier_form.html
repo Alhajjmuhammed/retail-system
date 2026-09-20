@@ -1,0 +1,18 @@
+{% include "partials/modal_open.html" with title=supplier.name|default:"New supplier" subtitle="Who you buy from, and how long they give you to pay." width="max-w-lg" %}
+<form {% if modal %}hx-post="{% if supplier %}{% url 'purchasing:supplier_edit' supplier.pk %}{% else %}{% url 'purchasing:supplier_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %} class="grid gap-4 p-5 sm:grid-cols-2">
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% if errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" %}</div>{% endif %}
+  <div class="sm:col-span-2"><label class="label" for="name">Name</label><input name="name" id="name" maxlength="120" value="{% if values %}{{ values.name }}{% else %}{{ supplier.name|default:'' }}{% endif %}" class="input" required autofocus></div>
+  <div><label class="label" for="contact_name">Contact person</label><input name="contact_name" id="contact_name" maxlength="120" value="{% if values %}{{ values.contact_name }}{% else %}{{ supplier.contact_name|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="phone">Phone</label><input type="tel" name="phone" id="phone" maxlength="30" value="{% if values %}{{ values.phone }}{% else %}{{ supplier.phone|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="email">Email</label><input type="email" name="email" id="email" maxlength="254" value="{% if values %}{{ values.email }}{% else %}{{ supplier.email|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="tin">TIN</label><input name="tin" id="tin" maxlength="30" value="{% if values %}{{ values.tin }}{% else %}{{ supplier.tin|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="payment_terms_days">Days to pay</label><input type="number" min="0" max="365" name="payment_terms_days" id="payment_terms_days" value="{% if values %}{{ values.payment_terms_days }}{% else %}{{ supplier.payment_terms_days|default:0 }}{% endif %}" class="input"><p class="hint">0 means on delivery.</p></div>
+  <div class="sm:col-span-2"><label class="label" for="address">Address</label><textarea name="address" id="address" rows="2" maxlength="500" class="input">{% if values %}{{ values.address }}{% else %}{{ supplier.address|default:'' }}{% endif %}</textarea></div>
+  <div class="flex justify-end gap-2 sm:col-span-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% include "partials/modal_close.html" %}

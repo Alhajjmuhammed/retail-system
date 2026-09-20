@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ count.reference }}{% endblock %}
+{% block heading %}Count {{ count.reference }}{% endblock %}
+
+{% block content %}
+<form method="post" class="space-y-4">
+  {% csrf_token %}
+  <div class="card card-body flex flex-wrap items-center justify-between gap-3 text-sm">
+    <div>
+      <p class="font-medium text-ink-900">{{ count.branch.name }} &middot; started {{ count.created_at|date:"j M Y H:i" }}</p>
+      {% if count.applied_at %}<p class="hint">Applied {{ count.applied_at|date:"j M Y H:i" }}{% if count.applied_by %} by {{ count.applied_by.name }}{% endif %}</p>{% endif %}
+    </div>
+    <span class="badge {% if count.status == 'applied' %}badge-ok{% elif count.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ count.get_status_display }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">System</th><th class="text-right">Counted</th><th class="text-right">Difference</th></tr></thead>
+      <tbody>
+        {% for line in count.lines.all %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td class="text-ink-800">{{ line.variant }}</td>
+          <td class="text-right text-ink-500">{{ line.system_qty|floatformat:"-3" }}</td>
+          <td class="text-right">
+            {% if editable %}
+              <input type="number" step="0.001" min="0" name="qty:{{ line.pk }}" aria-label="Counted {{ line.variant }}"
+                     value="{{ line.counted_qty|floatformat:'-3'|default:'' }}"
+                     class="input w-28 py-1 text-right text-sm" placeholder="—">
+            {% else %}{{ line.counted_qty|floatformat:"-3"|default:"—" }}{% endif %}
+          </td>
+          <td class="text-right font-medium {% if line.variance < 0 %}text-red-600{% elif line.variance > 0 %}text-emerald-700{% endif %}">
+            {{ line.variance|floatformat:"-3"|default:"—" }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if editable %}
+  <input type="hidden" name="action" value="">
+  <div class="flex flex-wrap gap-2">
+    <button type="submit" class="btn btn-secondary" @click="$el.form.elements.action.value = ''" x-data>Save progress</button>
+    <button type="submit" class="btn btn-primary" x-data
+            @click.prevent="$el.form.elements.action.value = 'apply'; $store.confirm.ask($el.form, { title: 'Apply {{ count.reference|escapejs }}?', body: 'Every difference becomes a stock movement and the count closes. Lines left empty are not changed.', label: 'Apply', danger: false })">Apply differences</button>
+  </div>
+  <p class="hint">Applying writes one stock movement per difference. Nothing is overwritten.</p>
+  {% endif %}
+</form>
+{% endblock %}

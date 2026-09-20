@@ -1,0 +1,128 @@
+{% extends "platform/base.html" %}
+{% block title %}Health{% endblock %}
+{% block heading %}Health{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% if jobs_bad %}
+  <div class="flex gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+    <span class="mt-0.5 shrink-0">{% icon "alert" class="h-4 w-4" %}</span>
+    <p><strong>{{ jobs_bad }} background job{{ jobs_bad|pluralize }} not running as scheduled.</strong>
+      Renewal invoices, receipts for the tax authority and SMS stop silently when the scheduler stops.
+      On the server, check the <span class="font-mono">worker</span> and <span class="font-mono">beat</span> containers are up.</p>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-5 lg:grid-cols-3">
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">Services</h2></div>
+      <div class="divide-y divide-ink-100">
+        {% for name, ok, detail in services %}
+        <div class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+          <span class="text-ink-800">{{ name }}</span>
+          <span class="flex items-center gap-1.5 {% if ok %}text-emerald-700{% else %}text-red-700{% endif %}">
+            <span class="dot {% if ok %}bg-emerald-500{% else %}bg-red-500{% endif %}"></span>{% if ok %}Working{% else %}Down{% endif %}
+          </span>
+        </div>
+        {% if detail %}<p class="px-5 pb-3 text-xs text-red-700">{{ detail }}</p>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card lg:col-span-2">
+      <div class="card-head"><h2 class="card-title">Background jobs</h2><span class="hint">When each last ran</span></div>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead><tr><th class="w-12 text-right">SN</th><th>Job</th><th>Last finished</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+              <td><span class="text-ink-900">{{ job.label }}</span><p class="hint font-mono">{{ job.name }}</p></td>
+              <td class="whitespace-nowrap text-sm text-ink-600">{% if job.beat.last_finished %}{{ job.beat.last_finished|ago }}{% else %}—{% endif %}</td>
+              <td class="whitespace-nowrap">
+                <span class="flex items-center gap-1.5 text-sm {% if job.verdict == 'fine' %}text-emerald-700{% elif job.verdict == 'failed' %}text-red-700{% else %}text-amber-700{% endif %}">
+                  <span class="dot {% if job.verdict == 'fine' %}bg-emerald-500{% elif job.verdict == 'failed' %}bg-red-500{% else %}bg-amber-500{% endif %}"></span>
+                  {% if job.verdict == "fine" %}Running{% elif job.verdict == "failed" %}Failed last time{% elif job.verdict == "overdue" %}Overdue{% else %}Never run{% endif %}
+                </span>
+                {% if job.verdict == "failed" and job.beat.last_error %}<p class="hint max-w-xs truncate text-red-600" title="{{ job.beat.last_error }}">{{ job.beat.last_error|truncatechars:90 }}</p>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="stat">
+      <p class="stat-label">Receipts waiting for the tax authority</p>
+      <p class="stat-value">{{ fiscal_pending }}</p>
+      {% if fiscal_oldest %}<p class="hint">Oldest {{ fiscal_oldest|ago }}</p>{% endif %}
+    </div>
+    <div class="stat">
+      <p class="stat-label">Receipts that failed</p>
+      <p class="stat-value {% if fiscal_failed_count %}text-red-600{% endif %}">{{ fiscal_failed_count }}</p>
+      {% if fiscal_failed_count and "health.manage" in pp %}
+      <form method="post" action="{% url 'platform:fiscal_retry' %}" class="mt-2" x-data
+            @submit.prevent="$store.confirm.ask($el, { title: 'Send {{ fiscal_failed_count }} failed receipt{{ fiscal_failed_count|pluralize }} again?', body: 'For after the provider was down. They go with the next run, within ten minutes.', label: 'Send again' })">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm">Send them again</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="stat">
+      <p class="stat-label">SMS waiting</p>
+      <p class="stat-value">{{ sms_queued }}</p>
+      {% if sms_failed %}<p class="hint text-red-600">{{ sms_failed }} failed this week</p>{% endif %}
+    </div>
+    <a {% if "devices.view" in pp %}href="{% url 'platform:devices' %}?view=holding"{% endif %} class="stat transition hover:border-brand-300">
+      <p class="stat-label">Tills holding unsent sales</p>
+      <p class="stat-value {% if devices_holding %}text-red-600{% endif %}">{{ devices_holding }}</p>
+      <p class="hint">{{ devices_silent }} silent over a day</p>
+    </a>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div class="stat">
+      <p class="stat-label">Sales to check</p>
+      <p class="stat-value {% if sales_review %}text-amber-600{% endif %}">{{ sales_review }}</p>
+      <p class="hint">Recorded, but outside what the shop allows; each shop sees its own.</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Sales refused by the server</p>
+      <p class="stat-value {% if sync_refused %}text-amber-600{% endif %}">{{ sync_refused }}</p>
+      <p class="hint">In the last 7 days. They wait on the till for a manager.</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label">Items with negative stock</p>
+      <p class="stat-value {% if negative_total %}text-amber-600{% endif %}">{{ negative_total }}</p>
+      {% for row in negative_stock|slice:":3" %}<p class="hint">{{ row.tenant__name }}: {{ row.n }}</p>{% empty %}<p class="hint">Usually selling offline beyond what was counted.</p>{% endfor %}
+    </div>
+  </div>
+
+  {% if fiscal_failed %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Latest failed receipts</h2></div>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th class="w-12 text-right">SN</th><th>Shop</th><th>Sale</th><th>Tries</th><th>Why</th></tr></thead>
+        <tbody>
+          {% for f in fiscal_failed %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="text-ink-800">{{ f.tenant.name }}</td>
+            <td class="font-mono text-xs text-ink-600">{{ f.sale.number }}</td>
+            <td class="tnum text-ink-600">{{ f.attempts }}</td>
+            <td class="max-w-md truncate text-xs text-red-700" title="{{ f.error }}">{{ f.error|default:"—"|truncatechars:120 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

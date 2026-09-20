@@ -1,0 +1,21 @@
+{% include "partials/modal_open.html" with title="New order" subtitle="Pick the supplier; add what you want on the next screen." width="max-w-md" %}
+<form method="post" action="{% url 'purchasing:order_create' %}" class="space-y-4 p-5">
+  {% csrf_token %}
+  {% if suppliers %}
+  <div><label class="label" for="supplier">Supplier</label>
+    <select name="supplier" id="supplier" class="input" required>
+      {% for s in suppliers %}<option value="{{ s.pk }}" {% if chosen == s.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div><label class="label" for="expected_date">Expected</label><input type="date" name="expected_date" id="expected_date" class="input"></div>
+  <div><label class="label" for="note">Note to the supplier</label><textarea name="note" id="note" rows="2" maxlength="500" class="input" placeholder="Optional"></textarea></div>
+  <div class="flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
+    <button type="submit" class="btn btn-primary">Create and add items</button>
+  </div>
+  {% else %}
+  <p class="text-sm text-ink-600">Add a supplier first.</p>
+  <a href="{% url 'purchasing:supplier_list' %}" class="btn btn-primary">Go to suppliers</a>
+  {% endif %}
+</form>
+{% include "partials/modal_close.html" %}

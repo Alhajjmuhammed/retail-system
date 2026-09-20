@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Sales report{% endblock %}
+{% block heading %}Sales{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="stat"><p class="stat-label">Sales</p><p class="stat-value">{{ totals.count|default:0|intcomma }}</p><p class="hint">average {{ totals.average|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Kept after refunds</p><p class="stat-value">{{ totals.net|default:0|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Refunded</p><p class="stat-value {% if totals.refunded %}text-amber-700{% endif %}">{{ totals.refunded|default:0|floatformat:0|intcomma }}</p><p class="hint">of {{ totals.value|default:0|floatformat:0|intcomma }} rung up</p></div>
+    <div class="stat"><p class="stat-label">VAT</p><p class="stat-value">{{ totals.tax|default:0|floatformat:0|intcomma }}</p></div>
+  </div>
+
+  <div class="card">
+    <div class="border-b border-ink-200 px-5 py-3"><h2 class="text-sm font-semibold text-ink-900">By day, after refunds</h2></div>
+    <div class="space-y-1.5 p-5">
+      {% for row in daily %}
+      <div class="flex items-center gap-3">
+        <span class="w-20 shrink-0 text-xs text-ink-500">{{ row.day|date:"j M" }}</span>
+        <div class="h-5 flex-1 overflow-hidden rounded bg-ink-100">
+          <div class="h-full rounded bg-brand-600" style="width: {% if row.net > 0 %}{% widthratio row.net peak 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+        <span class="w-28 shrink-0 text-right text-sm font-medium text-ink-900" title="{{ row.count }} sale{{ row.count|pluralize }}{% if row.refunded %}, {{ row.refunded|floatformat:0|intcomma }} refunded{% endif %}">{{ row.net|floatformat:0|intcomma }}</span>
+      </div>
+      {% empty %}<p class="py-6 text-center text-sm text-ink-500">No sales in this period.</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="border-b border-ink-200 px-5 py-3"><h2 class="text-sm font-semibold text-ink-900">How they paid</h2></div>
+    <div class="divide-y divide-ink-100 text-sm">
+      {% for row in by_method %}
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ row.label }}{% if row.on_account %} <span class="badge badge-warn">not money in yet</span>{% endif %}</span><span class="font-medium">{{ row.total|default:0|floatformat:0|intcomma }}</span></div>
+      {% empty %}<p class="px-5 py-4 text-sm text-ink-500">No payments in this period.</p>
+      {% endfor %}
+      {% if by_method %}<p class="px-5 py-2.5 text-xs text-ink-500">As paid at the till, before refunds.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

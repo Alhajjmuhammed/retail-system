@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Invite staff{% endblock %}
+{% block heading %}Invite somebody{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg space-y-5">
+  <p class="section-lead">
+    They get a link, choose their own password, and are in. Nothing is emailed
+    &mdash; copy the link and send it however you normally reach them.
+  </p>
+
+  <form method="post" class="card card-body grid gap-4 sm:grid-cols-2">
+    {% csrf_token %}
+    <div class="sm:col-span-2">
+      <label class="label" for="email">Their email</label>
+      <input type="email" name="email" id="email" class="input" required autofocus>
+    </div>
+    <div class="sm:col-span-2">
+      <label class="label" for="role">Role</label>
+      <select name="role" id="role" class="input" required>
+        {% for role in roles %}<option value="{{ role.pk }}">{{ role.name }}</option>{% endfor %}
+      </select>
+      <p class="hint">You can change it, and set exceptions, once they have joined.</p>
+    </div>
+    <button type="submit" class="btn btn-primary sm:col-span-2">Create the link</button>
+  </form>
+
+  {% if pending %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Waiting to be accepted</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for invite in pending %}
+      <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-ink-800">{{ invite.email }}</p>
+          <p class="hint">{{ invite.role.name }} &middot; expires {{ invite.expires_at|date:"j M" }}</p>
+        </div>
+        <div class="flex gap-1.5">
+          <a href="{% url 'accounts:staff_invite_sent' invite.pk %}" class="btn btn-secondary btn-sm">Get link</a>
+          <form method="post" action="{% url 'accounts:staff_invite_cancel' invite.pk %}" x-data
+                @submit.prevent="$store.confirm.ask($el, { title: 'Cancel the invitation to {{ invite.email|escapejs }}?', body: 'The link stops working straight away.', label: 'Cancel invitation', danger: true })">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm text-ink-400 hover:text-red-600">Cancel</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <a href="{% url 'accounts:staff' %}" class="btn btn-secondary">Back to staff</a>
+</div>
+{% endblock %}

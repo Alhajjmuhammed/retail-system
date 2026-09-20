@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Fiscal receipts{% endblock %}
+{% block heading %}Fiscal receipts{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <p class="section-lead">
+    Submitting to the revenue authority needs the internet; selling does not.
+    Receipts queue while you are offline and go as soon as the line is back.
+  </p>
+
+  {% if not provider %}
+  <div class="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-600/20">
+    {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
+    <span>
+      No fiscal provider is connected yet, so nothing is being submitted.
+      Receipts still queue, so nothing is lost.
+      {% can_do "settings.edit" as may_settings %}
+      {% if may_settings %}<a href="{% url 'org:business' %}" class="font-medium underline">Set one up</a>.{% endif %}
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-3 sm:grid-cols-4">
+    {% for value, label in statuses %}
+    <a href="?{% if status != value %}status={{ value }}{% endif %}" class="stat transition hover:border-brand-300 {% if status == value %}ring-2 ring-brand-400{% endif %}" title="{% if status == value %}Show all{% else %}Show only {{ label|lower }}{% endif %}">
+      <p class="stat-label">{{ label }}</p>
+      <p class="stat-value {% if value == 'failed' and counts|get:value %}text-red-600{% elif value == 'pending' and counts|get:value %}text-amber-600{% endif %}">{{ counts|get:value }}</p>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if counts.failed %}
+  <form method="post" x-data @submit.prevent="$store.confirm.ask($el, { title: 'Send the failed ones again?', body: 'They go back in the queue and are sent as soon as the provider answers.', label: 'Send again' })">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="retry">
+    <button type="submit" class="btn btn-secondary">{% icon "restore" class="h-4 w-4" %} Try the failed ones again</button>
+  </form>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Receipt</th><th>Sale</th><th>Status</th><th>Fiscal number</th><th>Sent</th><th class="text-right">Tries</th></tr></thead>
+      <tbody>
+        {% for row in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td class="text-ink-500">{{ row.created_at|date:"j M H:i" }}</td>
+          <td><a href="{% url 'pos:sale_detail' row.sale_id %}" class="font-medium text-brand-700 hover:underline">{{ row.sale.number }}</a></td>
+          <td>
+            <span class="badge {% if row.status == 'sent' %}badge-ok{% elif row.status == 'failed' %}badge-danger{% elif row.status == 'pending' %}badge-warn{% else %}badge-muted{% endif %}">{{ row.get_status_display }}</span>
+            {% if row.error %}<p class="hint break-words text-red-600" title="{{ row.error }}" x-data="{ all: false }" @click="all = !all"><span x-show="!all">{{ row.error|truncatechars:60 }}</span><span x-show="all" x-cloak>{{ row.error }}</span></p>{% endif %}
+          </td>
+          <td class="font-mono text-xs text-ink-600">{{ row.receipt_no|default:"—" }}</td>
+          <td class="text-ink-500">{{ row.sent_at|date:"j M H:i"|default:"—" }}</td>
+          <td class="tnum text-right text-ink-500">{{ row.attempts }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">{% include "partials/empty.html" with icon="shield" title="Nothing queued" text="Fiscal copies appear here as sales are rung up." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{% if membership %}{{ membership.user.name }}{% else %}Add staff{% endif %}{% endblock %}
+{% block heading %}{% if membership %}{{ membership.user.name }}{% else %}Add staff{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    <div class="card-body space-y-4">
+      {% for field in form %}
+      <div>
+        <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% if field.name == "branches" %}
+          <div class="space-y-1.5">
+            {% for choice in field %}
+            <label class="flex items-center gap-2 text-sm text-ink-700">{{ choice.tag }} {{ choice.choice_label }}</label>
+            {% endfor %}
+          </div>
+        {% else %}{{ field }}{% endif %}
+        {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="hint text-red-600">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="flex gap-3 pt-1">
+        <button type="submit" class="btn btn-primary">{% if membership %}Save{% else %}Add{% endif %}</button>
+        <a href="{% url 'accounts:staff' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </div>
+  </form>
+
+  {% if membership and groups %}
+  <form method="post" class="space-y-5">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="overrides">
+
+    <div>
+      <h2 class="text-base font-semibold text-ink-900">Exceptions for {{ membership.user.name }}</h2>
+      <p class="mt-1 text-sm text-ink-600">
+        Their role decides the rest. Use this only where this one person should
+        differ. <strong>Withheld always wins</strong>, even if the role allows it.
+      </p>
+    </div>
+
+    {% for module, items in groups.items %}
+    <div class="card">
+      <div class="border-b border-ink-200 px-5 py-3">
+        <h3 class="text-sm font-semibold text-ink-900">{{ module }}</h3>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for item in items %}
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-2.5 {% if not item.available %}opacity-60{% endif %}">
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm text-ink-800">{{ item.permission.label }}</span>
+            <span class="hint">
+              {% if not item.available %}Not included in your plan
+              {% elif item.granted %}Their role allows this{% if item.limit %} up to {{ item.limit|floatformat:"-2" }}{% endif %}
+              {% else %}Their role does not allow this{% endif %}
+            </span>
+          </span>
+
+          <span class="flex items-center gap-1">
+            {% with ov=item.override %}
+            <label class="cursor-pointer">
+              <input type="radio" name="override:{{ item.permission.code }}" value="" class="peer sr-only"
+                     {% if not ov %}checked{% endif %} {% if not item.available %}disabled{% endif %}>
+              <span class="rounded-md px-2.5 py-1 text-xs text-ink-500 peer-checked:bg-ink-200 peer-checked:font-medium peer-checked:text-ink-900">Use role</span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="override:{{ item.permission.code }}" value="grant" class="peer sr-only"
+                     {% if ov and ov.effect == "grant" %}checked{% endif %} {% if not item.available %}disabled{% endif %}>
+              <span class="rounded-md px-2.5 py-1 text-xs text-ink-500 peer-checked:bg-emerald-100 peer-checked:font-medium peer-checked:text-emerald-800">Also allow</span>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="override:{{ item.permission.code }}" value="deny" class="peer sr-only"
+                     {% if ov and ov.effect == "deny" %}checked{% endif %} {% if not item.available %}disabled{% endif %}>
+              <span class="rounded-md px-2.5 py-1 text-xs text-ink-500 peer-checked:bg-red-100 peer-checked:font-medium peer-checked:text-red-800">Withhold</span>
+            </label>
+            {% if item.takes_limit %}
+            <input type="number" step="0.01" min="0" name="override_limit:{{ item.permission.code }}"
+                   value="{{ item.override.limit_value|default_if_none:'' }}" placeholder="limit"
+                   class="input ml-2 w-24 py-1 text-xs">
+            {% endif %}
+            {% endwith %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary">Save exceptions</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

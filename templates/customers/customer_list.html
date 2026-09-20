@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block heading %}Customers{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Customers</p><p class="stat-value">{{ summary.count }}</p></a>
+    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Owed to you</p><p class="stat-value {% if summary.total_owed %}text-amber-700{% endif %}">{{ summary.total_owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} customer{{ summary.owing|pluralize }}</p></a>
+    <a href="?view=over" class="stat transition hover:border-brand-300 {% if view == 'over' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Over their limit</p><p class="stat-value {% if summary.over %}text-red-600{% endif %}">{{ summary.over }}</p></a>
+    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <form hx-get="{% url 'customers:customer_list' %}" hx-target="#customer-rows" hx-push-url="true"
+          hx-trigger="input changed delay:250ms from:input" class="w-full sm:w-auto">
+      <input type="hidden" name="view" value="{{ view }}">
+      <input type="search" name="q" value="{{ q }}" placeholder="Name or phone" aria-label="Find a customer" class="input w-full sm:w-64" autocomplete="off">
+    </form>
+    <div class="flex flex-wrap gap-2">
+      {% can_do "credit.collect" as may_collect %}
+      {% if may_collect %}<a href="{% url 'customers:statements' %}" class="btn btn-secondary">{% icon "wallet" %} Who owes</a>{% endif %}
+      <a href="{% url 'customers:customer_create' %}" hx-get="{% url 'customers:customer_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New customer</a>
+    </div>
+  </div>
+  <div id="customer-rows">{% include "customers/_customer_rows.html" %}</div>
+</div>
+{% endblock %}

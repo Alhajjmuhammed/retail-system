@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Link expired{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full items-center justify-center px-5 py-12">
+  <div class="w-full max-w-md text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink-100 text-ink-400">
+      {% icon "clock" class="h-5 w-5" %}
+    </div>
+    <h1 class="mt-5 text-xl font-semibold tracking-tight text-ink-900">This link no longer works</h1>
+    <p class="mt-2 text-sm leading-relaxed text-ink-500">
+      Invitations expire after two weeks, and each one can only be used once.
+      Ask whoever invited you to send a new link.
+    </p>
+    <a href="{% url 'accounts:login' %}" class="btn btn-secondary mt-6">Go to sign in</a>
+  </div>
+</div>
+{% endblock %}

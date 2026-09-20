@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Not allowed{% endblock %}
+{% block heading %}Not allowed{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-lg">
+  <div class="card card-body space-y-2">
+    <h2 class="text-base font-semibold text-ink-900">You cannot do that</h2>
+    <p class="text-sm text-ink-600">{{ decision.reason }}</p>
+  </div>
+</div>
+{% endblock %}

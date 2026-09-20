@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Till tiles{% endblock %}
+{% block heading %}Till tiles{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-5">
+  <p class="section-lead">
+    Tiles are how anything without a barcode gets sold &mdash; sugar, bread,
+    tomatoes, charcoal. Put your fastest movers here and a cashier never has to
+    type.
+  </p>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">On the till now</h2>
+      <span class="hint">{{ tiles|length }} tile{{ tiles|length|pluralize }}{% if tiles|length > till_cap %} &middot; the till shows the first {{ till_cap }}{% endif %}</span>
+    </div>
+    <div class="p-4">
+      {% if tiles %}
+      <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+        {% for tile in tiles %}
+        <form method="post" class="relative" x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Take {{ tile.variant|escapejs }} off the till?', body: 'The product stays; only the tile goes.', label: 'Remove' })">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="tile" value="{{ tile.pk }}">
+          <div class="tile">
+            <span class="line-clamp-2 text-sm font-medium leading-snug text-ink-800">{{ tile.variant }}</span>
+            <span class="tnum text-sm font-bold text-brand-700">{{ tile.variant.price_for|default:0|floatformat:0|intcomma }}</span>
+            <span class="hint">{% if tile.branch %}{{ tile.branch.name }} only{% else %}Every branch{% endif %}{% if tile.plu_code %} &middot; code {{ tile.plu_code }}{% endif %}</span>
+          </div>
+          <button type="submit" class="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-ink-400 shadow-sm hover:text-red-600" title="Remove from the till" aria-label="Remove {{ tile.variant }} from the till">{% icon "trash" class="h-3.5 w-3.5" %}</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}
+        {% include "partials/empty.html" with icon="tag" title="No tiles yet" text="Pick your fastest-moving products below. They appear on the till immediately." %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-2">
+      <h2 class="card-title">Add a product</h2>
+      <form method="get" class="w-full sm:w-64">
+        <input type="search" name="q" value="{{ q }}" class="input" placeholder="Find a product" aria-label="Find a product">
+      </form>
+    </div>
+    <div class="max-h-[28rem] divide-y divide-ink-100 overflow-y-auto">
+      {% for variant in candidates %}
+      <form method="post" class="flex flex-wrap items-center gap-2 px-5 py-2.5 sm:flex-nowrap">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <input type="hidden" name="variant" value="{{ variant.pk }}">
+        <span class="min-w-0 basis-full sm:flex-1 sm:basis-auto">
+          <span class="block truncate text-sm text-ink-800">{{ variant }}</span>
+          <span class="hint">{{ variant.product.category.name|default:"Uncategorised" }}</span>
+        </span>
+        {% if branches|length > 1 %}
+        <select name="branch" class="input w-36 py-1.5 text-sm" aria-label="Which branch">
+          <option value="">Every branch</option>
+          {% for b in branches %}<option value="{{ b.pk }}">{{ b.name }} only</option>{% endfor %}
+        </select>
+        {% endif %}
+        <input type="text" name="plu_code" class="input w-24 py-1.5 text-sm" placeholder="code" maxlength="8" aria-label="Short code (optional)" title="Optional short code a cashier can type">
+        <button type="submit" class="btn btn-secondary btn-sm">{% icon "plus" class="h-4 w-4" %} Add</button>
+      </form>
+      {% empty %}
+        {% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try another part of the name." %}
+        {% else %}{% include "partials/empty.html" with icon="tag" title="Everything is already on the till" text="Add more products first." %}{% endif %}
+      {% endfor %}
+    </div>
+    {% if more %}<p class="border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">Showing the first 100. Search to find the rest.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

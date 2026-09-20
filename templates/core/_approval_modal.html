@@ -1,0 +1,9 @@
+{% comment %}
+The approval screen inside a pop-up. A 403 page used to be dropped by HTMX,
+so pressing Save in a modal simply did nothing. The form posts as a normal
+page: the approved action then runs and lands where it would have.
+{% endcomment %}
+{% include "partials/modal_open.html" with title="Needs approval" width="max-w-md" %}
+{% include "core/_approval_form.html" %}
+{% if has_files %}<p class="hint px-5 pb-4">Attached files are not carried over: add them again afterwards.</p>{% endif %}
+{% include "partials/modal_close.html" %}

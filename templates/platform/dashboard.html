@@ -1,0 +1,253 @@
+{% extends "platform/base.html" %}
+{% block title %}Overview{% endblock %}
+{% block heading %}Overview{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% comment %}
+  Money first. The counts that were here before said how many shops existed
+  but nothing about whether the business was working.
+  {% endcomment %}
+  <div class="grid gap-4 lg:grid-cols-3">
+
+    <div class="card card-body lg:col-span-1">
+      <p class="stat-label">Monthly recurring</p>
+      <p class="tnum mt-1 text-4xl font-semibold tracking-tight text-ink-900">
+        {{ mrr|floatformat:0|intcomma }}
+      </p>
+      <p class="mt-1 text-xs text-ink-500">
+        From {{ counts.paying }} paying shop{{ counts.paying|pluralize }}, priced per branch.
+      </p>
+      {% if trial_value %}
+      <div class="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
+        <span class="text-brand-700">{% icon "trending" class="h-4 w-4" %}</span>
+        <p class="text-xs text-brand-800">
+          <span class="tnum font-semibold">{{ trial_value|floatformat:0|intcomma }}</span>
+          more if the {{ counts.trialing }} trial{{ counts.trialing|pluralize }} convert
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+      <div class="stat">
+        <p class="stat-label">Shops</p>
+        <p class="stat-value">{{ counts.total }}</p>
+        <p class="hint">{{ new_this_week }} joined this week</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">On trial</p>
+        <p class="stat-value {% if counts.trialing %}text-brand-700{% endif %}">{{ counts.trialing }}</p>
+        <p class="hint">{{ trials_ending|length }} ending within a week</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">At risk</p>
+        <p class="stat-value {% if counts.at_risk %}text-amber-600{% endif %}">{{ counts.at_risk }}</p>
+        <p class="hint">Past due or in grace &middot; {{ counts.suspended }} suspended</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Owed to you</p>
+        <p class="stat-value {% if outstanding_total %}text-amber-600{% endif %}">{{ outstanding_total|floatformat:0|intcomma }}</p>
+        <p class="hint">Across {{ outstanding|length }} open invoice{{ outstanding|length|pluralize }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+
+    {% comment %}
+    One series, so no legend: the title says what is plotted. Columns are
+    capped so the band keeps its air, with a rounded top and a square foot on
+    the baseline.
+    {% endcomment %}
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Shops joining</h2>
+        <span class="text-xs text-ink-500">Last six months</span>
+      </div>
+      <div class="p-5">
+        <div class="relative flex h-44 gap-2">
+          {% for row in signups %}
+          {# One full-height track per column, so the bar's % resolves. #}
+          <div class="group flex h-full flex-1 flex-col items-center">
+            <span class="tnum mb-1.5 h-4 text-xs font-medium
+              {% if row.value %}text-ink-700{% else %}text-ink-300{% endif %}">{{ row.value }}</span>
+            <div class="flex w-full flex-1 items-end justify-center">
+              <div class="w-full max-w-6 rounded-t bg-brand-600 transition group-hover:bg-brand-700"
+                   style="height: {% if signup_peak %}{% widthratio row.value signup_peak 100 %}{% else %}0{% endif %}%;"
+                   title="{{ row.value }} shop{{ row.value|pluralize }} in {{ row.label }}"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {# Hairline baseline, one step off the surface. #}
+        <div class="flex gap-2 border-t border-ink-200 pt-2">
+          {% for row in signups %}
+          <span class="flex-1 text-center text-xs text-ink-500">{{ row.label }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Shops by plan</h2>
+        <span class="text-xs text-ink-500">{{ counts.total }} total</span>
+      </div>
+      <div class="space-y-3 p-5">
+        {% for row in by_plan %}
+        <div>
+          <div class="mb-1 flex items-baseline justify-between text-sm">
+            <span class="text-ink-700">{{ row.plan__name }}</span>
+            <span class="tnum font-medium text-ink-900">{{ row.n }}</span>
+          </div>
+          <div class="h-2 overflow-hidden rounded-full bg-ink-100">
+            <div class="h-full rounded-full bg-brand-600"
+                 style="width: {% if plan_peak %}{% widthratio row.n plan_peak 100 %}{% else %}0{% endif %}%"></div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="py-6 text-center text-sm text-ink-500">No subscriptions yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Trials ending</h2>
+        <span class="text-xs text-ink-500">Worth a phone call</span>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for s in trials_ending %}
+        <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' s.tenant_id %}"{% endif %}
+           class="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-ink-50">
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-medium text-ink-800">{{ s.tenant.name }}</span>
+            <span class="hint">{{ s.plan.name }}</span>
+          </span>
+          <span class="badge {% if s.days_until_due <= 1 %}badge-danger{% else %}badge-warn{% endif %}">
+            {{ s.trial_ends_at|timeuntil }}
+          </span>
+        </a>
+        {% empty %}
+        <p class="px-5 py-8 text-center text-sm text-ink-500">None in the next week.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      {% if "invoices.view" in pp %}
+      <div class="card-head">
+        <h2 class="card-title">Waiting to be paid</h2>
+        {% if outstanding %}
+        {% if "invoices.view" in pp %}<a {% if "invoices.view" in pp %}href="{% url 'platform:invoices' %}"{% endif %} class="text-xs font-medium text-brand-700 hover:underline">All</a>{% endif %}
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="divide-y divide-ink-100">
+        {% for inv in outstanding %}
+        <a {% if "invoices.view" in pp %}href="{% url 'platform:invoices' %}"{% endif %}
+           class="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-ink-50">
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-medium text-ink-800">{{ inv.tenant.name }}</span>
+            <span class="hint">{{ inv.number }}{% if inv.due_date %} &middot; due {{ inv.due_date|date:"j M" }}{% endif %}</span>
+          </span>
+          <span class="tnum shrink-0 text-sm font-semibold text-ink-900">{{ inv.outstanding|floatformat:0|intcomma }}</span>
+        </a>
+        {% empty %}
+        <p class="px-5 py-8 text-center text-sm text-ink-500">Nothing outstanding.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Newest shops</h2>
+        {% if "shops.view" in pp %}<a {% if "shops.view" in pp %}href="{% url 'platform:tenant_list' %}"{% endif %} class="text-xs font-medium text-brand-700 hover:underline">All</a>{% endif %}
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for t in newest %}
+        <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' t.pk %}"{% endif %}
+           class="flex items-center gap-3 px-5 py-3 transition hover:bg-ink-50">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-xs font-semibold text-brand-800">
+            {{ t.name|slice:":1"|upper }}
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-ink-800">{{ t.name }}</span>
+            <span class="hint">{{ t.created_at|date:"j M Y" }}</span>
+          </span>
+        </a>
+        {% empty %}
+        <p class="px-5 py-8 text-center text-sm text-ink-500">No shops yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+
+    {% comment %}
+    Status colours, never a series hue, and always with words beside them.
+    {% endcomment %}
+    <div class="card lg:col-span-1">
+      <div class="card-head">
+        <h2 class="card-title">Needs attention</h2>
+        {% if "health.view" in pp %}<a {% if "health.view" in pp %}href="{% url 'platform:health' %}"{% endif %} class="text-xs font-medium text-brand-700 hover:underline">Health</a>{% endif %}
+      </div>
+      <div class="divide-y divide-ink-100 text-sm">
+        <div class="flex items-center justify-between px-5 py-2.5">
+          <span class="flex items-center gap-2 text-ink-600">
+            {% if health.devices_stale %}<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>{% else %}<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{% endif %}
+            Devices silent 24h
+          </span>
+          <span class="tnum font-medium {% if health.devices_stale %}text-amber-700{% else %}text-ink-400{% endif %}">{{ health.devices_stale }}</span>
+        </div>
+        <div class="flex items-center justify-between px-5 py-2.5">
+          <span class="flex items-center gap-2 text-ink-600">
+            {% if health.fiscal_failed %}<span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>{% else %}<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{% endif %}
+            Fiscal receipts failed
+          </span>
+          <span class="tnum font-medium {% if health.fiscal_failed %}text-red-700{% else %}text-ink-400{% endif %}">{{ health.fiscal_failed }}</span>
+        </div>
+        <div class="flex items-center justify-between px-5 py-2.5">
+          <span class="flex items-center gap-2 text-ink-600">
+            <span class="h-1.5 w-1.5 rounded-full bg-ink-300"></span>
+            Fiscal receipts queued
+          </span>
+          <span class="tnum font-medium text-ink-500">{{ health.fiscal_pending }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% if "audit.view" in pp %}
+    <div class="card lg:col-span-2">
+      <div class="card-head">
+        <h2 class="card-title">Your team's activity</h2>
+        <a href="{% url 'platform:platform_audit' %}" class="text-xs font-medium text-brand-700 hover:underline">All</a>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for row in activity %}
+        <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+          <span class="min-w-0">
+            <span class="font-medium text-ink-800">{{ row.label }}</span>
+            {% if row.target %}<span class="text-ink-500"> &middot; {{ row.target }}</span>{% endif %}
+          </span>
+          <span class="shrink-0 whitespace-nowrap text-xs text-ink-500">
+            {% if row.user %}{{ row.user.name|default:row.user.email }}{% else %}a removed account{% endif %} &middot; {{ row.when|ago }}
+          </span>
+        </div>
+        {% empty %}
+        <p class="px-5 py-8 text-center text-sm text-ink-500">
+          Support sessions, plan changes and admin access appear here.
+        </p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

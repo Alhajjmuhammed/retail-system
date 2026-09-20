@@ -1,0 +1,61 @@
+{% comment %}One invoice at a glance: what it is for, what came in, what is left.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+{% endif %}
+{% include "platform/_modal_head.html" with title=invoice.number subtitle=invoice.tenant.name %}
+
+<div class="space-y-4 p-5">
+  <div class="grid grid-cols-3 gap-3">
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Total</p><p class="tnum mt-0.5 font-semibold text-ink-900">{{ invoice.total|floatformat:0|intcomma }} <span class="text-xs font-normal text-ink-500">{{ invoice.currency }}</span></p></div>
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Status</p>
+      <p class="mt-0.5 font-semibold {% if invoice.status == 'paid' %}text-emerald-700{% elif invoice.status == 'void' %}text-ink-500{% elif invoice.due_date and invoice.due_date < today %}text-red-700{% else %}text-amber-700{% endif %}">
+        {% if invoice.status == "open" and invoice.due_date and invoice.due_date < today %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}
+      </p></div>
+    <div class="rounded-xl px-3 py-2.5 {% if invoice.outstanding > 0 and invoice.status != 'void' %}bg-amber-50{% else %}bg-ink-50{% endif %}"><p class="text-xs text-ink-500">Left to pay</p><p class="tnum mt-0.5 font-semibold text-ink-900">{% if invoice.status == "void" %}—{% else %}{{ invoice.outstanding|floatformat:0|intcomma }}{% endif %}</p></div>
+  </div>
+  <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+    <dt class="text-ink-500">Period</dt><dd class="text-ink-800">{{ invoice.period_start|date:"j M Y" }} &ndash; {{ invoice.period_end|date:"j M Y" }}</dd>
+    <dt class="text-ink-500">Due</dt><dd class="text-ink-800">{{ invoice.due_date|date:"j M Y"|default:"—" }}</dd>
+    <dt class="text-ink-500">Raised</dt><dd class="text-ink-800">{{ invoice.created_at|date:"j M Y" }}</dd>
+    {% if invoice.paid_at %}<dt class="text-ink-500">Paid in full</dt><dd class="text-ink-800">{{ invoice.paid_at|date:"j M Y" }}</dd>{% endif %}
+  </dl>
+
+  <div>
+    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-ink-500">Payments</p>
+    <div class="divide-y divide-ink-100 rounded-xl ring-1 ring-ink-100">
+      {% for p in payments %}
+      <div class="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
+        <div class="min-w-0">
+          <p class="text-sm font-medium {% if p.status == 'refunded' %}text-ink-400 line-through{% else %}text-ink-900{% endif %}">{{ p.amount|floatformat:0|intcomma }} &middot; {{ p.get_method_display }}</p>
+          <p class="hint">{{ p.created_at|date:"j M Y H:i" }}{% if p.provider_ref %} &middot; <span class="font-mono">{{ p.provider_ref }}</span>{% endif %}{% if p.status == "refunded" %} &middot; reversed{% if p.raw_payload.reversed_because %}: {{ p.raw_payload.reversed_because }}{% endif %}{% endif %}</p>
+        </div>
+        {% if "invoices.manage" in pp and p.status == "succeeded" %}
+        <form method="post" action="{% url 'platform:payment_reverse' p.pk %}?next={{ next|urlencode }}" x-data="{ open: false }" class="flex items-center gap-1.5">
+          {% csrf_token %}
+          <template x-if="open">
+            <input name="reason" class="input w-40 py-1 text-xs" placeholder="Why?" required>
+          </template>
+          <button type="button" x-show="!open" @click="open = true" class="btn btn-ghost btn-sm text-ink-500 hover:text-red-600">Reverse</button>
+          <button type="submit" x-show="open" x-cloak class="btn btn-danger btn-sm">Reverse it</button>
+        </form>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p class="px-3.5 py-3 text-sm text-ink-500">Nothing received yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if "invoices.manage" in pp %}{% if invoice.status == "open" or invoice.status == "draft" %}
+<div class="flex flex-wrap justify-end gap-2 border-t border-ink-100 px-5 py-3">
+  <button type="button" class="btn btn-primary btn-sm"
+          hx-get="{% url 'platform:invoice_pay' invoice.pk %}?next={{ next|urlencode }}" hx-target="#modal">{% icon "wallet" %} Record a payment</button>
+</div>
+{% endif %}{% endif %}
+{% if modal %}
+  </div>
+</div>
+{% endif %}

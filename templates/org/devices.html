@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Devices{% endblock %}
+{% block heading %}Tills and phones{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <p class="text-sm text-ink-600">Every till and phone that has been used to sell here. A lost or stolen one can be switched off: it then cannot send sales or take payment.</p>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Device</th><th>Branch</th><th>Last heard from</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
+      <tbody>
+        {% for d in devices %}
+        <tr x-data="{ editing: false }">
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td>
+            <div x-show="!editing">
+              <span class="font-medium text-ink-900">{{ d.label|default:"Unnamed" }}</span>
+              <span class="badge badge-muted ml-1">{{ d.get_kind_display }}</span>
+            </div>
+            <form x-show="editing" x-cloak method="post" action="{% url 'org:device_update' d.pk %}" class="flex gap-1.5">
+              {% csrf_token %}<input type="hidden" name="action" value="rename">
+              <input name="label" value="{{ d.label }}" maxlength="60" class="input py-1 text-sm" placeholder="e.g. Front counter">
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+          </td>
+          <td class="text-sm text-ink-600">{{ d.branch.name }}</td>
+          <td class="whitespace-nowrap text-sm {% if d.is_active and d.last_sync_at and d.last_sync_at < stale_before %}text-amber-700{% else %}text-ink-600{% endif %}">
+            {% if d.last_sync_at %}{{ d.last_sync_at|ago }}{% else %}never{% endif %}
+          </td>
+          <td class="whitespace-nowrap">
+            <span class="flex items-center gap-1.5 text-sm text-ink-700">
+              <span class="dot {% if not d.is_active %}bg-ink-300{% elif d.queued %}bg-red-500{% else %}bg-emerald-500{% endif %}"></span>
+              {% if not d.is_active %}Switched off{% elif d.queued %}{{ d.queued }} unsent sale{{ d.queued|pluralize }}{% else %}In use{% endif %}
+            </span>
+          </td>
+          <td>
+            <div class="flex items-center justify-end gap-0.5">
+              <button type="button" class="btn-icon btn-icon-brand" title="Rename" aria-label="Rename" @click="editing = !editing">{% icon "pencil" %}</button>
+              <form method="post" action="{% url 'org:device_update' d.pk %}" x-data
+                    @submit.prevent="$store.confirm.ask($el, {
+                      title: '{% if d.is_active %}Switch off{% else %}Bring back{% endif %} {{ d.label|default:"this device"|escapejs }}?',
+                      body: '{% if d.is_active %}It will not be able to send sales or take payment. Anything it is holding stays on it.{% else %}It can sell again.{% endif %}',
+                      label: '{% if d.is_active %}Switch off{% else %}Bring back{% endif %}',
+                      danger: {% if d.is_active %}true{% else %}false{% endif %} })">
+                {% csrf_token %}<input type="hidden" name="action" value="toggle">
+                <button type="submit" class="btn-icon {% if d.is_active %}btn-icon-danger{% endif %}"
+                        title="{% if d.is_active %}Switch off — lost or stolen{% else %}Bring back{% endif %}">
+                  {% if d.is_active %}{% icon "suspend" %}{% else %}{% icon "restore" %}{% endif %}
+                </button>
+              </form>
+              {% if not d.queued %}
+              <form method="post" action="{% url 'org:device_update' d.pk %}" x-data
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Forget {{ d.label|default:"this device"|escapejs }}?', body: 'It disappears from this list and is switched off. If it is ever used again it stays blocked.', label: 'Forget' })">
+                {% csrf_token %}<input type="hidden" name="action" value="forget">
+                <button type="submit" class="btn-icon btn-icon-danger" title="Forget this device" aria-label="Forget this device">{% icon "trash" %}</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone appears here the first time somebody sells on it." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+
+{% block body %}
+<div class="flex min-h-full">
+  <div class="flex w-full flex-col justify-center px-5 py-10 sm:px-10 lg:w-[480px] lg:shrink-0 lg:px-14">
+    <div class="mx-auto w-full max-w-sm">
+      <div class="mb-8">
+        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">R</div>
+        <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Welcome back</h1>
+        <p class="mt-1.5 text-sm text-ink-500">Sign in to your shop.</p>
+      </div>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% if request.GET.reset %}
+          <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-600/15">Password saved. Sign in with the new one.</div>
+        {% endif %}
+        {% if form.non_field_errors %}
+          <div class="flex items-start gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+            {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
+            <span>{{ form.non_field_errors.0 }}</span>
+          </div>
+        {% endif %}
+
+        <div>
+          <label class="label" for="id_username">Email</label>
+          <input type="email" name="username" id="id_username" class="input input-lg"
+                 autocomplete="username" placeholder="you@shop.co.tz" autofocus required>
+        </div>
+        <div>
+          <div class="flex items-baseline justify-between">
+            <label class="label" for="id_password">Password</label>
+            <a href="{% url 'accounts:password_reset' %}" class="text-xs font-medium text-brand-700 hover:underline">Forgot it?</a>
+          </div>
+          <input type="password" name="password" id="id_password" class="input input-lg"
+                 autocomplete="current-password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full">Sign in</button>
+      </form>
+
+      <p class="mt-6 text-center text-sm text-ink-500">
+        New here?
+        <a href="{% url 'signup' %}" class="font-medium text-brand-700 hover:underline">Start a free trial</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="relative hidden flex-1 overflow-hidden bg-brand-900 lg:block">
+    <div class="absolute inset-0 opacity-[0.07]"
+         style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 28px 28px;"></div>
+    <div class="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-700/40 blur-3xl"></div>
+    <div class="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-brand-600/25 blur-3xl"></div>
+    <div class="relative flex h-full flex-col justify-end p-14">
+      <p class="max-w-md text-xl font-medium leading-relaxed text-white">
+        One system for every shop you run. Sell on the counter or in the aisle,
+        keep selling when the internet drops, and know at the end of the day
+        exactly what came in and what is missing.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-brand-200">
+        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} Works offline</span>
+        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} Multiple branches</span>
+        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} VAT and fiscal receipts</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // Whoever signs in next must not be handed the previous person's till.
+  // Queued, unsent sales live in IndexedDB and are left alone.
+  // Every version of it, whatever the worker currently calls its cache.
+  if ("caches" in window) {
+    caches.keys().then((names) => names
+      .filter((name) => name.startsWith("till-pages"))
+      .forEach((name) => caches.delete(name))).catch(() => {});
+  }
+</script>
+{% endblock %}

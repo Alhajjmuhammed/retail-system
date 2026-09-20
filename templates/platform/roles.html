@@ -1,0 +1,97 @@
+{% extends "platform/base.html" %}
+{% block title %}Admin roles{% endblock %}
+{% block heading %}Admin roles{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <div>
+        <h2 class="card-title">What your own team may do</h2>
+        <p class="hint">Each platform admin holds one role. Shop staff roles are set by each shop and are separate.</p>
+      </div>
+      <button type="button" class="btn btn-primary shrink-0"
+              hx-get="{% url 'platform:role_create' %}" hx-target="#modal">
+        {% icon "plus" %} New role
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Role</th>
+            <th>May do</th>
+            <th>Held by</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for role in roles %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td>
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {% if role.is_super %}bg-brand-600 text-white{% else %}bg-brand-100 text-brand-800{% endif %}">
+                  {% icon "key" class="h-4 w-4" %}
+                </span>
+                <span class="min-w-0">
+                  <span class="block font-medium text-ink-900">{{ role.name }}</span>
+                  <span class="hint block max-w-sm">{{ role.description|default:"—" }}</span>
+                </span>
+              </div>
+            </td>
+            <td>
+              {% if role.is_super %}
+                <span class="badge badge-brand">Everything</span>
+              {% else %}
+                {% with n=role.permission_set|length %}
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 w-24 overflow-hidden rounded-full bg-ink-100">
+                    <div class="h-full rounded-full bg-brand-500" style="width: {% widthratio n total_perms 100 %}%"></div>
+                  </div>
+                  <span class="tnum text-sm text-ink-700">{{ n }} of {{ total_perms }}</span>
+                </div>
+                {% endwith %}
+              {% endif %}
+            </td>
+            <td>
+              <div class="flex max-w-xs flex-wrap gap-1">
+                {% for admin in role.admins.all %}
+                  <a {% if "people.view" in pp %}href="{% url 'platform:user_detail' admin.pk %}"{% endif %} class="badge badge-muted hover:ring-brand-300">{{ admin.name|default:admin.email }}</a>
+                {% empty %}
+                  <span class="text-sm text-ink-400">Nobody</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if role.is_super %}
+                  <span class="px-2 text-xs text-ink-400" title="Holds every permission, including future ones">Locked</span>
+                {% else %}
+                  <button type="button" class="btn-icon btn-icon-brand" title="Edit what this role may do"
+                          hx-get="{% url 'platform:role_edit' role.pk %}" hx-target="#modal">
+                    {% icon "pencil" %}
+                  </button>
+                  {% if not role.admin_count %}
+                  <form method="post" action="{% url 'platform:role_delete' role.pk %}" x-data
+                        @submit.prevent="$store.confirm.ask($el, {
+                          title: 'Remove the {{ role.name|escapejs }} role?',
+                          body: 'Nobody holds it, so nothing else changes.',
+                          label: 'Remove', danger: true })">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-icon btn-icon-danger" title="Remove — nobody holds it">{% icon "trash" %}</button>
+                  </form>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

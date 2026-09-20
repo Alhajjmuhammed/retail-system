@@ -1,0 +1,66 @@
+{% comment %}
+Icon actions for one person. Used by the People list, the quick view and the
+person's own page, so each guard is expressed once. Buttons appear only when
+the viewer's role allows them; the views check again regardless.
+Needs: row (a User), shops (how many shops they belong to), next (return path).
+{% endcomment %}
+{% with may=row|manageable_by:request.user %}
+<div class="flex items-center justify-end gap-0.5">
+  {% if "people.manage" in pp and may %}
+  <button type="button" class="btn-icon btn-icon-brand" title="Edit name, email or phone"
+          hx-get="{% url 'platform:user_edit' row.pk %}?next={{ next|urlencode }}" hx-target="#modal">
+    {% icon "pencil" %}
+  </button>
+
+  <button type="button" class="btn-icon btn-icon-brand" title="Set a new password"
+          hx-get="{% url 'platform:user_password' row.pk %}?next={{ next|urlencode }}" hx-target="#modal">
+    {% icon "key" %}
+  </button>
+  {% endif %}
+
+  {% if row.pk != request.user.pk %}
+  {% if "people.manage" in pp and may %}
+  <form method="post" action="{% url 'platform:user_toggle_active' row.pk %}?next={{ next|urlencode }}" x-data
+        @submit.prevent="$store.confirm.ask($el, {
+          title: '{% if row.is_active %}Deactivate{% else %}Reactivate{% endif %} {{ row.name|default:row.email|escapejs }}?',
+          body: '{% if row.is_active %}They are signed out everywhere, including any till, and cannot sign in again. Everything they recorded stays.{% else %}They can sign in again straight away with their existing password.{% endif %}',
+          label: '{% if row.is_active %}Deactivate{% else %}Reactivate{% endif %}',
+          danger: {% if row.is_active %}true{% else %}false{% endif %} })">
+    {% csrf_token %}
+    <button type="submit" class="btn-icon {% if row.is_active %}btn-icon-danger{% endif %}"
+            title="{% if row.is_active %}Deactivate — they keep their records{% else %}Reactivate{% endif %}">
+      {% if row.is_active %}{% icon "suspend" %}{% else %}{% icon "restore" %}{% endif %}
+    </button>
+  </form>
+  {% endif %}
+
+  {% if "admins.manage" in pp and may and row.is_platform_staff or "admins.manage" in pp and row.is_active and not row.is_platform_staff %}
+  <button type="button" class="btn-icon {% if row.is_platform_staff %}text-brand-600{% endif %}"
+          title="{% if row.is_platform_staff %}Platform access: {{ row.platform_role.name|default:'Super admin' }}{% else %}Give platform access{% endif %}"
+          hx-get="{% url 'platform:user_platform_access' row.pk %}?next={{ next|urlencode }}" hx-target="#modal">
+    {% icon "shield" %}
+  </button>
+  {% endif %}
+
+  {% if "people.delete" in pp and may and not shops and not row.last_login %}
+  <form method="post" action="{% url 'platform:user_delete' row.pk %}?next={{ next|urlencode }}" x-data
+        @submit.prevent="$store.confirm.ask($el, {
+          title: 'Delete {{ row.email|escapejs }}?',
+          body: 'They belong to no shop and have never signed in, so nothing refers to this account. This cannot be undone.',
+          label: 'Delete', danger: true })">
+    {% csrf_token %}
+    <button type="submit" class="btn-icon btn-icon-danger" title="Delete — never used">
+      {% icon "trash" %}
+    </button>
+  </form>
+  {% endif %}
+  {% endif %}
+
+  {% if not hide_open %}
+  <button type="button" class="btn-icon" title="Open"
+          hx-get="{% url 'platform:user_quick_view' row.pk %}" hx-target="#modal">
+    {% icon "chevron-right" %}
+  </button>
+  {% endif %}
+</div>
+{% endwith %}

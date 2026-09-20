@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{% if product %}{{ product.name }}{% else %}New product{% endif %}{% endblock %}
+{% block heading %}{% if product %}{{ product.name }}{% else %}New product{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl card">
+  {% include "catalog/_product_form.html" with modal=False %}
+</div>
+{% endblock %}

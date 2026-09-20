@@ -1,0 +1,18 @@
+{% if messages %}
+<div class="mb-5 space-y-2">
+  {% for message in messages %}
+  <div x-data="{ show: true }" x-show="show" x-cloak
+       class="flex items-start gap-3 rounded-xl px-4 py-3 text-sm ring-1 ring-inset
+       {% if message.tags == 'error' %}bg-red-50 text-red-800 ring-red-600/15
+       {% elif message.tags == 'warning' %}bg-amber-50 text-amber-800 ring-amber-600/20
+       {% elif message.tags == 'success' %}bg-emerald-50 text-emerald-800 ring-emerald-600/15
+       {% else %}bg-ink-100 text-ink-700 ring-ink-500/10{% endif %}">
+    <span class="mt-0.5 shrink-0">
+      {% if message.tags == 'error' or message.tags == 'warning' %}{% icon "alert" %}{% else %}{% icon "check" %}{% endif %}
+    </span>
+    <span class="flex-1">{{ message }}</span>
+    <button type="button" @click="show = false" class="shrink-0 opacity-50 hover:opacity-100" aria-label="Dismiss">&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

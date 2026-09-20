@@ -1,0 +1,74 @@
+{% extends "platform/base.html" %}
+{% block title %}Activity{% endblock %}
+{% block heading %}What your team did{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <select name="area" class="input w-48">
+          <option value="">Everything</option>
+          {% for key, pair in areas.items %}
+            <option value="{{ key }}" {% if area == key %}selected{% endif %}>{{ pair.0 }}</option>
+          {% endfor %}
+        </select>
+        <select name="who" class="input w-48">
+          <option value="">Anyone on the team</option>
+          {% for person in team %}
+            <option value="{{ person.pk }}" {% if who == person.pk|stringformat:"s" %}selected{% endif %}>{{ person.name|default:person.email }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        {% if area or who %}<a href="{% url 'platform:platform_audit' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+      </form>
+      <p class="hint max-w-sm">Anybody who opens a shop, changes a plan or gives out admin access is answerable for it.</p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr><th class="w-12 text-right">SN</th><th>When</th><th>What</th><th>On</th><th>Who</th><th>From</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+            <td class="whitespace-nowrap">
+              <span class="text-sm text-ink-700">{{ row.when|ago }}</span>
+              <p class="hint">{{ row.when|date:"j M Y, H:i" }}</p>
+            </td>
+            <td>
+              <span class="font-medium text-ink-900">{{ row.label }}</span>
+              {% if row.detail %}
+              <p class="hint max-w-md">
+                {% for key, value in row.detail.items %}{{ key|capfirst }}: {% if value is True %}yes{% elif value is False %}no{% else %}{{ value|join_if_list }}{% endif %}{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+              </p>
+              {% endif %}
+            </td>
+            <td class="text-sm text-ink-700">{{ row.target|default:"—" }}</td>
+            <td class="whitespace-nowrap text-sm text-ink-700">{% if row.user %}{{ row.user.name|default:row.user.email }}{% else %}<span class="text-ink-400">a removed account</span>{% endif %}</td>
+            <td class="font-mono text-xs text-ink-500">{{ row.ip|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">{% include "partials/empty.html" with icon="clipboard" title="Nothing yet" text="Support sessions, plan changes, admin access and every other change your team makes appear here." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page.paginator.count %}
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+      <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+      {% if page.has_other_pages %}
+      <div class="flex items-center gap-1.5">
+        {% if page.has_previous %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.previous_page_number }}" class="btn btn-secondary btn-sm">Previous</a>{% endif %}
+        <span class="px-1">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?{% if keep %}{{ keep }}&amp;{% endif %}page={{ page.next_page_number }}" class="btn btn-secondary btn-sm">Next</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

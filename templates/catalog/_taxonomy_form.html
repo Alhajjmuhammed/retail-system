@@ -1,0 +1,64 @@
+{% comment %}Change or remove a category, brand, unit or VAT rate. Modal from the list, or a page.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-md rounded-2xl bg-white shadow-float">
+{% include "platform/_modal_head.html" with title=label|add:": "|add:object.name %}
+{% endif %}
+<form {% if modal %}hx-post="{% url 'catalog:taxonomy_edit' kind object.pk %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %} class="space-y-4 p-5">
+  {% csrf_token %}
+  {% if error %}<div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">{{ error }}</div>{% endif %}
+  <div>
+    <label class="label" for="name">Name</label>
+    <input name="name" id="name" value="{{ request.POST.name|default:object.name }}" maxlength="{% if kind == 'unit' or kind == 'tax' %}40{% else %}80{% endif %}" class="input" required autofocus>
+  </div>
+
+  {% if kind == "unit" %}
+  <div>
+    <label class="label" for="code">Short code</label>
+    <input name="code" id="code" value="{{ request.POST.code|default:object.code }}" maxlength="10" class="input">
+  </div>
+  <label class="flex items-center gap-2.5 text-sm text-ink-700">
+    <input type="checkbox" name="allows_decimal" class="checkbox" {% if object.allows_decimal %}checked{% endif %}>
+    <span>Can be sold in parts <span class="hint block">1.5 kg of sugar, but never 1.5 bottles.</span></span>
+  </label>
+  {% endif %}
+
+  {% if kind == "tax" %}
+  <div>
+    <label class="label" for="rate">Rate %</label>
+    <input type="number" step="0.01" min="0" max="100" name="rate" id="rate" value="{{ request.POST.rate|default:object.rate }}" class="input" required>
+    <p class="hint">Sales already made keep the rate they were charged at.</p>
+  </div>
+  <div>
+    <label class="label" for="fiscal_code">Code for the revenue authority</label>
+    <input name="fiscal_code" id="fiscal_code" value="{{ object.fiscal_code }}" maxlength="10" class="input">
+  </div>
+  <label class="flex items-center gap-2.5 text-sm text-ink-700">
+    <input type="checkbox" name="is_inclusive" class="checkbox" {% if object.is_inclusive %}checked{% endif %}>
+    Prices already include this
+  </label>
+  <label class="flex items-center gap-2.5 text-sm text-ink-700">
+    <input type="checkbox" name="is_default" class="checkbox" {% if object.is_default %}checked disabled{% endif %}>
+    Use for new products{% if object.is_default %} <span class="hint">(choose another rate to change this)</span>{% endif %}
+  </label>
+  {% endif %}
+
+  <div class="flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>
+    {% else %}<a href="{% url 'catalog:taxonomy' %}" class="btn btn-secondary">Cancel</a>{% endif %}
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+
+<form method="post" action="{% url 'catalog:taxonomy_delete' kind object.pk %}" x-data
+      @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ object.name|escapejs }}?', body: 'If anything uses it, it is switched off rather than deleted, and you can switch it back on.', label: 'Remove' })"
+      class="flex items-center justify-between gap-3 border-t border-ink-100 px-5 py-4">
+  {% csrf_token %}
+  <p class="hint">If anything uses it, it is switched off rather than deleted.</p>
+  <button type="submit" class="btn btn-danger btn-sm">{% icon "trash" class="h-4 w-4" %} Remove</button>
+</form>
+{% if modal %}
+  </div>
+</div>
+{% endif %}

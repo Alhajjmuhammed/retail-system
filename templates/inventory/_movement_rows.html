@@ -1,0 +1,23 @@
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th class="w-12 text-right">SN</th><th>When</th><th>Product</th><th>Why</th><th class="text-right">Change</th><th class="text-right">After</th><th>Who</th></tr></thead>
+    <tbody>
+      {% for m in page %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td class="whitespace-nowrap text-ink-500">{{ m.created_at|date:"j M H:i" }}</td>
+        <td class="min-w-40 text-ink-800">{{ m.variant }}</td>
+        <td><span class="badge badge-muted">{{ m.get_reason_display }}</span>{% if m.note %}<p class="hint max-w-xs break-words">{{ m.note }}</p>{% endif %}</td>
+        <td class="text-right font-medium {% if m.qty_delta < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">
+          {{ m.qty_delta|floatformat:"-3" }}
+        </td>
+        <td class="text-right text-ink-600">{{ m.balance_after|floatformat:"-3" }}</td>
+        <td class="text-ink-500">{{ m.created_by.name|default:"system" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">{% include "partials/empty.html" with icon="activity" title="No movements" text="Nothing has changed stock at this branch yet." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "partials/pagination.html" %}
+</div>

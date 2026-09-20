@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Close shift{% endblock %}
+{% block heading %}Close your shift{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg space-y-4">
+  <div class="card">
+    <div class="border-b border-ink-200 px-5 py-3">
+      <h2 class="text-sm font-semibold text-ink-900">What the system expects</h2>
+    </div>
+    <div class="divide-y divide-ink-100 text-sm">
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Opening float</span><span class="font-medium">{{ shift.opening_float|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash sales ({{ sales_count }})</span><span class="font-medium">{{ cash_taken|floatformat:0|intcomma }}</span></div>
+      {% if cash_refunded %}<div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash refunded</span><span class="font-medium">&minus;{{ cash_refunded|floatformat:0|intcomma }}</span></div>{% endif %}
+      {% for m in movements %}
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ m.get_kind_display }} &mdash; {{ m.reason }}</span><span class="font-medium">{{ m.amount|floatformat:0|intcomma }}</span></div>
+      {% endfor %}
+      <div class="flex justify-between bg-ink-50 px-5 py-3"><span class="font-semibold text-ink-900">Expected in drawer</span><span class="text-lg font-bold text-ink-900">{{ expected|floatformat:0|intcomma }}</span></div>
+    </div>
+  </div>
+
+  {% can_do "cash.movement" as may_move %}
+  {% if may_move %}
+  <details class="card">
+    <summary class="card-head cursor-pointer"><span class="card-title">Money put in, taken out or banked</span><span class="hint">Record it before you count</span></summary>
+    <form method="post" action="{% url 'pos:cash_movement' %}" class="card-body space-y-3">
+      {% csrf_token %}
+      {% comment %}
+      The chosen one is marked by script as well as by CSS: on an older phone
+      browser the styling alone showed nothing, so all three looked the same.
+      {% endcomment %}
+      <div class="grid grid-cols-3 gap-2" x-data="{ kind: 'pay_out' }">
+        <label class="flex cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-sm ring-1"
+               :class="kind === 'pay_in' ? 'bg-brand-50 ring-brand-400 font-medium text-brand-800' : 'ring-ink-200'">
+          <input type="radio" name="kind" value="pay_in" class="sr-only" x-model="kind">Put in</label>
+        <label class="flex cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-sm ring-1"
+               :class="kind === 'pay_out' ? 'bg-brand-50 ring-brand-400 font-medium text-brand-800' : 'ring-ink-200'">
+          <input type="radio" name="kind" value="pay_out" class="sr-only" x-model="kind" checked>Taken out</label>
+        <label class="flex cursor-pointer items-center justify-center rounded-lg px-2 py-2 text-sm ring-1"
+               :class="kind === 'drop' ? 'bg-brand-50 ring-brand-400 font-medium text-brand-800' : 'ring-ink-200'">
+          <input type="radio" name="kind" value="drop" class="sr-only" x-model="kind">Banked</label>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <input type="number" step="0.01" min="0.01" name="amount" class="input" placeholder="Amount" required>
+        <input type="text" name="reason" maxlength="200" class="input col-span-2" placeholder="What for, e.g. change float, deposit slip no." required>
+      </div>
+      <button type="submit" class="btn btn-secondary w-full">Record it</button>
+    </form>
+  </details>
+  {% endif %}
+
+  <form method="post" class="card card-body space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="label" for="counted_cash">Count the drawer and type what is there</label>
+      <input type="number" step="0.01" min="0" name="counted_cash" id="counted_cash"
+             inputmode="numeric" class="input py-3 text-lg" required autofocus>
+      <p class="hint">Count first, then look at the expected figure. That order is the point.</p>
+    </div>
+    <div>
+      <label class="label" for="note">Note</label>
+      <input type="text" name="note" id="note" maxlength="200" class="input" placeholder="Anything that explains a difference">
+    </div>
+    <button type="submit" class="btn btn-primary w-full">Close shift</button>
+  </form>
+</div>
+{% endblock %}

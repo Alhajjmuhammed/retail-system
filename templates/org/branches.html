@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Branches{% endblock %}
+{% block heading %}Branches &amp; tills{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-5">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <p class="section-lead">
+      Stock is counted per branch; your product list is shared across all of them.
+      {% if not may_branches %}Your plan includes one branch; add tills and phones to it here.{% endif %}
+      {% if allowed and may_branches %}Your plan allows {{ allowed }}, you have {{ used }}.{% endif %}
+    </p>
+    {% if may_branches and covers_all %}<a href="{% url 'org:branch_create' %}" hx-get="{% url 'org:branch_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} New branch</a>{% endif %}
+  </div>
+
+  <div class="space-y-3">
+    {% for branch in branches %}
+    <div class="card">
+      <div class="card-head">
+        <div class="min-w-0">
+          <h2 class="card-title">
+            {{ branch.name }}
+            {% if branch.is_default %}<span class="badge badge-brand ml-1.5">default</span>{% endif %}
+            {% if not branch.is_active %}<span class="badge badge-muted ml-1.5">closed</span>{% endif %}
+          </h2>
+          {% if branch.phone or branch.address %}<p class="hint">{{ branch.phone }} {{ branch.address|truncatewords:8 }}</p>{% endif %}
+        </div>
+        <div class="flex shrink-0 items-center gap-1">
+          {% if may_branches %}
+          <a href="{% url 'org:branch_edit' branch.pk %}" hx-get="{% url 'org:branch_edit' branch.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit {{ branch.name }}" aria-label="Edit {{ branch.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+          {% if branch.is_active and not branch.is_default %}
+          <form method="post" action="{% url 'org:branch_delete' branch.pk %}" class="inline" x-data
+                @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ branch.name|escapejs }}?', body: 'If it has stock or sales it is closed instead, and its history stays.', label: 'Remove' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger" title="Remove {{ branch.name }}" aria-label="Remove {{ branch.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 p-4">
+        {% for register in branch.registers.all %}
+          <span class="badge {% if register.is_active %}badge-ok{% else %}badge-muted{% endif %} gap-1.5">
+            {% icon "cart" class="h-3 w-3" %}
+            <a href="{% url 'org:register_edit' register.pk %}" hx-get="{% url 'org:register_edit' register.pk %}" hx-target="#modal" class="hover:underline" title="Edit till {{ register.name }}">{{ register.name }}</a>{% if not register.is_active %} (off){% endif %}
+            <form method="post" action="{% url 'org:register_delete' register.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Remove till {{ register.name|escapejs }}?', body: 'If it has shifts behind it, it is switched off instead.', label: 'Remove' })">
+              {% csrf_token %}
+              <button type="submit" class="opacity-50 hover:opacity-100" title="Remove till {{ register.name }}" aria-label="Remove till {{ register.name }}">&times;</button>
+            </form>
+          </span>
+        {% empty %}
+          <p class="text-sm text-ink-500">No till here yet &mdash; nobody can sell from this branch until you add one.</p>
+        {% endfor %}
+        {% if branch.is_active %}
+        <a href="{% url 'org:register_create' %}?branch={{ branch.pk }}" hx-get="{% url 'org:register_create' %}?branch={{ branch.pk }}" hx-target="#modal" class="btn btn-secondary btn-sm ml-auto">{% icon "plus" class="h-4 w-4" %} Add till</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,386 @@
+@import "tailwindcss";
+
+@source "../../templates/**/*.html";
+@source "../../apps/**/templates/**/*.html";
+
+/*
+ * Design system.
+ *
+ * Two audiences with opposite needs: a back-office user reading dense tables
+ * on a laptop, and a cashier hitting large targets on a cheap glossy tablet
+ * with a queue forming. Everything here serves one or the other.
+ */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Deep teal. Reads as money rather than generic SaaS blue, and holds its
+     contrast on the washed-out screens these shops actually own. */
+  --color-brand-50: oklch(0.977 0.015 185);
+  --color-brand-100: oklch(0.946 0.035 185);
+  --color-brand-200: oklch(0.898 0.065 184);
+  --color-brand-300: oklch(0.826 0.098 183);
+  --color-brand-400: oklch(0.733 0.114 182);
+  --color-brand-500: oklch(0.645 0.112 181);
+  --color-brand-600: oklch(0.548 0.098 181);
+  --color-brand-700: oklch(0.455 0.081 182);
+  --color-brand-800: oklch(0.383 0.065 183);
+  --color-brand-900: oklch(0.331 0.053 184);
+  --color-brand-950: oklch(0.225 0.038 186);
+
+  /* Warm neutrals. Pure slate looks clinical next to the teal. */
+  --color-ink-50: oklch(0.984 0.002 260);
+  --color-ink-100: oklch(0.968 0.004 260);
+  --color-ink-200: oklch(0.929 0.006 260);
+  --color-ink-300: oklch(0.869 0.009 260);
+  --color-ink-400: oklch(0.708 0.012 260);
+  --color-ink-500: oklch(0.556 0.014 260);
+  --color-ink-600: oklch(0.446 0.014 260);
+  --color-ink-700: oklch(0.372 0.013 260);
+  --color-ink-800: oklch(0.279 0.011 260);
+  --color-ink-900: oklch(0.212 0.009 260);
+  --color-ink-950: oklch(0.145 0.007 260);
+
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  --shadow-raised: 0 4px 6px -1px rgb(15 23 42 / 0.07), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+  --shadow-float: 0 20px 25px -5px rgb(15 23 42 / 0.10), 0 8px 10px -6px rgb(15 23 42 / 0.06);
+}
+
+@layer base {
+  [x-cloak] {
+    display: none !important;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Money and quantities line up in columns only with tabular figures. */
+  .tnum,
+  td.text-right,
+  th.text-right {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3 {
+    @apply tracking-tight;
+  }
+
+  /* A mis-tap on a touch screen should never select the whole receipt. */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-950;
+  }
+
+  /* Scrollbars, so dense tables do not look broken next to the rest. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-300);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+
+  /* ---- Buttons. Composed in markup: class="btn btn-primary" ---------- */
+
+  .btn {
+    @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg
+           px-3.5 py-2 text-sm font-medium whitespace-nowrap
+           transition-[background-color,box-shadow,border-color] duration-150
+           focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-brand-500/40 focus-visible:ring-offset-1
+           disabled:pointer-events-none disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply bg-brand-700 text-white shadow-sm
+           hover:bg-brand-800 active:bg-brand-900;
+  }
+  .btn-secondary {
+    @apply border border-ink-200 bg-white text-ink-700 shadow-sm
+           hover:border-ink-300 hover:bg-ink-50 active:bg-ink-100;
+  }
+  .btn-ghost {
+    @apply text-ink-600 hover:bg-ink-100 hover:text-ink-900;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800
+           focus-visible:ring-red-500/40;
+  }
+  .btn-sm {
+    /* Still a thumb-sized target on a phone, compact on a desktop row. */
+    @apply gap-1.5 rounded-md px-2.5 py-2 text-xs sm:py-1.5;
+  }
+  /* Till buttons: a cashier hits these a thousand times a day, often with
+     wet hands, on a cheap capacitive screen. */
+  .btn-lg {
+    @apply gap-2.5 rounded-xl px-5 py-3 text-base;
+  }
+  .btn-xl {
+    @apply gap-3 rounded-xl px-6 py-4 text-lg font-semibold;
+  }
+
+  /*
+   * Icon-only row actions. A 32px target with the icon at 16px: big enough
+   * to hit on a laptop trackpad, small enough that a row of three does not
+   * out-shout the data.
+   */
+  .btn-icon {
+    /* Big enough for a thumb on a phone, tidy on a desktop row. */
+    @apply inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-lg
+           text-ink-400 transition
+           hover:bg-ink-100 hover:text-ink-800
+           focus-visible:outline-none focus-visible:ring-2
+           focus-visible:ring-brand-500/40
+           disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-icon-danger {
+    @apply hover:bg-red-50 hover:text-red-600;
+  }
+  .btn-icon-brand {
+    @apply hover:bg-brand-50 hover:text-brand-700;
+  }
+
+  /* A status dot reads faster than a coloured word, and keeps the word. */
+  .dot {
+    @apply inline-block h-1.5 w-1.5 shrink-0 rounded-full;
+  }
+
+  /* ---- Forms --------------------------------------------------------- */
+
+  .input {
+    @apply block w-full rounded-lg border border-ink-200 bg-white
+           px-3 py-2 text-sm text-ink-900 shadow-sm
+           placeholder:text-ink-400
+           transition-[border-color,box-shadow] duration-150
+           focus:border-brand-500 focus:outline-none
+           focus:ring-2 focus:ring-brand-500/25
+           disabled:bg-ink-100 disabled:text-ink-500;
+  }
+  .input-lg {
+    @apply px-4 py-3 text-base;
+  }
+  .input-error {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-500/25;
+  }
+  select.input {
+    @apply cursor-pointer pr-9 appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.65rem center;
+  }
+  textarea.input {
+    @apply min-h-20 resize-y;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
+  }
+  .hint {
+    @apply mt-1 text-xs leading-relaxed text-ink-500;
+  }
+  .error-text {
+    @apply mt-1 text-xs font-medium text-red-600;
+  }
+  .checkbox {
+    /* 24px under a thumb, back to 16px where there is a mouse. */
+    @apply h-6 w-6 shrink-0 rounded border-ink-300 text-brand-700 sm:h-4 sm:w-4
+           focus:ring-2 focus:ring-brand-500/30 focus:ring-offset-0;
+  }
+
+  /* ---- Surfaces ------------------------------------------------------ */
+
+  .card {
+    @apply rounded-xl border border-ink-200/80 bg-white shadow-card;
+  }
+  .card-body {
+    @apply p-5;
+  }
+  .card-head {
+    @apply flex items-center justify-between gap-4 border-b border-ink-100 px-5 py-3.5;
+  }
+  .card-title {
+    @apply text-sm font-semibold text-ink-900;
+  }
+
+  .stat {
+    @apply rounded-xl border border-ink-200/80 bg-white p-5 shadow-card;
+  }
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-wider text-ink-500;
+  }
+  .stat-value {
+    @apply mt-1.5 text-2xl font-semibold tracking-tight text-ink-900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Badges -------------------------------------------------------- */
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5
+           text-xs font-medium ring-1 ring-inset;
+  }
+  .badge-ok      { @apply bg-emerald-50 text-emerald-700 ring-emerald-600/15; }
+  .badge-warn    { @apply bg-amber-50 text-amber-800 ring-amber-600/20; }
+  .badge-danger  { @apply bg-red-50 text-red-700 ring-red-600/15; }
+  .badge-muted   { @apply bg-ink-100 text-ink-600 ring-ink-500/10; }
+  .badge-brand   { @apply bg-brand-50 text-brand-800 ring-brand-600/15; }
+
+  /* ---- Navigation ---------------------------------------------------- */
+
+  /*
+   * The sidebar is its own scroll region, pinned to the viewport. Letting it
+   * grow with the page pushed sign-out below the fold on any long screen --
+   * you had to scroll a table of permissions to reach it.
+   */
+  .sidebar {
+    @apply sticky top-0 flex h-screen shrink-0 flex-col;
+  }
+  .sidebar-scroll {
+    @apply min-h-0 flex-1 overflow-y-auto;
+  }
+
+  /*
+   * Collapsed: icons only. The labels are hidden rather than removed so the
+   * markup stays identical between states and the mobile drawer, which never
+   * collapses, needs no separate copy.
+   */
+  .nav-collapsed .nav-label,
+  .nav-collapsed .nav-section,
+  .nav-collapsed .nav-aside {
+    @apply hidden;
+  }
+  .nav-collapsed .nav-link {
+    @apply justify-center px-0;
+  }
+  .nav-collapsed .nav-link-active::before {
+    @apply hidden;
+  }
+  /* The platform shell is dark; its icons inherit the link colour rather
+     than the light-theme muted grey. */
+  .bg-ink-900 .nav-link svg {
+    @apply text-current;
+  }
+
+  .nav-link {
+    @apply relative flex items-center gap-2.5 rounded-lg px-2.5 py-2
+           text-sm font-medium text-ink-600
+           transition-colors duration-100
+           hover:bg-ink-100 hover:text-ink-900;
+  }
+  .nav-link svg {
+    @apply h-4 w-4 shrink-0 text-ink-400;
+  }
+  .nav-link-active {
+    @apply bg-brand-50 text-brand-800 hover:bg-brand-50 hover:text-brand-800;
+  }
+  .nav-link-active svg {
+    @apply text-brand-600;
+  }
+  /* A thin accent bar reads faster than colour alone at a glance. */
+  .nav-link-active::before {
+    content: "";
+    @apply absolute -left-2.5 top-1.5 bottom-1.5 w-0.5 rounded-full bg-brand-600;
+  }
+  .nav-section {
+    @apply px-2.5 pb-1 pt-4 text-[0.6875rem] font-semibold uppercase
+           tracking-wider text-ink-400;
+  }
+
+  /* ---- Tables -------------------------------------------------------- */
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-ink-200/80 bg-white shadow-card;
+    /* On a narrow screen a wide table scrolls sideways; this fades the right
+       edge so it is clear there is more to see. */
+    -webkit-overflow-scrolling: touch;
+    background-image: linear-gradient(to right, #fff 30%, rgba(255, 255, 255, 0)),
+      linear-gradient(to left, #fff 30%, rgba(255, 255, 255, 0)),
+      linear-gradient(to right, rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0)),
+      linear-gradient(to left, rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0));
+    background-position: left center, right center, left center, right center;
+    background-repeat: no-repeat;
+    background-size: 36px 100%, 36px 100%, 12px 100%, 12px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  .table {
+    @apply min-w-full text-sm;
+  }
+  .table thead th {
+    @apply border-b border-ink-200 bg-ink-50/70 px-4 py-2.5 text-left
+           text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500;
+  }
+  .table tbody td {
+    @apply px-4 py-3 align-middle text-ink-700;
+  }
+  .table tbody tr {
+    @apply border-b border-ink-100 transition-colors last:border-0
+           hover:bg-brand-50/30;
+  }
+  .table tbody tr:last-child td:first-child { @apply rounded-bl-xl; }
+  .table tbody tr:last-child td:last-child  { @apply rounded-br-xl; }
+
+  /* ---- Empty states -------------------------------------------------- */
+
+  .empty {
+    @apply flex flex-col items-center justify-center gap-2 px-6 py-14 text-center;
+  }
+  .empty-icon {
+    @apply mb-1 flex h-11 w-11 items-center justify-center rounded-full
+           bg-ink-100 text-ink-400;
+  }
+  .empty-title {
+    @apply text-sm font-medium text-ink-800;
+  }
+  .empty-text {
+    @apply max-w-sm text-sm text-ink-500;
+  }
+
+  /* ---- Page furniture ------------------------------------------------ */
+
+  .page-title {
+    @apply truncate text-[1.0625rem] font-semibold tracking-tight text-ink-900;
+  }
+  .section-lead {
+    @apply max-w-2xl text-sm leading-relaxed text-ink-600;
+  }
+  .divider {
+    @apply h-px w-full bg-ink-200/80;
+  }
+
+  /* ---- Till ---------------------------------------------------------- */
+
+  .tile {
+    @apply flex h-24 flex-col justify-between rounded-xl border border-ink-200
+           bg-white p-3 text-left shadow-card transition
+           hover:border-brand-300 hover:shadow-raised
+           active:scale-[0.98] active:bg-brand-50;
+  }
+  .keypad-key {
+    @apply flex h-12 items-center justify-center rounded-xl bg-ink-100
+           text-lg font-semibold text-ink-800 transition
+           hover:bg-ink-200 active:scale-95;
+  }
+}
+
+  /* A link inside a table row that has to be tappable on a phone. */
+  .row-link {
+    @apply inline-flex min-h-8 items-center;
+  }

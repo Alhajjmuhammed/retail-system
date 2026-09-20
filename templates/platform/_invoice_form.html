@@ -1,0 +1,73 @@
+{% comment %}Raise an invoice, or correct one nothing has been paid against.{% endcomment %}
+{% if modal %}
+<div x-data x-show="true" @keydown.escape.window="$root.remove()" @click.self="$root.remove()"
+     class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-950/50 p-3 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-16">
+  <div class="w-full max-w-lg rounded-2xl bg-white shadow-float">
+{% endif %}
+{% if invoice %}
+  {% include "platform/_modal_head.html" with title=invoice.number subtitle=invoice.tenant.name %}
+{% else %}
+  {% include "platform/_modal_head.html" with title="Raise an invoice" subtitle="The amount and period fill in from the shop's plan. Change them if you agreed something else." %}
+{% endif %}
+
+<form {% if modal %}hx-post="{% if invoice %}{% url 'platform:invoice_edit' invoice.pk %}{% else %}{% url 'platform:invoice_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %}
+      class="p-5"
+      x-data="{
+        hints: {{ suggestions_json|default:'{}' }},
+        fill(id) { const h = this.hints[id]; if (!h) return;
+          this.$refs.start.value = h.start; this.$refs.end.value = h.end;
+          this.$refs.due.value = h.start; this.$refs.amount.placeholder = h.amount; }
+      }"
+      x-init="{% if not invoice %}fill($refs.tenant.value){% endif %}">
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% include "platform/_form_errors.html" %}
+  {% if locked %}
+  <div class="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/20">
+    This invoice is {{ invoice.get_status_display|lower }} or has payments, so it cannot be changed. Void it and raise a new one.
+  </div>
+  {% endif %}
+
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% if not invoice %}
+    <div class="sm:col-span-2">
+      <label class="label" for="tenant">Shop</label>
+      <select name="tenant" id="tenant" class="input" required autofocus x-ref="tenant" @change="fill($event.target.value)">
+        {% for t in tenants %}<option value="{{ t.pk }}" {% if selected_tenant == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }} &mdash; {{ t.subscription.plan.name|default:"no plan" }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label class="label" for="period_start">Period from</label>
+      <input type="date" name="period_start" id="period_start" x-ref="start" class="input" required {% if locked %}disabled{% endif %}
+             value="{% if values %}{{ values.period_start }}{% else %}{{ invoice.period_start|date:'Y-m-d' }}{% endif %}">
+    </div>
+    <div>
+      <label class="label" for="period_end">to</label>
+      <input type="date" name="period_end" id="period_end" x-ref="end" class="input" {% if locked %}disabled{% endif %}
+             value="{% if values %}{{ values.period_end }}{% else %}{{ invoice.period_end|date:'Y-m-d' }}{% endif %}">
+      {% if not invoice %}<p class="hint">Leave empty for one billing period.</p>{% endif %}
+    </div>
+    <div>
+      <label class="label" for="due_date">Due</label>
+      <input type="date" name="due_date" id="due_date" x-ref="due" class="input" {% if locked %}disabled{% endif %}
+             value="{% if values %}{{ values.due_date }}{% else %}{{ invoice.due_date|date:'Y-m-d' }}{% endif %}">
+    </div>
+    <div>
+      <label class="label" for="amount">Amount</label>
+      <input type="number" step="0.01" min="0" name="amount" id="amount" x-ref="amount" class="input" {% if locked %}disabled{% endif %}
+             {% if invoice %}required{% endif %}
+             value="{% if values %}{{ values.amount }}{% else %}{{ invoice.amount|default_if_none:'' }}{% endif %}">
+      {% if not invoice %}<p class="hint">Empty: the plan price per branch in use.</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="mt-5 flex justify-end gap-2">
+    {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">{% if locked %}Close{% else %}Cancel{% endif %}</button>{% endif %}
+    {% if not locked %}<button type="submit" class="btn btn-primary">{% if invoice %}Save{% else %}Raise it{% endif %}</button>{% endif %}
+  </div>
+</form>
+{% if modal %}
+  </div>
+</div>
+{% endif %}

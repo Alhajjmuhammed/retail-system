@@ -1,0 +1,13 @@
+{% for variant in results %}
+<button type="button" class="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-ink-50"
+        data-variant="{{ variant.pk }}" data-price="{{ variant.price_for|default:0 }}"
+        data-name="{{ variant }}">
+  <span class="min-w-0">
+    <span class="block truncate text-sm text-ink-800">{{ variant }}</span>
+    <span class="hint">{{ variant.product.category.name|default:"" }}</span>
+  </span>
+  <span class="ml-3 shrink-0 text-sm font-medium text-ink-900">{{ variant.price_for|default:0|floatformat:0 }}</span>
+</button>
+{% empty %}
+<p class="px-4 py-6 text-center text-sm text-ink-500">Nothing found.</p>
+{% endfor %}

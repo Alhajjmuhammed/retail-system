@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Send this link{% endblock %}
+{% block heading %}Send this to {{ invitation.email }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg space-y-4" x-data="{ copied: false }">
+  <div class="card card-body space-y-3">
+    <p class="text-sm text-ink-600">
+      They open it, choose a password, and join as <strong>{{ invitation.role.name }}</strong>.
+      The link stops working on {{ invitation.expires_at|date:"j F" }}, or once used.
+    </p>
+
+    <div class="flex gap-2">
+      <input type="text" readonly value="{{ link }}" id="invite-link"
+             class="input font-mono text-xs" onclick="this.select()">
+      <button type="button" class="btn btn-primary shrink-0"
+              @click="navigator.clipboard.writeText($refs.link.value); copied = true; setTimeout(() => copied = false, 2000)"
+              x-ref="linkbtn">
+        <span x-show="!copied">Copy</span>
+        <span x-show="copied" x-cloak>Copied</span>
+      </button>
+    </div>
+    <input type="hidden" x-ref="link" value="{{ link }}">
+
+    <p class="hint">Send it by WhatsApp, SMS, or read it out. It is the only credential, so do not post it anywhere public.</p>
+  </div>
+
+  <div class="flex gap-2">
+    <a href="{% url 'accounts:staff_invite' %}" class="btn btn-secondary">Invite somebody else</a>
+    <a href="{% url 'accounts:staff' %}" class="btn btn-secondary">Back to staff</a>
+  </div>
+</div>
+{% endblock %}

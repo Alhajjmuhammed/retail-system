@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Cash ups{% endblock %}
+{% block heading %}Cash ups{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <form method="get" class="flex flex-wrap items-end gap-2" x-data @change="$el.submit()">
+    <div><label class="label" for="days">Last</label><select name="days" id="days" class="input w-32"><option value="7" {% if days == 7 %}selected{% endif %}>7 days</option><option value="14" {% if days == 14 %}selected{% endif %}>14 days</option><option value="30" {% if days == 30 %}selected{% endif %}>30 days</option><option value="90" {% if days == 90 %}selected{% endif %}>90 days</option><option value="365" {% if days == 365 %}selected{% endif %}>A year</option>{% if days != 7 and days != 14 and days != 30 and days != 90 and days != 365 %}<option value="{{ days }}" selected>{{ days }} days</option>{% endif %}</select></div>
+    <div><label class="label" for="state">Show</label><select name="state" id="state" class="input w-44"><option value="">Every shift</option><option value="waiting" {% if state == "waiting" %}selected{% endif %}>Not approved yet</option><option value="short" {% if state == "short" %}selected{% endif %}>Short only</option></select></div>
+    {% if branches|length > 1 %}<div><label class="label" for="branch">Branch</label><select name="branch" id="branch" class="input w-44"><option value="">All</option>{% for b in branches %}<option value="{{ b.pk }}" {% if branch == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select></div>{% endif %}
+  </form>
+
+  {% if open_shifts %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Still open</h2><span class="hint">A drawer left open keeps its till locked. Count it and close it here.</span></div>
+    <div class="divide-y divide-ink-100">
+      {% for sh in open_shifts %}
+      <form method="post" action="{% url 'pos:shift_force_close' sh.pk %}" class="flex flex-wrap items-end gap-3 px-5 py-3" x-data
+            @submit.prevent="$store.confirm.ask($el, { title: 'Close {{ sh.user.name|escapejs }}\'s shift on {{ sh.register|escapejs }}?', body: 'The difference is recorded against them, with your name as the one who closed it.', label: 'Close shift' })">
+        {% csrf_token %}
+        <div class="min-w-48 flex-1">
+          <p class="text-sm font-medium text-ink-800">{{ sh.user.name }} &middot; {{ sh.register }}</p>
+          <p class="hint">{{ sh.branch }} &middot; open since {{ sh.opened_at|date:"j M H:i" }} ({{ sh.opened_at|ago }})</p>
+        </div>
+        <div class="w-36"><label class="label" for="counted-{{ sh.pk }}">Cash counted</label><input type="number" step="0.01" min="0" name="counted_cash" id="counted-{{ sh.pk }}" class="input" required></div>
+        <button type="submit" class="btn btn-secondary">Close it</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-3 sm:grid-cols-3">
+    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Expected</p><p class="mt-1 text-xl font-semibold">{{ totals.expected|default:0|floatformat:0|intcomma }}</p></div>
+    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Counted</p><p class="mt-1 text-xl font-semibold">{{ totals.counted|default:0|floatformat:0|intcomma }}</p></div>
+    <div class="card card-body">
+      <p class="text-xs uppercase tracking-wide text-ink-500">Difference</p>
+      <p class="mt-1 text-xl font-semibold {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:0|intcomma }}</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Closed</th><th>Cashier</th><th>Till</th><th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Difference</th><th>Note</th><th class="text-right">Approved</th></tr></thead>
+      <tbody>
+        {% for s in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td class="whitespace-nowrap text-ink-500">{{ s.closed_at|date:"j M H:i" }}{% if branches|length > 1 %}<p class="hint">{{ s.branch.name }}</p>{% endif %}</td>
+          <td class="font-medium text-ink-900">{{ s.user.name }}</td>
+          <td class="text-ink-600">{{ s.register.name }}</td>
+          <td class="text-right text-ink-500">{{ s.expected_cash|floatformat:0|intcomma }}</td>
+          <td class="text-right">{{ s.counted_cash|floatformat:0|intcomma }}</td>
+          <td class="text-right font-semibold {% if s.variance < 0 %}text-red-600{% elif s.variance > 0 %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ s.variance|floatformat:0|intcomma }}</td>
+          <td class="max-w-xs break-words text-ink-500">{{ s.variance_note|default:"" }}</td>
+          <td class="text-right">
+            <div class="flex items-center justify-end gap-1">
+            {% if s.approved_by_id %}
+              <span class="text-xs text-emerald-700">{{ s.approved_by.name }}</span>
+            {% elif s.user_id != request.user.pk %}
+              <form method="post" action="{% url 'finance:cashup_approve' s.pk %}" x-data
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s cash-up?', body: 'Difference of {{ s.variance|floatformat:0 }} is accepted as recorded.', label: 'Approve' })">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm">Approve</button>
+              </form>
+            {% else %}<span class="hint">yours</span>{% endif %}
+            <a href="{% url 'pos:shift_report' s.pk %}" class="btn-icon btn-icon-brand" title="Z-report" aria-label="Z-report for {{ s.user.name }}">{% icon "receipt" class="h-4 w-4" %}</a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="9">{% include "partials/empty.html" with icon="credit-card" title="No shifts closed" text="Closed shifts and their cash differences appear here." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

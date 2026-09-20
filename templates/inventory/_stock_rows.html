@@ -1,0 +1,38 @@
+{% can_do "stock.adjust" as may_adjust %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th class="w-12 text-right">SN</th><th>Product</th><th class="text-right">On hand</th><th class="text-right">Warn at</th>
+      {% if can_see_cost %}<th class="text-right">Cost</th><th class="text-right">Value</th>{% endif %}<th></th></tr>
+    </thead>
+    <tbody>
+      {% for item in page %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td>
+          <span class="font-medium text-ink-900">{{ item.variant }}</span>
+          <p class="hint">{{ item.variant.product.base_unit.code }}{% if item.bin_location %} &middot; {{ item.bin_location }}{% endif %}</p>
+        </td>
+        <td class="text-right">
+          <span class="font-medium {% if item.qty_on_hand < 0 %}text-red-600{% elif item.is_low %}text-amber-600{% else %}text-ink-900{% endif %}">
+            {{ item.qty_on_hand|floatformat:"-3" }}
+          </span>
+          {% if item.qty_on_hand < 0 %}<p class="hint text-red-600">oversold offline</p>
+          {% elif item.is_low %}<p class="hint text-amber-600">reorder</p>{% endif %}
+        </td>
+        <td class="text-right text-ink-500">{{ item.reorder_level|floatformat:"-3"|default:"—" }}</td>
+        {% if can_see_cost %}
+        <td class="text-right text-ink-500">{{ item.avg_cost|floatformat:0|intcomma }}</td>
+        <td class="text-right text-ink-700">{{ item.stock_value|floatformat:0|intcomma }}</td>
+        {% endif %}
+        <td class="text-right">
+          {% if may_adjust %}<a href="{% url 'inventory:stock_adjust' item.pk %}" class="btn-icon btn-icon-brand" title="Adjust {{ item.variant }}" aria-label="Adjust {{ item.variant }}">{% icon "pencil" class="h-4 w-4" %}</a>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">{% include "partials/empty.html" with icon="box" title="Nothing here" text="No stock at this branch matches the filter." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "partials/pagination.html" %}
+</div>

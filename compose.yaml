@@ -1,0 +1,71 @@
+# One command to run the whole thing. Works with podman compose or docker
+# compose; nothing here is specific to either.
+
+services:
+  db:
+    image: docker.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_USER: retail
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: retail
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./ops/bootstrap_db.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U retail"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build: .
+    env_file: .env
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - media:/app/media
+      - private:/app/private
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  # Trials, usage, the fiscal queue and stock alerts. Without these the
+  # platform needs somebody watching it.
+  worker:
+    build: .
+    env_file: .env
+    command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "2"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - media:/app/media
+      - private:/app/private
+    restart: unless-stopped
+
+  beat:
+    build: .
+    env_file: .env
+    command: ["celery", "-A", "config", "beat", "-l", "info"]
+    depends_on:
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  redis-data:
+  media:
+  # Receipts. Deliberately not mounted into nginx.
+  private:

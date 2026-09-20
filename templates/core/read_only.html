@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Read only{% endblock %}
+{% block heading %}Read only{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-lg">
+  <div class="card card-body space-y-3">
+    <h2 class="text-base font-semibold text-ink-900">{{ tenant.name }} cannot record new transactions</h2>
+    <p class="text-sm text-ink-600">
+      The subscription is {{ subscription.get_status_display|lower }}. Everything you
+      have entered is still here and nothing has been deleted &mdash; you can look at
+      all of it. To start selling again, settle the subscription.
+    </p>
+    <a href="{% url 'tenancy:billing' %}" class="btn btn-primary self-start">Go to subscription</a>
+  </div>
+</div>
+{% endblock %}

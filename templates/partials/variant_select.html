@@ -1,0 +1,7 @@
+{% comment %}Pick a product by name. Replaces typing a raw database id.{% endcomment %}
+<select name="variant" id="variant" class="input" required>
+  <option value="">Choose a product…</option>
+  {% for v in variants %}
+    <option value="{{ v.pk }}">{{ v.product.name }}{% if v.name %} — {{ v.name }}{% endif %}{% if v.product.sku %} ({{ v.product.sku }}){% endif %}</option>
+  {% endfor %}
+</select>

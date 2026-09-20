@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block heading %}Suppliers{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <a href="?view=active" class="stat transition hover:border-brand-300 {% if view == 'active' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Suppliers</p><p class="stat-value">{{ summary.count }}</p></a>
+    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
+    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
+    <div class="flex items-center justify-end lg:col-span-1 col-span-2">
+      <a href="{% url 'purchasing:supplier_create' %}" hx-get="{% url 'purchasing:supplier_create' %}" hx-target="#modal" class="btn btn-primary w-full sm:w-auto">{% icon "plus" %} New supplier</a>
+    </div>
+  </div>
+
+  <form method="get" class="flex gap-2">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="Name, contact or phone" aria-label="Find a supplier" class="input w-full sm:w-72">
+  </form>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Name</th><th>Contact</th><th>Terms</th><th class="text-right">Owed</th><th></th></tr></thead>
+      <tbody>
+        {% for s in page %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td><a href="{% url 'purchasing:supplier_detail' s.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ s.name }}</a>{% if not s.is_active %} <span class="badge badge-muted">removed</span>{% endif %}{% if s.tin %}<p class="hint">TIN {{ s.tin }}</p>{% endif %}</td>
+          <td class="text-ink-600">{{ s.contact_name|default:"—" }}{% if s.phone %}<p class="hint">{{ s.phone }}</p>{% endif %}</td>
+          <td class="text-ink-600">{% if s.payment_terms_days %}{{ s.payment_terms_days }} days{% else %}On delivery{% endif %}</td>
+          <td class="tnum text-right font-medium {% if s.owed > 0 %}text-amber-700{% elif s.owed < 0 %}text-emerald-700{% endif %}">{{ s.owed|floatformat:0|intcomma }}{% if s.owed < 0 %}<p class="hint">paid ahead</p>{% endif %}</td>
+          <td class="whitespace-nowrap text-right">
+            <a href="{% url 'purchasing:supplier_detail' s.pk %}" class="btn-icon btn-icon-brand" title="Open {{ s.name }}" aria-label="Open {{ s.name }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
+            <a href="{% url 'purchasing:supplier_edit' s.pk %}" hx-get="{% url 'purchasing:supplier_edit' s.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit {{ s.name }}" aria-label="Edit {{ s.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+            {% if s.is_active %}
+            <form method="post" action="{% url 'purchasing:supplier_delete' s.pk %}" class="inline" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ s.name|escapejs }}?', body: 'If you ever bought from them they are switched off instead, and can be brought back.', label: 'Remove' })">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-danger" title="Remove {{ s.name }}" aria-label="Remove {{ s.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'purchasing:supplier_restore' s.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon btn-icon-brand" title="Bring {{ s.name }} back" aria-label="Bring {{ s.name }} back">{% icon "restore" class="h-4 w-4" %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="6">{% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try part of the name or the phone number." %}{% else %}{% include "partials/empty.html" with icon="building" title="No suppliers here" text="Add the people you buy from to track what you owe them." %}{% endif %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

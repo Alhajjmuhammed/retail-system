@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Roles{% endblock %}
+{% block heading %}Roles &amp; permissions{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-5">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <p class="section-lead">
+      Build the roles your shop actually has. Everyone you add gets one, and you
+      can make exceptions for individual people from the staff page.
+    </p>
+    <a href="{% url 'accounts:role_create' %}" class="btn btn-primary shrink-0">{% icon "plus" %} New role</a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th class="w-12 text-right">SN</th><th>Role</th><th>Can do</th><th class="text-right">People</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for role in roles %}
+        <tr>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td>
+            <span class="font-medium text-ink-900">{{ role.name }}</span>
+            {% if role.is_owner_role %}<span class="badge badge-muted ml-2">locked</span>{% endif %}
+            {% if role.description %}<p class="hint">{{ role.description }}</p>{% endif %}
+          </td>
+          <td class="text-ink-600">
+            {% if role.is_owner_role %}Everything{% else %}{{ role.perm_count }} permission{{ role.perm_count|pluralize }}{% endif %}
+          </td>
+          <td class="tnum text-right text-ink-600">{{ role.active }}{% if role.suspended %}<p class="hint">+{{ role.suspended }} suspended</p>{% endif %}</td>
+          <td class="text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              {% if role.is_owner_role %}
+                <span class="text-sm text-ink-400">Always full access</span>
+              {% else %}
+                <a href="{% url 'accounts:role_edit' role.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+              {% endif %}
+              <form method="post" action="{% url 'accounts:role_duplicate' role.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm" title="Make a copy to change">Copy</button>
+              </form>
+              {% if not role.is_owner_role %}
+              <form method="post" action="{% url 'accounts:role_delete' role.pk %}"
+                    x-data
+              @submit.prevent="$store.confirm.ask($el, { title: 'Delete the {{ role.name|escapejs }} role?', label: 'Confirm' })">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm text-ink-400 hover:text-red-600"
+                        {% if role.active or role.suspended %}disabled title="{{ role.active|add:role.suspended }} people hold this role"{% endif %}>
+                  Delete
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-body">
+    <h2 class="card-title mb-1.5">How this works</h2>
+    <p class="text-sm leading-relaxed text-ink-600">
+      The list of permissions is fixed by the system; who holds them is entirely
+      yours. <strong>Owner</strong> always holds everything and cannot be edited or
+      removed &mdash; without it nobody could administer the shop. A role somebody
+      currently holds cannot be deleted; move them first.
+    </p>
+  </div>
+</div>
+{% endblock %}

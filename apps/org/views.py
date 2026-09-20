@@ -1,0 +1,282 @@
+"""
+Settings.
+
+Everything a shop configures about itself: its branches and tills, its tax
+rates and units, and the handful of choices that change how the rest of the
+system behaves.
+"""
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+
+from apps.core import audit
+from apps.core.decorators import branch_of, requires
+from apps.core.deletion import remove_or_archive
+from apps.core.features import LimitExceeded
+from apps.org.forms import BranchForm, BusinessForm, RegisterForm, TenantProfileForm
+from apps.org.models import Branch, Register, TenantSettings
+
+
+def _branch_in_url(request, **kwargs):
+    return Branch.objects.filter(pk=kwargs.get("pk")).first() if kwargs.get("pk") else None
+
+
+def _covers_all(request):
+    m = request.membership
+    return m.role.is_owner_role or m.all_branches
+
+
+def _settings_row(tenant):
+    row, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+    return row
+
+
+@login_required
+@requires("settings.edit")
+def business(request):
+    row = _settings_row(request.tenant)
+
+    profile = TenantProfileForm(
+        request.POST or None, request.FILES or None, instance=request.tenant
+    )
+    settings_form = BusinessForm(request.POST or None, instance=row)
+
+    if request.method == "POST" and profile.is_valid() and settings_form.is_valid():
+        before = audit.snapshot(row)
+        profile.save()
+        settings_form.save()
+        audit.record(
+            "settings.changed",
+            obj=row,
+            before=before,
+            after=audit.snapshot(row),
+            ip=audit.client_ip(request),
+        )
+        messages.success(request, "Settings saved.")
+        return redirect("org:business")
+
+    return render(
+        request,
+        "org/business.html",
+        {"profile": profile, "form": settings_form, "settings_row": row},
+    )
+
+
+@login_required
+@requires("register.manage")
+def branches(request):
+    return render(
+        request,
+        "org/branches.html",
+        {
+            # Only the branches this person runs; a manager of one branch
+            # could rename, close or delete another's.
+            "branches": request.membership.branches(include_closed=True)
+            .prefetch_related("registers").order_by("name"),
+            "may_branches": request.membership.can("branch.manage"),
+            "covers_all": _covers_all(request),
+            "form": BranchForm(),
+            "register_form": RegisterForm(),
+            "allowed": request.tenant.limit_for("branches"),
+            "used": request.tenant.usage_of("branches"),
+        },
+    )
+
+
+def _settings_form(request, form, *, title, action):
+    from apps.core.listing import modal_or_page
+
+    return modal_or_page(request, "org/_model_form.html",
+                         {"form": form, "title": title, "action": action},
+                         title=title, back=reverse("org:branches"))
+
+
+@login_required
+@requires("branch.manage", branch=_branch_in_url)
+def branch_form(request, pk=None):
+    from apps.core.listing import close_modal
+
+    branch = get_object_or_404(Branch, pk=pk) if pk else None
+    if branch is None and not _covers_all(request):
+        messages.error(request, "Only someone who works across every branch can open a new one.")
+        return close_modal(request, reverse("org:branches"))
+    form = BranchForm(request.POST or None, instance=branch)
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            saved = form.save()
+        except LimitExceeded as exc:
+            # Shown in the form: it used to close the page and say it on another.
+            form.add_error(None, str(exc))
+        else:
+            if saved.is_default:
+                # Exactly one default, or people land in the wrong shop.
+                Branch.objects.exclude(pk=saved.pk).update(is_default=False)
+            audit.record("branch.saved", obj=saved, ip=audit.client_ip(request))
+            messages.success(request, f"{saved.name} saved.")
+            return close_modal(request, reverse("org:branches"))
+
+    return _settings_form(
+        request, form, title=branch.name if branch else "New branch",
+        action=reverse("org:branch_edit", args=[branch.pk]) if branch
+        else reverse("org:branch_create"),
+    )
+
+
+@login_required
+@requires("register.manage", branch=branch_of(Register))
+def register_edit(request, pk):
+    from apps.core.listing import close_modal
+
+    register = get_object_or_404(Register, pk=pk)
+    form = RegisterForm(request.POST or None, instance=register,
+                        branches=request.membership.branches(include_closed=True))
+    if request.method == "POST" and form.is_valid():
+        before = audit.snapshot(register)
+        form.save()
+        audit.record("register.saved", obj=register, before=before,
+                     after=audit.snapshot(register), ip=audit.client_ip(request))
+        messages.success(request, f"{register.name} saved.")
+        return close_modal(request, reverse("org:branches"))
+    return _settings_form(request, form, title=f"Till {register.name}",
+                          action=reverse("org:register_edit", args=[pk]))
+
+
+@login_required
+@requires("register.manage", branch=branch_of(Register))
+@require_POST
+def register_delete(request, pk):
+    """
+    Gone if it never sold anything, switched off if it did.
+
+    A till with shifts behind it holds the cash history for those shifts.
+    """
+    register = get_object_or_404(Register, pk=pk)
+    name = register.name
+    outcome = remove_or_archive(register, label=f"Till {name}")
+
+    if not outcome.blocked:
+        audit.record("register.removed", obj=register, ip=audit.client_ip(request))
+    if outcome.archived:
+        messages.warning(request, outcome.message)
+    elif outcome.blocked:
+        messages.error(request, outcome.message)
+    else:
+        messages.success(request, outcome.message)
+    return redirect("org:branches")
+
+
+@login_required
+@requires("branch.manage", branch=_branch_in_url)
+@require_POST
+def branch_delete(request, pk):
+    """
+    A branch with stock or sales is closed rather than deleted.
+
+    Deleting it would orphan every movement recorded there.
+    """
+    branch = get_object_or_404(Branch, pk=pk)
+    name = branch.name
+
+    blockers = (
+        (
+            lambda: branch.is_default and Branch.objects.filter(is_active=True).count() > 1,
+            "Make another branch the default first.",
+        ),
+        (
+            lambda: Branch.objects.filter(is_active=True).count() == 1,
+            "This is your only branch. A shop needs at least one.",
+        ),
+    )
+    outcome = remove_or_archive(branch, label=name, blockers=blockers)
+
+    if not outcome.blocked:
+        audit.record("branch.removed", obj=branch, ip=audit.client_ip(request))
+    if outcome.blocked:
+        messages.error(request, outcome.message)
+    elif outcome.archived:
+        messages.warning(request, outcome.message)
+    else:
+        messages.success(request, outcome.message)
+    return redirect("org:branches")
+
+
+@login_required
+@requires("register.manage")
+def register_create(request):
+    from apps.core.listing import close_modal
+    from apps.core.parsing import int_or
+
+    form = RegisterForm(request.POST or None,
+                        initial={"branch": int_or(request.GET.get("branch")) or None},
+                        branches=request.membership.branches())
+    if request.method == "POST" and form.is_valid():
+        register = form.save()
+        audit.record("register.created", obj=register, ip=audit.client_ip(request))
+        messages.success(request, f"{register.name} added to {register.branch.name}.")
+        return close_modal(request, reverse("org:branches"))
+    return _settings_form(request, form, title="New till", action=reverse("org:register_create"))
+
+
+# --------------------------------------------------------------------------
+# Tills and phones
+# --------------------------------------------------------------------------
+
+@login_required
+@requires("register.manage")
+def devices(request):
+    """
+    The shop's own tills and phones, and a way to switch off a lost one.
+
+    Only the platform could see these before -- an owner with a stolen phone
+    had no way to stop it taking payment.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.org.models import Device
+
+    rows = (
+        Device.objects.select_related("branch")
+        .filter(branch__in=request.membership.branches(include_closed=True), hidden=False)
+        .order_by("-is_active", "branch__name", "label")
+    )
+    return render(request, "org/devices.html", {
+        "devices": rows, "stale_before": timezone.now() - timedelta(hours=24),
+    })
+
+
+@login_required
+@requires("register.manage")
+@require_POST
+def device_update(request, pk):
+    from apps.org.models import Device
+
+    device = get_object_or_404(Device, pk=pk,
+                               branch__in=request.membership.branches(include_closed=True))
+    action = request.POST.get("action")
+    if action == "rename":
+        device.label = request.POST.get("label", "").strip()[:60]
+        device.save(update_fields=["label", "updated_at"])
+        messages.success(request, f"Renamed to {device}.")
+    elif action == "toggle":
+        device.is_active = not device.is_active
+        device.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, f"{device} {'is back in use' if device.is_active else 'is switched off: it can no longer send sales'}.")
+    elif action == "forget" and not device.queued:
+        # Forgetting also switches it off, and keeps the record that blocks it.
+        device.is_active = False
+        device.hidden = True
+        device.save(update_fields=["is_active", "hidden", "updated_at"])
+        messages.success(request, f"{device} forgotten. It stays blocked if it is ever used again.")
+        audit.record("device.forgotten", obj=device, ip=audit.client_ip(request))
+        return redirect("org:devices")
+    else:
+        messages.error(request, "Nothing changed.")
+        return redirect("org:devices")
+    audit.record(f"device.{action}", obj=device, ip=audit.client_ip(request))
+    return redirect("org:devices")

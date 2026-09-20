@@ -1,0 +1,101 @@
+{% extends "platform/base.html" %}
+{% block title %}Permissions{% endblock %}
+{% block heading %}Permission catalogue{% endblock %}
+
+{% block content %}
+<div x-data="{
+       q: '', module: '', only: '',
+       rows: {{ rows_json }},
+       match(r) {
+         return (this.q === '' || r.h.includes(this.q.toLowerCase()))
+           && (this.module === '' || this.module === r.m)
+           && (this.only === '' || (this.only === 'approval' && r.a) || (this.only === 'gated' && r.g) || (this.only === 'unused' && r.u));
+       },
+       get count() { return this.rows.filter((r) => this.match(r)).length },
+     }"
+     class="space-y-4">
+
+  {% if missing or stale %}
+  <div class="flex gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+    <span class="mt-0.5 shrink-0">{% icon "alert" class="h-4 w-4" %}</span>
+    <p>The catalogue in the code and in the database disagree.
+      {% if missing %}Not yet in the database: <span class="font-mono">{{ missing|join:", " }}</span>. {% endif %}
+      {% if stale %}No longer in the code: <span class="font-mono">{{ stale|join:", " }}</span>. {% endif %}
+      Run <span class="font-mono">manage.py sync_permissions</span> on the server.</p>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <button type="button" @click="only = ''" class="stat text-left transition hover:border-brand-300" :class="only === '' && 'border-brand-300'">
+      <p class="stat-label">Permissions</p><p class="stat-value">{{ total }}</p>
+      <p class="hint">What every shop builds its roles from.</p>
+    </button>
+    <button type="button" @click="only = 'approval'" class="stat text-left transition hover:border-brand-300" :class="only === 'approval' && 'border-brand-300'">
+      <p class="stat-label">Need approval</p><p class="stat-value">{{ dangerous }}</p>
+      <p class="hint">A manager can authorise these on the spot.</p>
+    </button>
+    <button type="button" @click="only = 'gated'" class="stat text-left transition hover:border-brand-300" :class="only === 'gated' && 'border-brand-300'">
+      <p class="stat-label">Gated by a plan</p><p class="stat-value">{{ gated }}</p>
+      <p class="hint">No role can grant what the plan excludes.</p>
+    </button>
+    <button type="button" @click="only = 'unused'" class="stat text-left transition hover:border-brand-300" :class="only === 'unused' && 'border-brand-300'">
+      <p class="stat-label">Given to nobody</p>
+      <p class="stat-value {% if ungranted %}text-amber-600{% endif %}">{{ ungranted }}</p>
+      <p class="hint">No role or person, in any shop.</p>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <p class="max-w-2xl text-sm leading-relaxed text-ink-600">
+        Defined in the code, so this is a reference rather than an editor. Shops never
+        see the codes &mdash; their role builder shows the plain names.
+      </p>
+      <div class="flex shrink-0 flex-wrap gap-2">
+        <input type="search" x-model="q" placeholder="Filter" class="input w-48" autocomplete="off">
+        <select x-model="module" class="input w-40">
+          <option value="">Every area</option>
+          {% for m in modules %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Area</th>
+            <th>Shown to a shop as</th>
+            <th>Kind</th>
+            <th>Needs plan feature</th>
+            <th class="text-right">Roles</th>
+            <th class="text-right">People</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr data-row x-show="match(rows[{{ forloop.counter0 }}])">
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td class="whitespace-nowrap text-ink-500">{{ item.permission.module }}</td>
+            <td>
+              <span class="text-ink-900">{{ item.permission.label }}</span>
+              {% if item.permission.is_dangerous %}<span class="badge badge-warn ml-1.5">needs approval</span>{% endif %}
+              <p class="hint"><span class="font-mono">{{ item.permission.code }}</span>{% if item.permission.description %} &middot; {{ item.permission.description }}{% endif %}</p>
+            </td>
+            <td class="whitespace-nowrap text-sm text-ink-600">{{ item.kind }}</td>
+            <td class="whitespace-nowrap text-sm text-ink-600">{{ item.feature|default:"—" }}</td>
+            <td class="tnum text-right {% if not item.permission.roles_granting %}text-ink-300{% else %}text-ink-700{% endif %}">{{ item.permission.roles_granting }}</td>
+            <td class="tnum text-right {% if not item.permission.people_granted %}text-ink-300{% else %}text-ink-700{% endif %}"
+                title="People given it as a personal exception">{{ item.permission.people_granted }}</td>
+          </tr>
+          {% endfor %}
+          <tr x-show="count === 0" x-cloak>
+            <td colspan="7">{% include "partials/empty.html" with icon="search" title="Nothing matches" text="Try another word, or choose every area." %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

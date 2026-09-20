@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Adjust stock{% endblock %}
+{% block heading %}Adjust {{ item.variant }}{% endblock %}
+
+{% block content %}
+<form method="post" class="mx-auto max-w-sm space-y-4">
+  {% csrf_token %}
+  <div class="card card-body space-y-4">
+    {% if error %}<div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">{{ error }}</div>{% endif %}
+    <div class="flex items-baseline justify-between rounded-lg bg-ink-50 px-4 py-3">
+      <span class="text-sm text-ink-600">System says</span>
+      <span class="text-xl font-semibold text-ink-900">{{ item.qty_on_hand|floatformat:"-3" }}</span>
+    </div>
+    <div>
+      <label class="label" for="new_qty">Count it and type what is actually there</label>
+      <input type="number" step="{% if item.variant.product.base_unit.allows_decimal %}0.001{% else %}1{% endif %}" min="0" name="new_qty" id="new_qty" value="{{ values.new_qty }}" class="input py-3 text-lg" required autofocus>
+    </div>
+    <div>
+      <label class="label" for="reason">Why the difference</label>
+      <input type="text" name="reason" id="reason" value="{{ values.reason }}" maxlength="200" class="input" required
+             placeholder="Broken, stolen, miscounted on delivery">
+      <p class="hint">Recorded against your name. This is the trail an owner reads later.</p>
+    </div>
+    <label class="flex items-center gap-2.5 text-sm text-ink-700">
+      <input type="checkbox" name="wastage" class="checkbox" {% if values.wastage %}checked{% endif %}>
+      This is damage or expiry
+    </label>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{% url 'inventory:stock_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

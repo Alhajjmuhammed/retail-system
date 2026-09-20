@@ -1,0 +1,193 @@
+{% extends "platform/base.html" %}
+{% block title %}Shops{% endblock %}
+{% block heading %}Shops{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <a href="?" class="stat transition hover:border-brand-300">
+      <p class="stat-label">All shops</p>
+      <p class="stat-value">{{ summary.total }}</p>
+    </a>
+    <a href="?status=active" class="stat transition hover:border-brand-300">
+      <p class="stat-label">Paying</p>
+      <p class="stat-value text-emerald-700">{{ summary.active }}</p>
+    </a>
+    <a href="?status=trialing" class="stat transition hover:border-brand-300">
+      <p class="stat-label">On trial</p>
+      <p class="stat-value text-brand-700">{{ summary.trialing }}</p>
+    </a>
+    <a href="?status=at_risk" class="stat transition hover:border-brand-300">
+      <p class="stat-label">At risk</p>
+      <p class="stat-value {% if summary.at_risk %}text-amber-600{% endif %}">{{ summary.at_risk }}</p>
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
+            {% icon "search" class="h-4 w-4" %}
+          </span>
+          <input type="search" name="q" value="{{ q }}" placeholder="Name, TIN or owner's email"
+                 class="input w-64 pl-9" autocomplete="off">
+        </div>
+        <select name="status" class="input w-40">
+          <option value="">Any status</option>
+          <option value="at_risk" {% if status == "at_risk" %}selected{% endif %}>At risk (any)</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="order" class="input w-40">
+          <option value="-created_at" {% if order == "-created_at" %}selected{% endif %}>Newest first</option>
+          <option value="created_at" {% if order == "created_at" %}selected{% endif %}>Oldest first</option>
+          <option value="name" {% if order == "name" %}selected{% endif %}>By name</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        {% if plan_code %}<input type="hidden" name="plan" value="{{ plan_code }}"><span class="badge badge-brand">Plan: {{ plan_code }}</span>{% endif %}
+        {% if q or status or plan_code %}<a href="{% url 'platform:tenant_list' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+      </form>
+
+      {% if "shops.create" in pp %}
+      <button type="button" class="btn btn-primary shrink-0"
+              hx-get="{% url 'platform:tenant_create' %}" hx-target="#modal">
+        {% icon "plus" %} New shop
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="w-12 text-right">SN</th>
+            <th>Shop</th>
+            <th>Plan</th>
+            <th>Status</th>
+            <th class="text-right">Size</th>
+            <th>Last heard from</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tenants %}
+          <tr>
+            <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+            <td>
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-sm font-semibold text-brand-800">
+                  {{ t.name|slice:":1"|upper }}
+                </span>
+                <span class="min-w-0">
+                  <a {% if "shops.view" in pp %}href="{% url 'platform:tenant_detail' t.pk %}"{% endif %}
+                     class="block truncate font-medium text-ink-900 hover:text-brand-700 hover:underline">{{ t.name }}</a>
+                  <span class="hint">{{ t.slug }}{% if t.tin %} &middot; TIN {{ t.tin }}{% endif %}</span>
+                </span>
+              </div>
+            </td>
+
+            <td class="whitespace-nowrap">
+              <span class="badge badge-muted">{{ t.subscription.plan.name|default:"none" }}</span>
+            </td>
+
+            <td class="whitespace-nowrap">
+              {% with s=t.subscription.status %}
+              <span class="flex items-center gap-1.5 text-sm text-ink-700">
+                <span class="dot
+                  {% if s == 'active' %}bg-emerald-500
+                  {% elif s == 'trialing' %}bg-brand-500
+                  {% elif s == 'suspended' or s == 'cancelled' %}bg-red-500
+                  {% else %}bg-amber-500{% endif %}"></span>
+                {{ t.subscription.get_status_display|default:"No plan" }}
+              </span>
+              {% if s == "trialing" and t.subscription.trial_ends_at %}
+                <p class="hint">{{ t.subscription.trial_ends_at|timeuntil }} left</p>
+              {% endif %}
+              {% endwith %}
+            </td>
+
+            <td class="whitespace-nowrap text-right">
+              <span class="tnum text-sm text-ink-700">{{ t.branch_count }}</span>
+              <span class="text-xs text-ink-400">branch{{ t.branch_count|pluralize:"es" }}</span>
+              <p class="hint">{{ t.user_count }} staff</p>
+            </td>
+
+            <td class="whitespace-nowrap">
+              {% if t.last_sale %}
+                <span class="text-sm text-ink-700">Sold {{ t.last_sale|ago }}</span>
+              {% elif t.last_seen %}
+                <span class="text-sm text-ink-600">Signed in {{ t.last_seen|ago }}</span>
+              {% else %}
+                <span class="badge badge-warn">never used it</span>
+              {% endif %}
+              <p class="hint">Joined {{ t.created_at|date:"j M Y" }}</p>
+            </td>
+
+            <td>
+              <div class="flex items-center justify-end gap-0.5">
+                {% if "shops.edit" in pp %}
+                <button type="button" class="btn-icon btn-icon-brand"
+                        hx-get="{% url 'platform:tenant_edit' t.pk %}?next={{ request.get_full_path|urlencode }}" hx-target="#modal"
+                        title="Edit details">
+                  {% icon "pencil" %}
+                </button>
+                {% endif %}
+
+                {% if "shops.support" in pp %}
+                <form method="post" action="{% url 'platform:impersonate' t.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-icon btn-icon-brand"
+                          title="Open their account for support">
+                    {% icon "enter" %}
+                  </button>
+                </form>
+                {% endif %}
+
+                {% if "shops.suspend" in pp %}
+                <form method="post" action="{% url 'platform:tenant_suspend' t.pk %}?next={{ request.get_full_path|urlencode }}" x-data
+                      @submit.prevent="$store.confirm.ask($el, {
+                        title: '{% if t.status == "active" %}Suspend{% else %}Reactivate{% endif %} {{ t.name|escapejs }}?',
+                        body: '{% if t.status == "active" %}They keep every record and can still sign in to look. They simply cannot sell until you reactivate them.{% else %}They can trade again immediately.{% endif %}',
+                        label: '{% if t.status == "active" %}Suspend{% else %}Reactivate{% endif %}',
+                        danger: {% if t.status == "active" %}true{% else %}false{% endif %} })">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn-icon {% if t.status == 'active' %}btn-icon-danger{% endif %}"
+                          title="{% if t.status == 'active' %}Suspend — they keep their data{% else %}Reactivate{% endif %}">
+                    {% if t.status == "active" %}{% icon "suspend" %}{% else %}{% icon "restore" %}{% endif %}
+                  </button>
+                </form>
+                {% endif %}
+
+                <button type="button" class="btn-icon"
+                        hx-get="{% url 'platform:tenant_quick_view' t.pk %}" hx-target="#modal"
+                        title="Open">
+                  {% icon "chevron-right" %}
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">
+            {% if q or status %}
+              {% include "partials/empty.html" with icon="search" title="No shop matches" text="Try part of the name, a TIN, or the owner's email address." %}
+            {% else %}
+              {% include "partials/empty.html" with icon="building" title="No shops yet" text="Set one up for a shop you have sold to in person, or wait for a signup." %}
+            {% endif %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if tenants %}
+    <div class="border-t border-ink-100 px-5 py-2.5 text-xs text-ink-500">
+      Showing {{ tenants|length }} of {{ summary.total }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

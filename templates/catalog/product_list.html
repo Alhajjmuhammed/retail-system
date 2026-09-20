@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block heading %}Products{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <form hx-get="{% url 'catalog:product_list' %}" hx-target="#product-rows"
+          hx-trigger="input changed delay:250ms from:input[name='q'], change from:select"
+          hx-push-url="true" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+      <input type="search" name="q" aria-label="Search products" value="{{ q }}" placeholder="Name, code or barcode"
+             class="input col-span-2 w-full sm:w-64" autocomplete="off">
+      <select name="category" class="input w-full sm:w-44">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c.pk }}" {% if category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="input w-full sm:w-36">
+        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+        <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
+      </select>
+    </form>
+
+    <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+      {% can_do "product.manage" as may_manage %}
+      {% if may_manage %}
+        <a href="{% url 'catalog:product_import' %}" class="btn btn-secondary flex-1 sm:flex-none">{% icon "upload" %} Import</a>
+        <a href="{% url 'catalog:product_create' %}" hx-get="{% url 'catalog:product_create' %}" hx-target="#modal" class="btn btn-primary flex-1 sm:flex-none">{% icon "plus" %} New product</a>
+      {% endif %}
+      <a href="{% url 'catalog:product_export' %}" class="btn btn-secondary flex-1 sm:flex-none">{% icon "download" %} Export</a>
+    </div>
+  </div>
+
+  <div id="product-rows">
+    {% include "catalog/_product_rows.html" %}
+  </div>
+</div>
+{% endblock %}

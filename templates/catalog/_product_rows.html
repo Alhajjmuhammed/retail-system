@@ -1,0 +1,50 @@
+{% can_do "product.manage" as may_manage %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="w-12 text-right">SN</th>
+        <th>Product</th><th>Barcode</th><th>Unit</th>
+        <th class="text-right">Price</th>
+        {% if can_see_cost %}<th class="text-right">Cost</th>{% endif %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in page %}
+      {% with variant=product.default_variant %}
+      <tr>
+        <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
+        <td>
+          <span class="font-medium text-ink-900">{{ product.name }}</span>
+          {% if not product.is_active %}<span class="badge badge-muted ml-2">inactive</span>{% endif %}
+          {% if not product.track_stock %}<span class="badge badge-muted ml-2">no stock</span>{% endif %}
+          <p class="hint">{{ product.category.name|default:"Uncategorised" }}{% if product.sku %} &middot; {{ product.sku }}{% endif %}</p>
+        </td>
+        <td class="font-mono text-xs text-ink-600">
+          {% for b in variant.barcodes.all %}{{ b.code }}{% if b.pack_quantity != 1 %} <span class="text-ink-400">(x{{ b.pack_quantity|floatformat:"-3" }})</span>{% endif %}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-ink-400">&mdash;</span>{% endfor %}
+        </td>
+        <td class="text-ink-600">{{ product.base_unit.code }}</td>
+        <td class="tnum text-right font-medium text-ink-900">{% with p=variant.price_for %}{% if p is None %}<span class="text-ink-400">&mdash;</span>{% else %}{{ p|floatformat:0|intcomma }}{% endif %}{% endwith %}</td>
+        {% if can_see_cost %}<td class="tnum text-right text-ink-500">{% if product.branch_cost is None %}&mdash;{% else %}{{ product.branch_cost|floatformat:0|intcomma }}{% endif %}</td>{% endif %}
+        <td class="whitespace-nowrap text-right">
+          {% if may_manage %}
+          <a href="{% url 'catalog:product_edit' product.pk %}" hx-get="{% url 'catalog:product_edit' product.pk %}" hx-target="#modal"
+             class="btn-icon btn-icon-brand" title="Edit {{ product.name }}" aria-label="Edit {{ product.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+          <form method="post" action="{% url 'catalog:product_delete' product.pk %}" class="inline" x-data
+                @submit.prevent="$store.confirm.ask($el, { title: 'Delete {{ product.name|escapejs }}?', body: 'If it has ever been sold or stocked it is switched off instead, so your reports stay correct.', label: 'Delete' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger" title="Delete {{ product.name }}" aria-label="Delete {{ product.name }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endwith %}
+      {% empty %}
+      <tr><td colspan="7">{% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try part of the name, the code, or the first digits of a barcode." %}{% else %}{% include "partials/empty.html" with icon="tag" title="No products yet" text="Add them one at a time, or bring your whole list across from a spreadsheet." action_url="/products/import/" action_label="Import a spreadsheet" %}{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "partials/pagination.html" %}
+</div>
+
