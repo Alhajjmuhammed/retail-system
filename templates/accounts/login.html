@@ -2,74 +2,159 @@
 {% block title %}Sign in{% endblock %}
 
 {% block body %}
-<div class="flex min-h-full">
-  <div class="flex w-full flex-col justify-center px-5 py-10 sm:px-10 lg:w-[480px] lg:shrink-0 lg:px-14">
-    <div class="mx-auto w-full max-w-sm">
-      <div class="mb-8">
-        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">R</div>
-        <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Welcome back</h1>
-        <p class="mt-1.5 text-sm text-ink-500">Sign in to your shop.</p>
+{% comment %}
+A signed-in card over a quiet backdrop. The panel on the left is a drawing
+rather than a photograph: this screen is the first thing a shop sees each
+morning, sometimes on a phone tethered to one bar of signal, and a drawing
+weighs a few kilobytes and renders the same on every screen.
+{% endcomment %}
+<div class="relative flex min-h-full flex-col items-center justify-center overflow-hidden bg-ink-100 px-4 py-8 sm:px-6">
+
+  <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+    <div class="absolute inset-0 opacity-[0.05]"
+         style="background-image: radial-gradient(circle at 1px 1px, #0f172a 1px, transparent 0); background-size: 26px 26px;"></div>
+    <div class="absolute -top-40 right-[-10rem] h-[28rem] w-[28rem] rounded-full bg-brand-600/10 blur-3xl"></div>
+    <div class="absolute -bottom-48 left-[-8rem] h-[26rem] w-[26rem] rounded-full bg-brand-700/10 blur-3xl"></div>
+  </div>
+
+  <div class="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-float ring-1 ring-ink-900/5">
+    <div class="grid md:grid-cols-2">
+
+      {% comment %}
+      What the system is for, on a rotation. Hidden on a phone, where the
+      form should have the whole screen to itself.
+      {% endcomment %}
+      <div x-data="{ slide: 0, slides: 3 }"
+           x-init="setInterval(() => slide = (slide + 1) % slides, 6000)"
+           class="relative hidden bg-brand-900 md:block">
+        <div class="absolute inset-0 opacity-[0.12]"
+             style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px;"></div>
+        <div class="absolute -right-16 top-10 h-64 w-64 rounded-full bg-brand-600/30 blur-3xl"></div>
+
+        <div class="relative flex h-full min-h-[30rem] flex-col justify-between p-9">
+          <div class="flex items-center gap-2.5">
+            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white ring-1 ring-inset ring-white/20">R</div>
+            <span class="text-sm font-semibold tracking-tight text-white">Retail</span>
+          </div>
+
+          {% include "accounts/_login_art.html" %}
+
+          <div>
+            <div class="relative h-24">
+              <div x-show="slide === 0" x-transition:enter="transition ease-out duration-500"
+                   x-transition:enter-start="opacity-0 translate-y-2" class="absolute inset-0">
+                <p class="text-lg font-medium leading-snug text-white">The till keeps selling when the internet stops.</p>
+                <p class="mt-2 text-sm leading-relaxed text-brand-200">Sales are held on the device and sent the moment the line comes back. Nothing is counted twice.</p>
+              </div>
+              <div x-show="slide === 1" x-cloak x-transition:enter="transition ease-out duration-500"
+                   x-transition:enter-start="opacity-0 translate-y-2" class="absolute inset-0">
+                <p class="text-lg font-medium leading-snug text-white">Scan it, or sell it without a barcode.</p>
+                <p class="mt-2 text-sm leading-relaxed text-brand-200">One beep sells a crate of twenty-four. Tomatoes and charcoal reach the basket by touch.</p>
+              </div>
+              <div x-show="slide === 2" x-cloak x-transition:enter="transition ease-out duration-500"
+                   x-transition:enter-start="opacity-0 translate-y-2" class="absolute inset-0">
+                <p class="text-lg font-medium leading-snug text-white">At the end of the day, the drawer is counted.</p>
+                <p class="mt-2 text-sm leading-relaxed text-brand-200">Every difference is recorded with a name on it. That is the number an owner trusts.</p>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-2" role="tablist" aria-label="About this system">
+              <template x-for="i in 3" :key="i">
+                <button type="button" @click="slide = i - 1"
+                        :aria-selected="slide === i - 1"
+                        :class="slide === i - 1 ? 'w-7 bg-white' : 'w-2 bg-white/35 hover:bg-white/60'"
+                        class="h-2 rounded-full transition-all"
+                        :aria-label="'Slide ' + i"></button>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {% if request.GET.reset %}
-          <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-600/15">Password saved. Sign in with the new one.</div>
-        {% endif %}
-        {% if form.non_field_errors %}
-          <div class="flex items-start gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
-            {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
-            <span>{{ form.non_field_errors.0 }}</span>
+      {# Right: the form. #}
+      <div class="flex flex-col justify-center px-6 py-10 sm:px-10">
+        <div class="mx-auto w-full max-w-sm">
+          <div class="flex flex-col items-center text-center">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm md:hidden">R</div>
+            <h1 class="mt-4 text-2xl font-semibold tracking-tight text-ink-900 md:mt-0">Sign in</h1>
+            <p class="mt-1.5 text-sm text-ink-500">Enter your details to reach your shop.</p>
           </div>
-        {% endif %}
 
-        <div>
-          <label class="label" for="id_username">Email</label>
-          <input type="email" name="username" id="id_username" class="input input-lg"
-                 autocomplete="username" placeholder="you@shop.co.tz" autofocus required>
+          <form method="post" class="mt-7 space-y-4" x-data="{ show: false }">
+            {% csrf_token %}
+            {% if request.GET.reset %}
+              <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-600/15">
+                Password saved. Sign in with the new one.
+              </div>
+            {% endif %}
+            {% if form.non_field_errors %}
+              <div class="flex items-start gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+                {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
+                <span>{{ form.non_field_errors.0 }}</span>
+              </div>
+            {% endif %}
+
+            <div>
+              <label class="label" for="id_username">Email</label>
+              <div class="relative">
+                <input type="email" name="username" id="id_username" class="input input-lg pr-11"
+                       autocomplete="username" placeholder="you@shop.co.tz" autofocus required>
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-400">
+                  {% icon "mail" class="h-5 w-5" %}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-baseline justify-between">
+                <label class="label" for="id_password">Password</label>
+                <a href="{% url 'accounts:password_reset' %}" class="text-xs font-medium text-brand-700 hover:underline">Forgot it?</a>
+              </div>
+              <div class="relative">
+                <input :type="show ? 'text' : 'password'" name="password" id="id_password"
+                       class="input input-lg pr-11" autocomplete="current-password"
+                       placeholder="••••••••" required>
+                {% comment %}
+                A cashier typing on a glossy tablet with a queue behind them
+                needs to be able to check what they typed.
+                {% endcomment %}
+                <button type="button" @click="show = !show"
+                        class="absolute inset-y-0 right-2 flex items-center rounded-lg px-1.5 text-ink-400 transition hover:text-ink-700"
+                        :aria-label="show ? 'Hide password' : 'Show password'">
+                  <span x-show="!show">{% icon "eye" class="h-5 w-5" %}</span>
+                  <span x-show="show" x-cloak>{% icon "eye-off" class="h-5 w-5" %}</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-full">Sign in</button>
+          </form>
+
+          <p class="mt-6 text-center text-sm text-ink-500">
+            New here?
+            <a href="{% url 'signup' %}" class="font-medium text-brand-700 hover:underline">Start a free trial</a>
+          </p>
         </div>
-        <div>
-          <div class="flex items-baseline justify-between">
-            <label class="label" for="id_password">Password</label>
-            <a href="{% url 'accounts:password_reset' %}" class="text-xs font-medium text-brand-700 hover:underline">Forgot it?</a>
-          </div>
-          <input type="password" name="password" id="id_password" class="input input-lg"
-                 autocomplete="current-password" placeholder="••••••••" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-lg w-full">Sign in</button>
-      </form>
-
-      <p class="mt-6 text-center text-sm text-ink-500">
-        New here?
-        <a href="{% url 'signup' %}" class="font-medium text-brand-700 hover:underline">Start a free trial</a>
-      </p>
+      </div>
     </div>
   </div>
 
-  <div class="relative hidden flex-1 overflow-hidden bg-brand-900 lg:block">
-    <div class="absolute inset-0 opacity-[0.07]"
-         style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 28px 28px;"></div>
-    <div class="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-700/40 blur-3xl"></div>
-    <div class="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-brand-600/25 blur-3xl"></div>
-    <div class="relative flex h-full flex-col justify-end p-14">
-      <p class="max-w-md text-xl font-medium leading-relaxed text-white">
-        One system for every shop you run. Sell on the counter or in the aisle,
-        keep selling when the internet drops, and know at the end of the day
-        exactly what came in and what is missing.
-      </p>
-      <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-brand-200">
-        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} Works offline</span>
-        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} Multiple branches</span>
-        <span class="flex items-center gap-2">{% icon "check" class="h-4 w-4" %} VAT and fiscal receipts</span>
-      </div>
-    </div>
+  {# The notice every shop system carries: this is somebody's takings. #}
+  <div class="relative mt-5 w-full max-w-4xl rounded-xl bg-brand-800 px-5 py-4 text-center">
+    <p class="text-xs leading-relaxed text-brand-100">
+      This system is for authorised users only. It holds the takings, the stock and the staff records of a
+      real business. Signing in with somebody else's details, or using this system in a way you have not been
+      authorised to, is a criminal offence and is logged against your name.
+    </p>
+    <p class="mt-2 text-xs text-brand-200/80">
+      &copy; {% now "Y" %} {{ tenant.name|default:"Retail" }}. Every sign-in and every change is recorded.
+    </p>
   </div>
 </div>
+
 <script>
   // Whoever signs in next must not be handed the previous person's till.
   // Queued, unsent sales live in IndexedDB and are left alone.
-  // Every version of it, whatever the worker currently calls its cache.
   if ("caches" in window) {
     caches.keys().then((names) => names
       .filter((name) => name.startsWith("till-pages"))

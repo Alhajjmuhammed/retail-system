@@ -62,9 +62,14 @@ largest possible targets and nothing to mis-tap while a queue forms.
           <template x-for="variant in results" :key="variant.id">
             <button type="button" @click="pick(variant)"
                     class="flex w-full items-center justify-between gap-3 border-b border-ink-100 px-4 py-3 text-left last:border-0 hover:bg-brand-50/50">
-              <span class="min-w-0">
-                <span class="block truncate text-sm font-medium text-ink-800" x-text="variant.name"></span>
-                <span class="text-xs text-ink-500" x-text="variant.sku || ''"></span>
+              <span class="flex min-w-0 items-center gap-3">
+                <template x-if="variant.image">
+                  <img :src="variant.image" alt="" class="h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-ink-900/5">
+                </template>
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-medium text-ink-800" x-text="variant.name"></span>
+                  <span class="text-xs text-ink-500" x-text="variant.sku || ''"></span>
+                </span>
               </span>
               <span class="tnum shrink-0 text-sm font-semibold text-ink-900" x-text="money(priceFor(variant))"></span>
             </button>
@@ -78,7 +83,12 @@ largest possible targets and nothing to mis-tap while a queue forms.
         <button type="button"
                 @click="addTile({{ key.variant_id }}, '{{ key.variant|escapejs }}', {% with p=key.variant.price_for %}{% if p is None %}null{% else %}{{ p }}{% endif %}{% endwith %}, {{ key.variant.product.tax_rate.rate }})"
                 class="tile">
-          <span class="line-clamp-2 text-sm font-medium leading-snug text-ink-800">{{ key.variant }}</span>
+          {% if key.variant.product.image %}
+          <img src="{{ key.variant.product.image.url }}" alt="" loading="lazy" class="tile-pic">
+          {% else %}
+          <span class="tile-pic-blank" aria-hidden="true">{{ key.variant.product.name|first }}</span>
+          {% endif %}
+          <span class="line-clamp-2 flex-1 text-sm font-medium leading-snug text-ink-800">{{ key.variant }}</span>
           <span class="tnum text-sm font-bold text-brand-700"
                 x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
         </button>

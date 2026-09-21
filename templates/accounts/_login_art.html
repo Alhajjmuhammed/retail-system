@@ -1,0 +1,46 @@
+{% comment %}
+A card being tapped on a terminal, with the receipt already printing.
+
+Drawn rather than photographed: it is a few kilobytes, it needs no connection,
+and it stays sharp on the cheap glossy tablet this is most often opened on.
+{% endcomment %}
+<svg viewBox="0 0 320 210" class="my-6 w-full max-w-xs" fill="none" aria-hidden="true">
+  <!-- receipt, curling out from behind the terminal -->
+  <path d="M196 34h74v104l-9-6-9 6-9-6-9 6-9-6-9 6-9-6-9 6-2-2V34Z"
+        fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2"
+        stroke-linejoin="round"/>
+  <path d="M208 52h50M208 64h50M208 76h30" stroke="#ffffff" stroke-opacity="0.3"
+        stroke-width="2.5" stroke-linecap="round"/>
+  <!-- the barcode on the receipt -->
+  <g stroke="#ffffff" stroke-opacity="0.55" stroke-width="2.5" stroke-linecap="round">
+    <path d="M208 98v16M214 98v16M218 98v16M224 98v16M228 98v16M234 98v16M240 98v16M244 98v16M250 98v16M256 98v16"/>
+  </g>
+
+  <!-- the terminal -->
+  <rect x="44" y="70" width="132" height="112" rx="16"
+        fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2.5"/>
+  <rect x="62" y="90" width="96" height="52" rx="8"
+        fill="#ffffff" fill-opacity="0.14" stroke="#ffffff" stroke-opacity="0.4" stroke-width="2"/>
+  <!-- a total on the screen -->
+  <path d="M76 110h26" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+  <path d="M76 124h68" stroke="#ffffff" stroke-opacity="0.8" stroke-width="5" stroke-linecap="round"/>
+  <!-- keypad -->
+  <g fill="#ffffff" fill-opacity="0.35">
+    <circle cx="72" cy="160" r="4"/><circle cx="96" cy="160" r="4"/>
+    <circle cx="120" cy="160" r="4"/><circle cx="144" cy="160" r="4"/>
+  </g>
+
+  <!-- the card, tapped above it -->
+  <rect x="96" y="22" width="108" height="66" rx="10" transform="rotate(-12 96 22)"
+        fill="#ffffff" fill-opacity="0.16" stroke="#ffffff" stroke-opacity="0.65" stroke-width="2.5"/>
+  <rect x="106" y="44" width="22" height="16" rx="3" transform="rotate(-12 96 22)"
+        fill="#ffffff" fill-opacity="0.5"/>
+  <path d="M140 66h44" transform="rotate(-12 96 22)" stroke="#ffffff" stroke-opacity="0.4"
+        stroke-width="3" stroke-linecap="round"/>
+
+  <!-- the contactless ripple -->
+  <g stroke="#ffffff" stroke-linecap="round" fill="none">
+    <path d="M214 148a18 18 0 0 0 0-26" stroke-opacity="0.5" stroke-width="2.5"/>
+    <path d="M224 156a30 30 0 0 0 0-42" stroke-opacity="0.3" stroke-width="2.5"/>
+  </g>
+</svg>

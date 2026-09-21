@@ -16,10 +16,15 @@
       <tr>
         <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
         <td>
+          <div class="flex items-center gap-3">
+            {% include "catalog/_thumb.html" with product=product size="h-10 w-10" %}
+            <div class="min-w-0">
           <span class="font-medium text-ink-900">{{ product.name }}</span>
           {% if not product.is_active %}<span class="badge badge-muted ml-2">inactive</span>{% endif %}
           {% if not product.track_stock %}<span class="badge badge-muted ml-2">no stock</span>{% endif %}
           <p class="hint">{{ product.category.name|default:"Uncategorised" }}{% if product.sku %} &middot; {{ product.sku }}{% endif %}</p>
+            </div>
+          </div>
         </td>
         <td class="font-mono text-xs text-ink-600">
           {% for b in variant.barcodes.all %}{{ b.code }}{% if b.pack_quantity != 1 %} <span class="text-ink-400">(x{{ b.pack_quantity|floatformat:"-3" }})</span>{% endif %}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-ink-400">&mdash;</span>{% endfor %}

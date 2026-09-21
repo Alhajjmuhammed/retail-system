@@ -1,0 +1,14 @@
+{% comment %}
+A product's picture, or the first letter of its name.
+
+Never an empty box: a grid of blank squares reads as a broken page, while a
+letter reads as "this one has no photo yet".
+{% endcomment %}
+{% if product.image %}
+  <img src="{{ product.image.url }}" alt="" loading="lazy"
+       class="{{ size|default:'h-10 w-10' }} shrink-0 rounded-lg object-cover ring-1 ring-ink-900/5">
+{% else %}
+  <span class="{{ size|default:'h-10 w-10' }} flex shrink-0 items-center justify-center rounded-lg bg-ink-100 text-sm font-semibold uppercase text-ink-400 ring-1 ring-inset ring-ink-900/5">
+    {{ product.name|first }}
+  </span>
+{% endif %}

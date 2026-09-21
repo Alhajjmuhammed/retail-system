@@ -11,7 +11,12 @@
  * go through till.js, which knows how to queue and retry them.
  */
 const PAGES = "till-pages-v1";
-const ASSETS = "till-assets-v7";  // v7: messages stay long enough to read
+const ASSETS = "till-assets-v8";  // v8: product pictures are kept too
+// Product photographs, kept apart from the code and styles so they can be
+// pruned on their own: a shop with a thousand products should not be able to
+// push its own till page out of the cache.
+const PICTURES = "till-pictures-v1";
+const MAX_PICTURES = 300;
 const TILL = new URL("./", self.location).pathname; // "/pos/"
 
 self.addEventListener("install", (event) => {
@@ -19,7 +24,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const keep = new Set([PAGES, ASSETS]);
+  const keep = new Set([PAGES, ASSETS, PICTURES]);
   event.waitUntil(
     caches.keys()
       .then((names) => Promise.all(
@@ -69,6 +74,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(tillPage(request));
   } else if (url.pathname.startsWith("/static/")) {
     event.respondWith(asset(request));
+  } else if (url.pathname.startsWith("/media/products/")) {
+    // A tile with a hole where its picture was is worse than a tile with
+    // only a name on it, so these are kept and served from the cache first.
+    event.respondWith(picture(request));
   }
 });
 
@@ -103,4 +112,31 @@ async function asset(request) {
     })
     .catch(() => cached);
   return cached || fresh;
+}
+
+async function picture(request) {
+  const cache = await caches.open(PICTURES);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      await cache.put(request, response.clone());
+      prune(cache);
+    }
+    return response;
+  } catch (err) {
+    // No connection and never seen: the tile falls back to its name.
+    return new Response("", { status: 504 });
+  }
+}
+
+async function prune(cache) {
+  // Oldest first, because the catalogue is written in order and the things a
+  // shop added first are the things it has been selling longest.
+  const keys = await cache.keys();
+  if (keys.length <= MAX_PICTURES) return;
+  for (const key of keys.slice(0, keys.length - MAX_PICTURES)) {
+    await cache.delete(key);
+  }
 }

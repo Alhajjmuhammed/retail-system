@@ -2,6 +2,7 @@ from django import forms
 from django.db import models
 
 from apps.accounts.forms import TailwindMixin
+from apps.catalog.images import BadImage, shrink
 from apps.catalog.models import Brand, Category, Product, TaxRate, Unit
 
 
@@ -80,6 +81,21 @@ class ProductForm(TailwindMixin, forms.ModelForm):
             # Codes are managed in the barcode box under the form. A second
             # copy here put a just-removed code straight back on save.
             del self.fields["barcode"]
+
+    def clean_image(self):
+        """
+        Shrink the picture here rather than keep what the phone produced.
+
+        Every till downloads these, often on one bar of signal, so what is
+        stored is a small square WebP with the camera's metadata removed.
+        """
+        upload = self.cleaned_data.get("image")
+        if not upload or not hasattr(upload, "content_type"):
+            return upload          # unchanged, or already a stored file
+        try:
+            return shrink(upload)
+        except BadImage as exc:
+            raise forms.ValidationError(str(exc)) from exc
 
     def clean(self):
         data = super().clean()

@@ -114,6 +114,10 @@ def catalog_snapshot(request):
                 for pl in other_lists
                 if (amount := _list_price(v, pl)) is not None
             },
+            # The tile's picture. A cashier finds a photograph faster than a
+            # line of text, and the service worker keeps these so the tiles
+            # still look right with the line down.
+            "image": v.product.image.url if v.product.image else None,
             "barcodes": [
                 {"code": b.code, "qty": str(b.pack_quantity)} for b in v.barcodes.all()
             ],

@@ -69,6 +69,7 @@ def _variant_json(variant, price_list, customer=None):
         "price": None if price is None else str(price),
         "decimal": variant.product.base_unit.allows_decimal,
         "unit": variant.product.base_unit.code,
+        "image": variant.product.image.url if variant.product.image else None,
     }
 
 

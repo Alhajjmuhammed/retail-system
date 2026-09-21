@@ -368,10 +368,23 @@
   /* ---- Till ---------------------------------------------------------- */
 
   .tile {
-    @apply flex h-24 flex-col justify-between rounded-xl border border-ink-200
-           bg-white p-3 text-left shadow-card transition
+    /* Tall enough for a picture, a name and a price. Every tile carries all
+       three -- a product with no photograph shows its initial -- because a
+       grid where some tiles are short and some are tall reads as broken. */
+    @apply flex h-28 flex-col gap-1 rounded-xl border border-ink-200
+           bg-white p-2.5 text-left shadow-card transition sm:h-32 sm:gap-1.5
            hover:border-brand-300 hover:shadow-raised
            active:scale-[0.98] active:bg-brand-50;
+  }
+  /* Smaller on a phone, where every row of tiles is a row the cashier does
+     not have to scroll to. */
+  .tile-pic {
+    @apply h-9 w-9 shrink-0 rounded-lg object-cover ring-1 ring-ink-900/5 sm:h-12 sm:w-12;
+  }
+  .tile-pic-blank {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+           bg-ink-100 text-sm font-semibold uppercase text-ink-400
+           ring-1 ring-inset ring-ink-900/5 sm:h-12 sm:w-12 sm:text-base;
   }
   .keypad-key {
     @apply flex h-12 items-center justify-center rounded-xl bg-ink-100
