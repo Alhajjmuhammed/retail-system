@@ -4,7 +4,7 @@
 {% block heading %}What you may do{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="space-y-4">
 
   <div class="card">
     <div class="card-body flex flex-wrap items-center justify-between gap-3">
@@ -35,8 +35,9 @@
   </div>
   {% endif %}
 
+  <div class="grid gap-4 xl:grid-cols-2">
   {% for module, items in groups.items %}
-  <div class="card">
+  <div class="card self-start">
     <div class="card-head"><h2 class="card-title">{{ module }}</h2></div>
     <div class="divide-y divide-ink-100">
       {% for item in items %}
@@ -75,5 +76,6 @@
   </div>
   {% endif %}
   {% endfor %}
+  </div>
 </div>
 {% endblock %}

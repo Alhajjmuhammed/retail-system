@@ -5,129 +5,147 @@
 
 {% block content %}
 {% comment %}
-Everybody reaches this, whatever their role holds. A cashier who cannot open a
-single settings page still has a name that might be spelled wrong.
+Everybody reaches this, whatever their role holds.
 
-The heading and its explanation sit beside what they explain rather than in
-the far corner of the row, which is where a single centred column puts them.
+Laid out as cards that fill the width rather than one column down the middle:
+this page holds four short things, and a wide screen showing four short things
+in a single narrow strip looks like a page that failed to load.
 {% endcomment %}
-<div class="mx-auto max-w-5xl divide-y divide-ink-200/70">
+<div class="space-y-4">
 
-  <section class="settings-row pb-8">
-    <div class="settings-aside">
-      <h2 class="settings-lead">Who you are</h2>
-      <p class="settings-note">Your name goes on every sale you make, and on the receipt.</p>
+  <div class="card card-body flex flex-wrap items-center gap-4">
+    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-xl font-bold text-brand-800">
+      {{ user.name|slice:":1"|upper }}
     </div>
-    <form method="post" class="settings-body card card-body space-y-4">
+    <div class="min-w-0 flex-1">
+      <p class="truncate text-lg font-semibold tracking-tight text-ink-900">{{ user.name }}</p>
+      <p class="truncate text-sm text-ink-500">{{ user.email }}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      {% if membership %}
+      <span class="badge badge-brand">{{ membership.role.name }}</span>
+      <span class="badge badge-muted">{{ tenant.name }}</span>
+      <span class="badge badge-muted">
+        {% if membership.all_branches %}Every branch{% else %}
+          {% for b in branches %}{{ b.name }}{% if not forloop.last %}, {% endif %}{% empty %}No branch{% endfor %}
+        {% endif %}
+      </span>
+      {% else %}
+      <span class="badge badge-muted">Platform</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-2">
+
+    <form method="post" class="card flex flex-col">
       {% csrf_token %}
       <input type="hidden" name="action" value="details">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label class="label" for="name">Name</label>
-          <input name="name" id="name" value="{{ user.name }}" maxlength="120" class="input" required>
+      <div class="card-head">
+        <h2 class="card-title">Who you are</h2>
+        <p class="hint">On every sale you make</p>
+      </div>
+      <div class="card-body flex-1 space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="label" for="name">Name</label>
+            <input name="name" id="name" value="{{ user.name }}" maxlength="120" class="input" required>
+          </div>
+          <div>
+            <label class="label" for="phone">Phone</label>
+            <input name="phone" id="phone" value="{{ user.phone }}" maxlength="30" class="input"
+                   placeholder="Optional">
+          </div>
         </div>
         <div>
-          <label class="label" for="phone">Phone</label>
-          <input name="phone" id="phone" value="{{ user.phone }}" maxlength="30" class="input"
-                 placeholder="Optional">
+          <label class="label" for="email">Email</label>
+          <p class="input flex items-center bg-ink-50 text-ink-600" id="email">{{ user.email }}</p>
+          <p class="hint">How you sign in. Ask an owner or a manager to change it.</p>
         </div>
       </div>
-      <div>
-        <label class="label" for="email">Email</label>
-        <p class="input flex items-center bg-ink-50 text-ink-600" id="email">{{ user.email }}</p>
-        <p class="hint">How you sign in, and how the shop finds you. Ask an owner or a manager to change it.</p>
-      </div>
-      <div class="flex justify-end border-t border-ink-100 pt-4">
+      <div class="flex justify-end border-t border-ink-100 px-5 py-3">
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
-  </section>
 
-  <section class="settings-row py-8">
-    <div class="settings-aside">
-      <h2 class="settings-lead">What you may do here</h2>
-      <p class="settings-note">Set by the shop, not by you. Ask an owner or a manager for anything missing.</p>
-    </div>
-    <div class="settings-body card card-body space-y-4">
-      <dl class="grid gap-4 sm:grid-cols-3">
-        <div>
-          <dt class="label mb-1">Shop</dt>
-          <dd class="text-sm font-medium text-ink-900">{{ tenant.name|default:"—" }}</dd>
+    {% if pin_matters %}
+    <form method="post" class="card flex flex-col">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pin">
+      <div class="card-head">
+        <h2 class="card-title">Your approval PIN</h2>
+        <p class="hint">{% if has_pin %}You have one set{% else %}Not set yet{% endif %}</p>
+      </div>
+      <div class="card-body flex-1 space-y-4">
+        <p class="text-sm text-ink-600">
+          Typed on somebody else's screen to let through what their own role does not allow.
+          Every approval is recorded under your name, whoever typed it.
+        </p>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="label" for="pin">New PIN</label>
+            <input type="password" name="pin" id="pin" inputmode="numeric" maxlength="8"
+                   autocomplete="new-password" class="input" placeholder="4 to 8 numbers">
+          </div>
+          <div>
+            <label class="label" for="pin_again">Again</label>
+            <input type="password" name="pin_again" id="pin_again" inputmode="numeric" maxlength="8"
+                   autocomplete="new-password" class="input">
+          </div>
         </div>
-        <div>
-          <dt class="label mb-1">Role</dt>
-          <dd class="text-sm font-medium text-ink-900">{{ membership.role.name|default:"—" }}</dd>
-        </div>
-        <div>
-          <dt class="label mb-1">Works in</dt>
-          <dd class="text-sm font-medium text-ink-900">
-            {% if membership.all_branches %}Every branch{% else %}
-              {% for b in branches %}{{ b.name }}{% if not b.is_active %} (closed){% endif %}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
-            {% endif %}
-          </dd>
-        </div>
-      </dl>
+      </div>
+      <div class="flex items-center justify-between gap-2 border-t border-ink-100 px-5 py-3">
+        {% if has_pin %}
+        <button type="submit" name="remove" value="1" class="btn btn-ghost btn-sm text-red-700"
+                x-data @click.prevent="$store.confirm.ask($el.form, {
+                  title: 'Remove your approval PIN?',
+                  body: 'Nobody will be able to use your PIN to approve anything until you set a new one.',
+                  label: 'Remove it', danger: true })">Remove it</button>
+        {% else %}<span class="hint">Keep it to yourself.</span>{% endif %}
+        <button type="submit" class="btn btn-primary">
+          {% if has_pin %}Change PIN{% else %}Set a PIN{% endif %}
+        </button>
+      </div>
+    </form>
+    {% endif %}
+
+    <div class="card flex flex-col">
+      <div class="card-head">
+        <h2 class="card-title">What you may do here</h2>
+        <p class="hint">Set by the shop</p>
+      </div>
+      <div class="card-body flex-1">
+        <p class="text-sm text-ink-600">
+          Your role is <span class="font-semibold text-ink-900">{{ membership.role.name|default:"—" }}</span>.
+          Ask an owner or a manager for anything missing.
+        </p>
+      </div>
       {% if membership %}
-      <div class="border-t border-ink-100 pt-4">
+      <div class="border-t border-ink-100 px-5 py-3">
         <a href="{% url 'accounts:my_permissions' %}" class="btn btn-secondary btn-sm">
           {% icon "shield" class="h-4 w-4" %} See exactly what that allows
         </a>
       </div>
       {% endif %}
     </div>
-  </section>
 
-  {% if pin_matters %}
-  <section class="settings-row py-8">
-    <div class="settings-aside">
-      <h2 class="settings-lead">Your approval PIN</h2>
-      <p class="settings-note">
-        Typed on somebody else's screen to let through what their own role does not allow.
-        {% if has_pin %}You have one set.{% else %}You do not have one yet.{% endif %}
-      </p>
-    </div>
-    <form method="post" class="settings-body card card-body space-y-4">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="pin">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label class="label" for="pin">New PIN</label>
-          <input type="password" name="pin" id="pin" inputmode="numeric" maxlength="8"
-                 autocomplete="new-password" class="input" placeholder="4 to 8 numbers">
-        </div>
-        <div>
-          <label class="label" for="pin_again">Again</label>
-          <input type="password" name="pin_again" id="pin_again" inputmode="numeric" maxlength="8"
-                 autocomplete="new-password" class="input">
-        </div>
+    <div class="card flex flex-col">
+      <div class="card-head">
+        <h2 class="card-title">Password</h2>
+        <p class="hint">Yours alone</p>
       </div>
-      <p class="hint">Keep it to yourself. Every approval is recorded under your name, whoever typed it.</p>
-      <div class="flex items-center justify-between gap-2 border-t border-ink-100 pt-4">
-        {% if has_pin %}
-        <button type="submit" name="remove" value="1" class="btn btn-ghost text-red-700"
-                x-data @click.prevent="$store.confirm.ask($el.form, {
-                  title: 'Remove your approval PIN?',
-                  body: 'Nobody will be able to use your PIN to approve anything until you set a new one.',
-                  label: 'Remove it', danger: true })">Remove it</button>
-        {% else %}<span></span>{% endif %}
-        <button type="submit" class="btn btn-primary">
-          {% if has_pin %}Change PIN{% else %}Set a PIN{% endif %}
-        </button>
+      <div class="card-body flex-1">
+        <p class="text-sm text-ink-600">
+          A password somebody else typed in for you stays one they know. Changing it
+          signs out every other device.
+        </p>
       </div>
-    </form>
-  </section>
-  {% endif %}
-
-  <section class="settings-row py-8">
-    <div class="settings-aside">
-      <h2 class="settings-lead">Password</h2>
-      <p class="settings-note">A password somebody else typed in for you stays one they know.</p>
+      <div class="border-t border-ink-100 px-5 py-3">
+        <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary btn-sm">
+          {% icon "key" class="h-4 w-4" %} Change your password
+        </a>
+      </div>
     </div>
-    <div class="settings-body card card-body">
-      <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary">
-        {% icon "key" class="h-4 w-4" %} Change your password
-      </a>
-    </div>
-  </section>
+  </div>
 </div>
 {% endblock %}
