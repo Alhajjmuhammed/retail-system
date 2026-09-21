@@ -4,23 +4,28 @@
       <tr><th class="w-12 text-right">SN</th><th>When</th><th>What</th><th>Who</th><th>Approved by</th><th>Where</th><th></th></tr>
     </thead>
     <tbody>
-      {% for row in page %}
+      {% for row in entries %}
       <tr>
         <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
-        <td class="whitespace-nowrap text-ink-500">{{ row.created_at|date:"j M H:i" }}</td>
+        <td class="whitespace-nowrap text-ink-500">{{ row.when|date:"j M H:i" }}</td>
         <td>
-          <span class="font-medium text-ink-800">{{ row.action }}</span>
-          {% if row.object_type %}<p class="hint">{{ row.object_type }} {{ row.object_id }}</p>{% endif %}
+          <span class="flex items-center gap-2.5">
+            <span class="feed-icon feed-{{ row.tone }}">{% icon row.icon class="h-4 w-4" %}</span>
+            <span class="min-w-0">
+              <span class="block font-medium text-ink-800">{{ row.text }}</span>
+              <span class="hint">{{ row.row.action }}{% if row.row.object_type %} &middot; {{ row.row.object_type }} {{ row.row.object_id }}{% endif %}</span>
+            </span>
+          </span>
         </td>
-        <td class="text-ink-700">{{ row.user.name|default:"system" }}</td>
+        <td class="text-ink-700">{{ row.who }}</td>
         <td>
-          {% if row.authorised_by %}
-            <span class="badge badge-warn">{{ row.authorised_by.name }}</span>
+          {% if row.approved_by %}
+            <span class="badge badge-warn">{{ row.approved_by }}</span>
           {% else %}<span class="text-ink-300">&mdash;</span>{% endif %}
         </td>
-        <td class="text-ink-500">{{ row.branch.name|default:"—" }}</td>
+        <td class="text-ink-500">{{ row.row.branch.name|default:"—" }}</td>
         <td class="text-right">
-          <a href="{% url 'accounts:audit_entry' row.pk %}" class="text-sm font-medium text-brand-700 hover:underline">Open</a>
+          <a href="{% url 'accounts:audit_entry' row.row.pk %}" class="text-sm font-medium text-brand-700 hover:underline">Open</a>
         </td>
       </tr>
       {% empty %}

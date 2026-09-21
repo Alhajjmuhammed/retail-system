@@ -180,7 +180,7 @@ class Command(BaseCommand):
             Unit,
         )
         from apps.customers.models import Customer
-        from apps.inventory.models import MovementReason
+        from apps.inventory.models import MovementReason, StockItem
         from apps.inventory.services import record_movement
         from apps.purchasing.models import Supplier
 
@@ -212,6 +212,12 @@ class Command(BaseCommand):
                 record_movement(
                     variant=variant, qty_delta=qty, reason=MovementReason.OPENING,
                     branch=branch, unit_cost=cost, note="Opening stock", user=owner,
+                )
+                # A level to warn at, or "running low" can never fire and the
+                # whole reorder feature is invisible in the demo. A third of
+                # the opening count is about a week's cover for these lines.
+                StockItem.objects.filter(variant=variant, branch=branch).update(
+                    reorder_level=max(round(qty / 3), 5)
                 )
             # Things without a barcode need a tile, or they cannot be sold.
             if code is None or tiles < 4:

@@ -3,7 +3,7 @@
 {% block heading %}Branches &amp; tills{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-5xl space-y-5">
+<div class="space-y-5">
   <div class="flex flex-wrap items-start justify-between gap-4">
     <p class="section-lead">
       Stock is counted per branch; your product list is shared across all of them.
@@ -13,7 +13,7 @@
     {% if may_branches and covers_all %}<a href="{% url 'org:branch_create' %}" hx-get="{% url 'org:branch_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} New branch</a>{% endif %}
   </div>
 
-  <div class="space-y-3">
+  <div class="grid items-start gap-3 lg:grid-cols-2">
     {% for branch in branches %}
     <div class="card">
       <div class="card-head">

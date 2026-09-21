@@ -4,9 +4,18 @@
 
 {% block content %}
 <div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="section-lead">
+      Batches carry the date the goods go off. What is close to it is listed
+      here while there is still time to sell it or send it back &mdash; after
+      that it is money already spent.
+    </p>
+    <a href="{% url 'purchasing:receipt_create' %}" class="btn btn-secondary">{% icon "layers" %} Receive with dates</a>
+  </div>
+
   {% if expired %}
   <div class="card">
-    <div class="card-head"><h2 class="card-title text-red-700">Already expired, still on the shelf</h2><span class="hint">Take them off sale, then write them off from Stock &rarr; Adjust, ticking damage or expiry.</span></div>
+    <div class="card-head"><h2 class="card-title text-red-700"><span class="card-icon bg-red-50 text-red-600">{% icon "alert" class="h-3.5 w-3.5" %}</span>Already expired, still on the shelf</h2><span class="hint">Take them off sale, then write them off from Stock &rarr; Adjust, ticking damage or expiry.</span></div>
     <div class="table-wrap rounded-none border-0 shadow-none">
       <table class="table">
         <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th>Batch</th><th>Expired</th><th class="text-right">On hand</th></tr></thead>
@@ -48,7 +57,20 @@
           <td class="tnum text-right font-medium">{{ b.on_hand|floatformat:"-3" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="py-10 text-center text-sm text-ink-500">Nothing expiring in the next {{ days }} days.</td></tr>
+        {% comment %}
+        Written out rather than built with `add`, which drops the whole
+        string when it is handed a number.
+        {% endcomment %}
+        <tr><td colspan="6">
+          <div class="empty">
+            <span class="empty-icon">{% icon "clock" class="h-5 w-5" %}</span>
+            <p class="empty-title">Nothing going off soon</p>
+            <p class="empty-text">
+              No batch at this branch expires in the next {{ days }} days.
+              Dates are entered when goods are received.
+            </p>
+          </div>
+        </td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -235,18 +235,47 @@ def devices(request):
     had no way to stop it taking payment.
     """
     from datetime import timedelta
+    from urllib.parse import urlencode
 
+    from django.core.paginator import Paginator
+    from django.db.models import Q
     from django.utils import timezone
 
     from apps.org.models import Device
 
+    mine = request.membership.branches(include_closed=True)
     rows = (
         Device.objects.select_related("branch")
-        .filter(branch__in=request.membership.branches(include_closed=True), hidden=False)
+        .filter(branch__in=mine, hidden=False)
         .order_by("-is_active", "branch__name", "label")
     )
+    stale_before = timezone.now() - timedelta(hours=24)
+
+    # A busy shop registers a device for every till and every phone that has
+    # ever sold, and the page listed every one of them with no way to find
+    # anything. The counts below are over all of them, not the page shown.
+    counts = {
+        "all": rows.count(),
+        "silent": rows.filter(is_active=True).filter(
+            Q(last_sync_at__lt=stale_before) | Q(last_sync_at__isnull=True)).count(),
+        "off": rows.filter(is_active=False).count(),
+    }
+
+    term = request.GET.get("q", "").strip()[:60]
+    view = request.GET.get("view", "")
+    if term:
+        rows = rows.filter(Q(label__icontains=term) | Q(branch__name__icontains=term))
+    if view == "silent":
+        rows = rows.filter(is_active=True).filter(
+            Q(last_sync_at__lt=stale_before) | Q(last_sync_at__isnull=True))
+    elif view == "off":
+        rows = rows.filter(is_active=False)
+
+    page = Paginator(rows, 25).get_page(request.GET.get("page"))
     return render(request, "org/devices.html", {
-        "devices": rows, "stale_before": timezone.now() - timedelta(hours=24),
+        "page": page, "devices": page.object_list, "counts": counts,
+        "q": term, "view": view, "stale_before": stale_before,
+        "keep": urlencode({k: v for k, v in (("q", term), ("view", view)) if v}),
     })
 
 

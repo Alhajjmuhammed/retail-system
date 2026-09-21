@@ -4,23 +4,34 @@
 {% block content %}
 {% can_do "expense.approve" as may_approve %}
 <div class="space-y-4">
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="stat"><p class="stat-label">This month</p><p class="stat-value">{{ month_total|floatformat:0|intcomma }}</p></div>
-    <a href="?state=waiting" class="stat transition hover:border-brand-300 {% if f.state == 'waiting' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Waiting for approval</p><p class="stat-value {% if waiting %}text-amber-700{% endif %}">{{ waiting }}</p></a>
-    <div class="stat"><p class="stat-label">Shown below</p><p class="stat-value">{{ shown_total|floatformat:0|intcomma }}</p></div>
-    <div class="flex items-center justify-end">
-      <a href="{% url 'finance:expense_create' %}" hx-get="{% url 'finance:expense_create' %}" hx-target="#modal" class="btn btn-primary w-full sm:w-auto">{% icon "plus" %} Record an expense</a>
-    </div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="section-lead">
+      Rent, transport, wages, airtime &mdash; the money that leaves the shop
+      without being stock. Against takings, this is what turns a margin into
+      a profit.
+    </p>
+    <a href="{% url 'finance:expense_create' %}" hx-get="{% url 'finance:expense_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Record an expense</a>
   </div>
 
-  <form method="get" class="card card-body grid grid-cols-2 gap-2 {% if branches|length > 1 %}lg:grid-cols-8{% else %}lg:grid-cols-7{% endif %}" x-data @change="$el.submit()">
-    <input type="search" name="q" value="{{ f.q }}" placeholder="What for, reference" aria-label="Search" class="input col-span-2">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "calendar" class="h-3.5 w-3.5" %}</span>This month</p><p class="stat-value">{{ month_total|floatformat:0|intcomma }}</p></div>
+    <a href="?state=waiting" class="stat transition hover:border-brand-300 {% if f.state == 'waiting' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "clock" class="h-3.5 w-3.5" %}</span>Waiting for approval</p><p class="stat-value {% if waiting %}text-amber-700{% endif %}">{{ waiting }}</p></a>
+    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Shown below</p><p class="stat-value">{{ shown_total|floatformat:0|intcomma }}</p></div>
+  </div>
+
+  {% comment %}
+  Four filters to a row rather than seven: at seven the words inside the
+  dropdowns were cut off, and a filter you cannot read is a filter nobody
+  touches.
+  {% endcomment %}
+  <form method="get" class="card card-body grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" x-data @change="$el.submit()">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="What for, reference" aria-label="Search" class="input col-span-2 sm:col-span-1">
     <select name="category" class="input" aria-label="Category"><option value="">Any category</option>{% for c in categories %}<option value="{{ c.pk }}" {% if f.category == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
     <select name="method" class="input" aria-label="Paid by"><option value="">Any method</option>{% for value, label in methods %}<option value="{{ value }}" {% if f.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
     <select name="state" class="input" aria-label="Approval"><option value="">Approved or not</option><option value="waiting" {% if f.state == "waiting" %}selected{% endif %}>Waiting</option><option value="approved" {% if f.state == "approved" %}selected{% endif %}>Approved</option></select>
     <input type="date" name="from" value="{{ f.from|date:'Y-m-d' }}" class="input" aria-label="From">
     <input type="date" name="to" value="{{ f.to|date:'Y-m-d' }}" class="input" aria-label="To">
-    {% if branches|length > 1 %}<select name="branch" class="input col-span-2 lg:col-span-1" aria-label="Branch"><option value="">All branches</option>{% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
+    {% if branches|length > 1 %}<select name="branch" class="input col-span-2 sm:col-span-1" aria-label="Branch"><option value="">All branches</option>{% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
   </form>
 
   <div class="table-wrap">

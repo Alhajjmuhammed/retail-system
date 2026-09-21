@@ -27,13 +27,13 @@
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     {% if can_see_cost %}
-    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
     {% else %}
-    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
     {% endif %}
-    <a href="?view=low" class="stat transition hover:border-brand-300 {% if view == 'low' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Running low</p><p class="stat-value {% if counts.low %}text-amber-600{% endif %}">{{ counts.low }}</p></a>
-    <a href="?view=negative" class="stat transition hover:border-brand-300 {% if view == 'negative' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Below zero</p><p class="stat-value {% if counts.negative %}text-red-600{% endif %}">{{ counts.negative }}</p></a>
-    <a href="?view=dead" class="stat transition hover:border-brand-300 {% if view == 'dead' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Never counted</p><p class="stat-value">{{ counts.dead }}</p></a>
+    <a href="?view=low" class="stat transition hover:border-brand-300 {% if view == 'low' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>Running low</p><p class="stat-value {% if counts.low %}text-amber-600{% endif %}">{{ counts.low }}</p></a>
+    <a href="?view=negative" class="stat transition hover:border-brand-300 {% if view == 'negative' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Below zero</p><p class="stat-value {% if counts.negative %}text-red-600{% endif %}">{{ counts.negative }}</p></a>
+    <a href="?view=dead" class="stat transition hover:border-brand-300 {% if view == 'dead' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Never counted</p><p class="stat-value">{{ counts.dead }}</p></a>
   </div>
 
   <div id="stock-rows">{% include "inventory/_stock_rows.html" %}</div>

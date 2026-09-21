@@ -220,14 +220,25 @@
     @apply flex items-center justify-between gap-4 border-b border-ink-100 px-5 py-3.5;
   }
   .card-title {
-    @apply text-sm font-semibold text-ink-900;
+    @apply flex items-center gap-2 text-sm font-semibold text-ink-900;
+  }
+  /* The icon in a card heading. Muted on purpose: it is there to be found
+     at a glance, not to compete with the words beside it. */
+  .card-icon {
+    @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-lg
+           bg-ink-100 text-ink-500;
   }
 
   .stat {
     @apply rounded-xl border border-ink-200/80 bg-white p-5 shadow-card;
   }
   .stat-label {
-    @apply text-xs font-medium uppercase tracking-wider text-ink-500;
+    @apply flex items-center gap-1.5 text-xs font-medium uppercase
+           tracking-wider text-ink-500;
+  }
+  .stat-icon {
+    @apply flex h-5 w-5 shrink-0 items-center justify-center rounded
+           bg-ink-100 text-ink-500;
   }
   .stat-value {
     @apply mt-1.5 text-2xl font-semibold tracking-tight text-ink-900;
@@ -381,7 +392,13 @@
            text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500;
   }
   .table tbody td {
-    @apply px-4 py-3 align-middle text-ink-700;
+    @apply px-4 py-2.5 align-middle text-ink-700;
+  }
+  /* A row is a line in a list, not a card. The thumb-sized icon button that
+     is right on a phone made every desktop row 80px tall, which is what
+     turned three hundred sales into five screens of scrolling. */
+  .table tbody td .btn-icon {
+    @apply sm:h-7 sm:w-7;
   }
   .table tbody tr {
     @apply border-b border-ink-100 transition-colors last:border-0

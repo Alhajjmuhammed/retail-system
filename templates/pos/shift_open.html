@@ -11,23 +11,110 @@
   {% else %}<p class="hint mt-3">Ask the owner or a manager to add one.</p>{% endif %}
 </div>
 {% else %}
-<form method="post" class="mx-auto max-w-sm space-y-4">
-  {% csrf_token %}
-  <div class="card card-body space-y-4">
-    <div>
-      <label class="label" for="register">Till</label>
-      <select name="register" id="register" class="input" required>
-        {% for r in registers %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="label" for="opening_float">Cash in the drawer now</label>
-      <input type="number" step="0.01" min="0" name="opening_float" id="opening_float" value="0"
-             inputmode="numeric" class="input py-3 text-lg" required>
-      <p class="hint">Count it before you start. This is what the end-of-day figure is measured against.</p>
-    </div>
-    <button type="submit" class="btn btn-primary w-full btn-lg">Start selling</button>
+{% comment %}
+Two panels, because opening a till is two questions: what am I counting into
+the drawer, and is anybody already on this till. The second used to be
+unanswerable from this screen, which is how two people ended up on one till.
+{% endcomment %}
+<div class="grid items-start gap-5 lg:grid-cols-5">
+
+  {% if not free %}
+  {% comment %}
+  Every till is already being used. Offering a form with an empty dropdown
+  and a "Start selling" button that cannot work is worse than saying so.
+  {% endcomment %}
+  <div class="card card-body lg:col-span-2">
+    <span class="feed-icon feed-amber mb-3">{% icon "alert" class="h-4 w-4" %}</span>
+    <p class="text-sm font-semibold text-ink-900">Every till here is in use</p>
+    <p class="hint mt-1">
+      One person to a till. Wait for one to be closed, or ask a manager to add
+      another till for this branch.
+    </p>
+    {% can_do "register.manage" as may_register %}
+    {% if may_register %}
+    <a href="{% url 'org:branches' %}" class="btn btn-secondary btn-sm mt-3 self-start">{% icon "plus" %} Add a till</a>
+    {% endif %}
   </div>
-</form>
+  {% else %}
+  <form method="post" class="space-y-4 lg:col-span-2">
+    {% csrf_token %}
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title"><span class="card-icon">{% icon "cart" class="h-3.5 w-3.5" %}</span>Start a shift</h2>
+        <span class="hint">{{ request.branch.name }}</span>
+      </div>
+      <div class="card-body space-y-4">
+        <div>
+          <label class="label" for="register">Till</label>
+          <select name="register" id="register" class="input" required>
+            {% for till in tills %}
+            {% if not till.running %}
+            <option value="{{ till.register.pk }}">{{ till.register.name }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="label" for="opening_float">Cash in the drawer now</label>
+          <input type="number" step="0.01" min="0" name="opening_float" id="opening_float"
+                 value="{{ suggested|floatformat:0 }}"
+                 inputmode="numeric" class="input py-3 text-lg" required>
+          <p class="hint">Count it before you start. This is what the end-of-day figure is measured against.</p>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg">{% icon "enter" %} Start selling</button>
+      </div>
+    </div>
+  </form>
+  {% endif %}
+
+  <div class="card lg:col-span-3">
+    <div class="card-head">
+      <h2 class="card-title"><span class="card-icon">{% icon "building" class="h-3.5 w-3.5" %}</span>Tills at {{ request.branch.name }}</h2>
+      <span class="hint">{{ tills|length }} till{{ tills|length|pluralize }}</span>
+    </div>
+    <div class="divide-y divide-ink-100">
+      {% for till in tills %}
+      <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+        <span class="flex min-w-0 items-center gap-3">
+          <span class="feed-icon {% if till.running %}feed-amber{% else %}feed-brand{% endif %}">
+            {% icon "cart" class="h-4 w-4" %}
+          </span>
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold text-ink-900">{{ till.register.name }}</span>
+            <span class="block text-xs text-ink-500">
+              {% if till.running %}
+                Open since {{ till.running.opened_at|date:"H:i" }} &middot; {{ till.running.user.name }}
+              {% elif till.last %}
+                Last closed {{ till.last.closed_at|date:"j M, H:i" }} by {{ till.last.user.name }}
+              {% else %}
+                Never used yet
+              {% endif %}
+            </span>
+          </span>
+        </span>
+        <span class="flex shrink-0 items-center gap-3">
+          {% if till.last and not till.running %}
+          <span class="text-right">
+            <span class="block text-xs text-ink-500">left in drawer</span>
+            <span class="tnum block text-sm font-semibold text-ink-900">{{ till.last.counted_cash|floatformat:0|intcomma }}</span>
+          </span>
+          {% endif %}
+          {% if till.running %}
+            <span class="badge badge-warn">In use</span>
+          {% else %}
+            <span class="badge badge-ok">Free</span>
+          {% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="border-t border-ink-100 px-5 py-3">
+      <p class="hint">
+        One person to a till. The drawer is counted into the shift when it opens and
+        counted out when it closes, and the difference is what a cash-up shows.
+      </p>
+    </div>
+  </div>
+</div>
 {% endif %}
 {% endblock %}

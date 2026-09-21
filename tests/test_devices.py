@@ -99,3 +99,39 @@ def test_an_owner_can_switch_off_their_own_device(client, shop, owner, main_bran
     with unscoped():
         device.refresh_from_db()
         assert not device.is_active
+
+
+def test_a_long_device_list_paginates_and_can_be_searched(
+        client, shop, main_branch, owner):
+    """
+    Every till and every phone that ever sold registers itself, so this list
+    grows for ever. It used to print all of them on one page with no way to
+    find anything -- a shop with a hundred devices got eight screens.
+    """
+    stale = timezone.now() - timedelta(days=3)
+    with tenant_context(shop):
+        for n in range(30):
+            Device.objects.create(
+                branch=main_branch, device_id=str(uuid.uuid4()),
+                kind="till", label=f"Counter {n}",
+                last_sync_at=timezone.now() if n else stale,
+            )
+        Device.objects.create(branch=main_branch, device_id=str(uuid.uuid4()),
+                              kind="phone", label="Old phone", is_active=False)
+
+    client.force_login(owner)
+    first = client.get(reverse("org:devices"))
+    assert first.context["counts"] == {"all": 31, "silent": 1, "off": 1}
+    assert len(first.context["page"].object_list) == 25
+    assert first.context["page"].has_next()
+
+    # Searching narrows it, and the counts still describe the whole shop.
+    found = client.get(reverse("org:devices"), {"q": "Counter 7"})
+    assert [d.label for d in found.context["page"].object_list] == ["Counter 7"]
+    assert found.context["counts"]["all"] == 31
+
+    silent = client.get(reverse("org:devices"), {"view": "silent"})
+    assert [d.label for d in silent.context["page"].object_list] == ["Counter 0"]
+
+    off = client.get(reverse("org:devices"), {"view": "off"})
+    assert [d.label for d in off.context["page"].object_list] == ["Old phone"]

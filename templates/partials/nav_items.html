@@ -66,12 +66,12 @@ second copy of this file.
     {% comment %}Each on its own permission: nested under "stock.view" they
     were hidden from people allowed to use them.{% endcomment %}
     {% if may_transfer %}
-    <a href="{% url 'inventory:transfer_list' %}" title="Transfers" class="nav-link {% if 'transfer' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'inventory:transfer_list' %}" title="Transfers" class="nav-link {% if app == 'inventory' and 'transfer' in url_name %}nav-link-active{% endif %}">
       {% icon "truck" %}<span class="nav-label">Transfers</span>
     </a>
     {% endif %}
     {% if may_count %}
-    <a href="{% url 'inventory:count_list' %}" title="Counts" class="nav-link {% if 'count' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'inventory:count_list' %}" title="Counts" class="nav-link {% if app == 'inventory' and 'count' in url_name %}nav-link-active{% endif %}">
       {% icon "clipboard" %}<span class="nav-label">Counts</span>
     </a>
     {% endif %}
@@ -90,17 +90,17 @@ second copy of this file.
   <div class="space-y-0.5">
     <p class="nav-section">Buying</p>
     {% if may_receive %}
-    <a href="{% url 'purchasing:receipt_list' %}" title="Goods received" class="nav-link {% if 'receipt' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'purchasing:receipt_list' %}" title="Goods received" class="nav-link {% if app == 'purchasing' and 'receipt' in url_name %}nav-link-active{% endif %}">
       {% icon "layers" %}<span class="nav-label">Goods received</span>
     </a>
     {% endif %}
     {% if may_po %}
-    <a href="{% url 'purchasing:order_list' %}" title="Orders" class="nav-link {% if 'order' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'purchasing:order_list' %}" title="Orders" class="nav-link {% if app == 'purchasing' and 'order' in url_name %}nav-link-active{% endif %}">
       {% icon "clipboard" %}<span class="nav-label">Orders</span>
     </a>
     {% endif %}
     {% if may_suppliers %}
-    <a href="{% url 'purchasing:supplier_list' %}" title="Suppliers" class="nav-link {% if 'supplier' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'purchasing:supplier_list' %}" title="Suppliers" class="nav-link {% if app == 'purchasing' and 'supplier' in url_name %}nav-link-active{% endif %}">
       {% icon "building" %}<span class="nav-label">Suppliers</span>
     </a>
     {% endif %}
@@ -120,12 +120,12 @@ second copy of this file.
       {% icon "users" %}<span class="nav-label">Customers</span>
     </a>
     {% elif may_collect %}
-    <a href="{% url 'customers:statements' %}" title="Who owes" class="nav-link {% if app == 'customers' %}nav-link-active{% endif %}">
+    <a href="{% url 'customers:statements' %}" title="Who owes" class="nav-link {% if url_name == 'statements' %}nav-link-active{% endif %}">
       {% icon "wallet" %}<span class="nav-label">Who owes</span>
     </a>
     {% endif %}
     {% if may_expenses %}
-    <a href="{% url 'finance:expense_list' %}" title="Expenses" class="nav-link {% if 'expense' in url_name %}nav-link-active{% endif %}">
+    <a href="{% url 'finance:expense_list' %}" title="Expenses" class="nav-link {% if app == 'finance' and 'expense' in url_name %}nav-link-active{% endif %}">
       {% icon "wallet" %}<span class="nav-label">Expenses</span>
     </a>
     {% endif %}

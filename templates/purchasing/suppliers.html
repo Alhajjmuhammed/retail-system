@@ -3,13 +3,24 @@
 {% block heading %}Suppliers{% endblock %}
 {% block content %}
 <div class="space-y-4">
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <a href="?view=active" class="stat transition hover:border-brand-300 {% if view == 'active' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Suppliers</p><p class="stat-value">{{ summary.count }}</p></a>
-    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
-    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
-    <div class="flex items-center justify-end lg:col-span-1 col-span-2">
-      <a href="{% url 'purchasing:supplier_create' %}" hx-get="{% url 'purchasing:supplier_create' %}" hx-target="#modal" class="btn btn-primary w-full sm:w-auto">{% icon "plus" %} New supplier</a>
-    </div>
+  {% comment %}
+  The button used to sit inside the row of figures, as a fourth tile that was
+  not a figure. It belongs with the heading; the figures then have the whole
+  width and read as the three views they are.
+  {% endcomment %}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="section-lead">
+      Who you buy from, what you owe them, and on what terms. Removing a
+      supplier you have bought from keeps the history and takes them off the
+      list.
+    </p>
+    <a href="{% url 'purchasing:supplier_create' %}" hx-get="{% url 'purchasing:supplier_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} New supplier</a>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+    <a href="?view=active" class="stat transition hover:border-brand-300 {% if view == 'active' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "truck" class="h-3.5 w-3.5" %}</span>Suppliers</p><p class="stat-value">{{ summary.count }}</p></a>
+    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
+    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trash" class="h-3.5 w-3.5" %}</span>Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
   </div>
 
   <form method="get" class="flex gap-2">

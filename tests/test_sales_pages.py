@@ -161,6 +161,52 @@ def test_shift_open_without_tills_says_so(client, shop, main_branch, register, o
     assert r.status_code == 200 and "No till at" in r.content.decode()
 
 
+def test_opening_a_till_shows_what_each_till_is_doing(
+        client, shop, main_branch, register, owner, cashier):
+    """
+    The page was one box in the middle of an empty screen: you could not see
+    whether somebody was already on the till you were about to open.
+    """
+    from apps.accounts.models import Membership, Role
+    from apps.pos.services import open_shift
+
+    with tenant_context(shop):
+        person = Membership.objects.create(
+            tenant=shop, user=cashier, role=Role.objects.get(name="Cashier"))
+        person.branch_links.create(branch=main_branch)
+    with tenant_context(shop, branch=main_branch, user=cashier):
+        open_shift(register=register, opening_float=5000)
+
+    client.force_login(owner)
+    r = client.get(reverse("pos:shift_open"))
+    body = r.content.decode()
+
+    assert [t["register"] for t in r.context["tills"]] == [register]
+    assert r.context["tills"][0]["running"] is not None
+    # Nothing is free, so there is no form to fill in that could not work.
+    assert r.context["free"] == []
+    assert "Every till here is in use" in body and "Start selling" not in body
+    assert "Juma" in body
+
+
+def test_a_free_till_offers_the_drawer_it_was_left_with(
+        client, shop, main_branch, register, owner):
+    """Last night's closing count is the sensible float to suggest."""
+    from decimal import Decimal
+
+    from apps.pos.services import close_shift, open_shift
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        shift = open_shift(register=register, opening_float=Decimal("1000"))
+        close_shift(shift, counted_cash=Decimal("45000"), note="")
+
+    client.force_login(owner)
+    r = client.get(reverse("pos:shift_open"))
+    assert r.context["suggested"] == Decimal("45000")
+    body = r.content.decode()
+    assert "Start selling" in body and "left in drawer" in body
+
+
 def test_fiscal_page_paginates(client, shop, owner):
     client.force_login(owner)
     r = client.get(reverse("pos:fiscal_receipts"), {"status": "bogus", "page": "x"})

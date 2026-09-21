@@ -9,7 +9,17 @@ Built for one hand on the shop floor: find things at the top, the basket in
 the middle, the two ways to finish at the bottom. Prices always come from the
 server; the phone only says what and how many.
 {% endcomment %}
-<div x-data="phoneSale({{ config }})" class="flex min-h-full flex-col bg-ink-50">
+{% comment %}
+On a laptop this is a phone screen stretched across a metre of glass, with
+the basket a thin line of text in the middle of nothing. It keeps its phone
+proportions and sits in the middle of the page instead, framed, so a wide
+screen shows a tool rather than a page that failed to load.
+{% endcomment %}
+<div class="flex min-h-full justify-center bg-ink-100 sm:p-4 lg:p-6">
+<div x-data="phoneSale({{ config }})"
+     class="flex min-h-full w-full flex-col bg-ink-50 sm:min-h-0 sm:flex-1
+            sm:self-stretch sm:overflow-hidden sm:rounded-2xl sm:shadow-float
+            lg:max-w-2xl">
 
   <header class="sticky top-0 z-20 border-b border-ink-200 bg-white/95 px-3 py-2.5 backdrop-blur">
     <div class="flex items-center gap-2">
@@ -181,6 +191,7 @@ server; the phone only says what and how many.
       </div>
     </form>
   </div>
+</div>
 </div>
 
 <script src="{% versioned_static 'js/phone.js' %}"></script>

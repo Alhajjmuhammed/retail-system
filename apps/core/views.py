@@ -106,7 +106,7 @@ def dashboard(request):
             "chart_rows": rows,
             "top": figures.top_products(branches, start, end),
             "by_method": paid,
-            "recent": sales.select_related("customer", "branch").order_by("-sold_at")[:8],
+            "recent": sales.select_related("customer", "branch").order_by("-sold_at")[:10],
         })
 
     # -- who did what, for whoever may read it ------------------------------

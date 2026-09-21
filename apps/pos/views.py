@@ -172,7 +172,29 @@ def shift_open(request):
         audit.record("shift.opened", obj=shift, ip=audit.client_ip(request))
         return redirect("pos:till")
 
-    return render(request, "pos/shift_open.html", {"registers": registers})
+    # What each till is doing right now, and what it last closed with. The
+    # page was one small box in the middle of an empty screen, and the thing
+    # a person actually wants to know before they start -- is anyone else on
+    # this till, and how much was in the drawer last night -- was nowhere.
+    registers = list(registers)
+    running = {
+        shift.register_id: shift
+        for shift in Shift.objects.filter(register__in=registers, status=ShiftStatus.OPEN)
+        .select_related("user")
+    }
+    last = {}
+    for shift in (Shift.objects.filter(register__in=registers, closed_at__isnull=False)
+                  .select_related("user").order_by("register_id", "-closed_at")):
+        last.setdefault(shift.register_id, shift)
+
+    tills = [{"register": r, "running": running.get(r.pk), "last": last.get(r.pk)}
+             for r in registers]
+    free = [t for t in tills if t["running"] is None]
+    return render(request, "pos/shift_open.html", {
+        "registers": registers, "tills": tills, "free": free,
+        # Whatever the drawer was left with is the sensible float to suggest.
+        "suggested": (free[0]["last"].counted_cash if free and free[0]["last"] else 0),
+    })
 
 
 @login_required

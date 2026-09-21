@@ -2,10 +2,23 @@
 {% block title %}Who owes{% endblock %}
 {% block heading %}Who owes money{% endblock %}
 {% block content %}
-<div class="mx-auto max-w-5xl space-y-4">
-  <div class="card card-body flex items-baseline justify-between">
-    <span class="text-sm text-ink-600">Total out on credit</span>
-    <span class="text-2xl font-bold text-ink-900">{{ total|floatformat:0|intcomma }}</span>
+{% comment %}
+Full width like every other list: this one was capped at five columns' worth
+and sat in the middle of the screen with a margin either side that nothing
+else in the system has.
+{% endcomment %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="section-lead">
+      Everyone carrying a balance, largest first. A statement is one customer's
+      own history, to print or send when they ask what they owe.
+    </p>
+    <a href="{% url 'customers:customer_list' %}?view=owing" class="btn btn-secondary shrink-0">{% icon "users" %} Open customers</a>
+  </div>
+
+  <div class="stat flex items-center justify-between">
+    <p class="stat-label"><span class="stat-icon">{% icon "credit-card" class="h-3.5 w-3.5" %}</span>Total out on credit</p>
+    <span class="tnum text-2xl font-bold text-ink-900">{{ total|floatformat:0|intcomma }}</span>
   </div>
   <div class="table-wrap">
     <table class="table">
@@ -21,7 +34,11 @@
           <td class="text-right">{% if c.owed > c.credit_limit %}<span class="badge badge-danger">yes</span>{% else %}<span class="text-ink-400">—</span>{% endif %}</td>
           <td class="text-right"><a href="{% url 'customers:customer_statement' c.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Statement for {{ c.name }}" aria-label="Statement for {{ c.name }}">{% icon "download" class="h-4 w-4" %}</a></td>
         </tr>
-        {% empty %}<tr><td colspan="7" class="py-10 text-center text-sm text-ink-500">Nobody owes anything.</td></tr>{% endfor %}
+        {% empty %}
+        <tr><td colspan="7">
+          {% include "partials/empty.html" with icon="check" title="Nobody owes anything" text="Every account is settled. Sales on credit appear here until they are paid." %}
+        </td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>

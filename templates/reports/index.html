@@ -13,17 +13,47 @@
   </div>
 
   <div class="card">
-    <div class="border-b border-ink-200 px-5 py-3"><h2 class="text-sm font-semibold text-ink-900">By day, after refunds</h2></div>
-    <div class="space-y-1.5 p-5">
-      {% for row in daily %}
-      <div class="flex items-center gap-3">
-        <span class="w-20 shrink-0 text-xs text-ink-500">{{ row.day|date:"j M" }}</span>
-        <div class="h-5 flex-1 overflow-hidden rounded bg-ink-100">
-          <div class="h-full rounded bg-brand-600" style="width: {% if row.net > 0 %}{% widthratio row.net peak 100 %}{% else %}0{% endif %}%"></div>
+    <div class="card-head">
+      <h2 class="card-title"><span class="card-icon">{% icon "chart" class="h-3.5 w-3.5" %}</span>By day, after refunds</h2>
+      <span class="hint">{{ daily|length }} day{{ daily|length|pluralize }}</span>
+    </div>
+    <div class="p-5">
+      {% if chart %}
+      <div class="chart">
+        <div class="chart-scale">
+          {% for line in chart.grid %}<span>{{ line.value|floatformat:0|intcomma }}</span>{% endfor %}
         </div>
-        <span class="w-28 shrink-0 text-right text-sm font-medium text-ink-900" title="{{ row.count }} sale{{ row.count|pluralize }}{% if row.refunded %}, {{ row.refunded|floatformat:0|intcomma }} refunded{% endif %}">{{ row.net|floatformat:0|intcomma }}</span>
+        <div class="chart-plot">
+          <svg class="chart-svg" viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" aria-hidden="true">
+            {% for line in chart.grid %}
+            <line class="chart-grid" x1="0" x2="{{ chart.width }}"
+                  y1="{% widthratio line.pct 100 chart.height %}" y2="{% widthratio line.pct 100 chart.height %}"/>
+            {% endfor %}
+            <path class="spark-fill" d="{{ chart.area }}"/>
+            <polyline class="spark-line" points="{{ chart.line }}"/>
+          </svg>
+        </div>
       </div>
-      {% empty %}<p class="py-6 text-center text-sm text-ink-500">No sales in this period.</p>{% endfor %}
+      <div class="chart-marks">
+        {% for mark in chart.marks %}<span class="chart-mark" style="left: {{ mark.pct }}%">{{ mark.label }}</span>{% endfor %}
+      </div>
+      {% endif %}
+
+      {% comment %}
+      The figures the line is drawn from. In columns, because a month of days
+      in one column is a page of scrolling for thirty numbers.
+      {% endcomment %}
+      <div class="mt-5 grid gap-x-8 gap-y-1.5 border-t border-ink-100 pt-4 sm:grid-cols-2 xl:grid-cols-3">
+        {% for row in daily %}
+        <div class="flex items-center gap-3">
+          <span class="w-16 shrink-0 text-xs text-ink-500">{{ row.day|date:"j M" }}</span>
+          <div class="h-1.5 flex-1 overflow-hidden rounded bg-ink-100">
+            <div class="h-full rounded bg-brand-600" style="width: {% if row.net > 0 %}{% widthratio row.net peak 100 %}{% else %}0{% endif %}%"></div>
+          </div>
+          <span class="tnum w-24 shrink-0 text-right text-sm font-medium text-ink-900" title="{{ row.count }} sale{{ row.count|pluralize }}{% if row.refunded %}, {{ row.refunded|floatformat:0|intcomma }} refunded{% endif %}">{{ row.net|floatformat:0|intcomma }}</span>
+        </div>
+        {% empty %}<p class="col-span-full py-6 text-center text-sm text-ink-500">No sales in this period.</p>{% endfor %}
+      </div>
     </div>
   </div>
 

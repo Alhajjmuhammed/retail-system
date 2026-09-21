@@ -29,12 +29,19 @@
   </div>
   {% endif %}
 
-  <div class="grid gap-3 sm:grid-cols-3">
-    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Expected</p><p class="mt-1 text-xl font-semibold">{{ totals.expected|default:0|floatformat:0|intcomma }}</p></div>
-    <div class="card card-body"><p class="text-xs uppercase tracking-wide text-ink-500">Counted</p><p class="mt-1 text-xl font-semibold">{{ totals.counted|default:0|floatformat:0|intcomma }}</p></div>
-    <div class="card card-body">
-      <p class="text-xs uppercase tracking-wide text-ink-500">Difference</p>
-      <p class="mt-1 text-xl font-semibold {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:0|intcomma }}</p>
+  {# The same three-tile shape the rest of the system uses for its figures. #}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div class="stat">
+      <p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Expected</p>
+      <p class="stat-value">{{ totals.expected|default:0|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="stat">
+      <p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Counted</p>
+      <p class="stat-value">{{ totals.counted|default:0|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="stat col-span-2 sm:col-span-1">
+      <p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Difference</p>
+      <p class="stat-value {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:0|intcomma }}</p>
     </div>
   </div>
 

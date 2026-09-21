@@ -3,11 +3,14 @@
 {% block heading %}Goods received{% endblock %}
 {% block content %}
 <div class="space-y-4">
+  <p class="section-lead">
+    Where stock rises and cost price is set. An order is optional &mdash; a
+    delivery that turns up without one is still recorded here.
+  </p>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <form method="get" class="w-full sm:w-auto"><input type="search" name="q" value="{{ q }}" placeholder="Reference, supplier or their note" aria-label="Find a delivery" class="input w-full sm:w-72"></form>
     <a href="{% url 'purchasing:receipt_create' %}" hx-get="{% url 'purchasing:receipt_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Receive goods</a>
   </div>
-  <p class="text-sm text-ink-600">Where stock rises and cost price is set. An order is optional.</p>
   <div class="table-wrap">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Supplier</th><th>When</th><th>By</th><th class="text-right">Value</th><th></th></tr></thead>

@@ -3,11 +3,15 @@
 {% block heading %}Customers{% endblock %}
 {% block content %}
 <div class="space-y-4">
+  <p class="section-lead">
+    The people you sell to on account: what they may owe, what they owe now,
+    and what they have paid. Anyone else is a walk-in and needs no record.
+  </p>
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Customers</p><p class="stat-value">{{ summary.count }}</p></a>
-    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Owed to you</p><p class="stat-value {% if summary.total_owed %}text-amber-700{% endif %}">{{ summary.total_owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} customer{{ summary.owing|pluralize }}</p></a>
-    <a href="?view=over" class="stat transition hover:border-brand-300 {% if view == 'over' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Over their limit</p><p class="stat-value {% if summary.over %}text-red-600{% endif %}">{{ summary.over }}</p></a>
-    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label">Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "users" class="h-3.5 w-3.5" %}</span>Customers</p><p class="stat-value">{{ summary.count }}</p></a>
+    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Owed to you</p><p class="stat-value {% if summary.total_owed %}text-amber-700{% endif %}">{{ summary.total_owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} customer{{ summary.owing|pluralize }}</p></a>
+    <a href="?view=over" class="stat transition hover:border-brand-300 {% if view == 'over' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>Over their limit</p><p class="stat-value {% if summary.over %}text-red-600{% endif %}">{{ summary.over }}</p></a>
+    <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trash" class="h-3.5 w-3.5" %}</span>Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
   </div>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <form hx-get="{% url 'customers:customer_list' %}" hx-target="#customer-rows" hx-push-url="true"

@@ -4,14 +4,39 @@
 
 {% block content %}
 <div class="space-y-4">
-  <p class="text-sm text-ink-600">Every till and phone that has been used to sell here. A lost or stolen one can be switched off: it then cannot send sales or take payment.</p>
+  <p class="section-lead">
+    Every till and phone that has been used to sell here. A lost or stolen one
+    can be switched off: it then cannot send sales or take payment.
+  </p>
+
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <a href="?" class="stat transition hover:border-brand-300 {% if not view %}ring-2 ring-brand-400{% endif %}">
+      <p class="stat-label"><span class="stat-icon">{% icon "cart" class="h-3.5 w-3.5" %}</span>All devices</p>
+      <p class="stat-value">{{ counts.all }}</p>
+    </a>
+    <a href="?view=silent" class="stat transition hover:border-brand-300 {% if view == 'silent' %}ring-2 ring-brand-400{% endif %}">
+      <p class="stat-label"><span class="stat-icon">{% icon "clock" class="h-3.5 w-3.5" %}</span>Silent 24h</p>
+      <p class="stat-value {% if counts.silent %}text-amber-600{% endif %}">{{ counts.silent }}</p>
+    </a>
+    <a href="?view=off" class="stat col-span-2 transition hover:border-brand-300 sm:col-span-1 {% if view == 'off' %}ring-2 ring-brand-400{% endif %}">
+      <p class="stat-label"><span class="stat-icon">{% icon "suspend" class="h-3.5 w-3.5" %}</span>Switched off</p>
+      <p class="stat-value">{{ counts.off }}</p>
+    </a>
+  </div>
+
+  <form method="get" class="flex gap-2">
+    {% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Device or branch"
+           aria-label="Find a device" class="input w-full sm:w-72">
+  </form>
+
   <div class="table-wrap">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Device</th><th>Branch</th><th>Last heard from</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
       <tbody>
         {% for d in devices %}
         <tr x-data="{ editing: false }">
-          <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
+          <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
           <td>
             <div x-show="!editing">
               <span class="font-medium text-ink-900">{{ d.label|default:"Unnamed" }}</span>
@@ -64,5 +89,6 @@
       </tbody>
     </table>
   </div>
+  {% include "partials/pagination.html" %}
 </div>
 {% endblock %}

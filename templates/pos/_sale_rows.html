@@ -16,7 +16,7 @@
           {% if sale.status != "completed" %}<span class="badge {% if sale.status == 'voided' %}badge-danger{% else %}badge-warn{% endif %} ml-1">{{ sale.get_status_display }}</span>{% endif %}
           {% if sale.is_offline_origin %}<span class="badge badge-muted ml-1">offline</span>{% endif %}
           {% if sale.needs_review %}<span class="badge badge-danger ml-1" title="{{ sale.review_notes }}">check</span>{% endif %}
-          {% if branches %}<p class="hint">{{ sale.branch.name }}</p>{% endif %}
+          {% if branches %}<span class="hint">&middot; {{ sale.branch.name }}</span>{% endif %}
         </td>
         <td class="whitespace-nowrap text-sm text-ink-600">{{ sale.sold_at|date:"j M Y, H:i" }}</td>
         <td class="text-sm text-ink-600">{{ sale.user.name }}</td>

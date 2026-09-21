@@ -24,10 +24,17 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="remove">
           <input type="hidden" name="tile" value="{{ tile.pk }}">
-          <div class="tile">
-            <span class="line-clamp-2 text-sm font-medium leading-snug text-ink-800">{{ tile.variant }}</span>
-            <span class="tnum text-sm font-bold text-brand-700">{{ tile.variant.price_for|default:0|floatformat:0|intcomma }}</span>
-            <span class="hint">{% if tile.branch %}{{ tile.branch.name }} only{% else %}Every branch{% endif %}{% if tile.plu_code %} &middot; code {{ tile.plu_code }}{% endif %}</span>
+          {% comment %}
+          The same picture the till shows, so this page and the screen the
+          cashier uses are recognisably the same tiles.
+          {% endcomment %}
+          <div class="flex items-center gap-3 rounded-xl border border-ink-200/80 bg-white p-2.5 pr-9 shadow-card transition hover:border-brand-300">
+            {% include "catalog/_thumb.html" with product=tile.variant.product size="h-11 w-11" %}
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm font-medium text-ink-800">{{ tile.variant }}</span>
+              <span class="tnum block text-sm font-bold text-brand-700">{{ tile.variant.price_for|default:0|floatformat:0|intcomma }}</span>
+              <span class="hint block truncate">{% if tile.branch %}{{ tile.branch.name }} only{% else %}Every branch{% endif %}{% if tile.plu_code %} &middot; code {{ tile.plu_code }}{% endif %}</span>
+            </span>
           </div>
           <button type="submit" class="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-ink-400 shadow-sm hover:text-red-600" title="Remove from the till" aria-label="Remove {{ tile.variant }} from the till">{% icon "trash" class="h-3.5 w-3.5" %}</button>
         </form>

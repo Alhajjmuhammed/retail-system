@@ -4,10 +4,10 @@
 {% block content %}
 <div class="space-y-4">
   {% include "reports/_range.html" with presets=None hide_dates=True %}
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-    {% if can_see_cost %}<div class="stat"><p class="stat-label">On the shelves at cost</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p><p class="hint">{% if branch_id %}One branch{% else %}All your branches{% endif %}, today</p></div>{% endif %}
-    <div class="stat"><p class="stat-label">Lines in stock</p><p class="stat-value">{{ page.paginator.count|intcomma }}</p></div>
-    {% if no_cost and can_see_cost %}<div class="stat"><p class="stat-label">With no cost price</p><p class="stat-value text-amber-700">{{ no_cost }}</p><p class="hint">Counted as zero. Receive them with a cost to fix.</p></div>{% endif %}
+  <div class="grid grid-cols-2 gap-3 {% if no_cost and can_see_cost %}lg:grid-cols-3{% endif %}">
+    {% if can_see_cost %}<div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>On the shelves at cost</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p><p class="hint">{% if branch_id %}One branch{% else %}All your branches{% endif %}, today</p></div>{% endif %}
+    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Lines in stock</p><p class="stat-value">{{ page.paginator.count|intcomma }}</p></div>
+    {% if no_cost and can_see_cost %}<div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>With no cost price</p><p class="stat-value text-amber-700">{{ no_cost }}</p><p class="hint">Counted as zero. Receive them with a cost to fix.</p></div>{% endif %}
   </div>
   <form method="get" class="flex gap-2">
     {% if branch_id %}<input type="hidden" name="branch" value="{{ branch_id }}">{% endif %}

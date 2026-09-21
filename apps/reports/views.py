@@ -145,10 +145,20 @@ def index(request):
     totals["net"] = (totals["value"] or Decimal("0")) - refunded
     totals["average"] = (totals["net"] / totals["count"]) if totals["count"] else 0
 
+    # The same line the dashboard draws, from the same geometry: thirty days
+    # as thirty bars was a page of scrolling before the first number.
+    from apps.core import charts
+
+    shape = charts.curve([
+        {"label": row["day"].strftime("%a %-d %b"),
+         "short": row["day"].strftime("%-d %b"), "value": row["net"]}
+        for row in daily
+    ])
     return render(
         request,
         "reports/index.html",
         _context(request, start, end, daily=daily, by_method=by_method, totals=totals,
+                 chart=shape,
                  peak=max((row["net"] for row in daily), default=0)),
     )
 

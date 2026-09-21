@@ -84,9 +84,13 @@ def audit_log(request):
         )
 
     page = Paginator(rows, 100).get_page(request.GET.get("page"))
+    # The rows in words, for reading. `page` still holds the rows themselves,
+    # for counting, paging and for anything that asks this view a question.
+    from apps.core.audit import describe
 
     context = {
         "page": page,
+        "entries": [describe(row) for row in page.object_list],
         "q": term,
         "action": action,
         "who": who,

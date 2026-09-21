@@ -24,7 +24,14 @@
   <div class="grid gap-3 sm:grid-cols-4">
     {% for value, label in statuses %}
     <a href="?{% if status != value %}status={{ value }}{% endif %}" class="stat transition hover:border-brand-300 {% if status == value %}ring-2 ring-brand-400{% endif %}" title="{% if status == value %}Show all{% else %}Show only {{ label|lower }}{% endif %}">
-      <p class="stat-label">{{ label }}</p>
+      <p class="stat-label">
+        <span class="stat-icon">
+          {% if value == "pending" %}{% icon "clock" class="h-3.5 w-3.5" %}
+          {% elif value == "sent" %}{% icon "check" class="h-3.5 w-3.5" %}
+          {% elif value == "failed" %}{% icon "alert" class="h-3.5 w-3.5" %}
+          {% else %}{% icon "shield" class="h-3.5 w-3.5" %}{% endif %}
+        </span>{{ label }}
+      </p>
       <p class="stat-value {% if value == 'failed' and counts|get:value %}text-red-600{% elif value == 'pending' and counts|get:value %}text-amber-600{% endif %}">{{ counts|get:value }}</p>
     </a>
     {% endfor %}

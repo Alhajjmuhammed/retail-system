@@ -11,7 +11,7 @@
         <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
         <td>
           <span class="font-medium text-ink-900">{{ item.variant }}</span>
-          <p class="hint">{{ item.variant.product.base_unit.code }}{% if item.bin_location %} &middot; {{ item.bin_location }}{% endif %}</p>
+          <span class="hint">&middot; {{ item.variant.product.base_unit.code }}{% if item.bin_location %} &middot; {{ item.bin_location }}{% endif %}</span>
         </td>
         <td class="text-right">
           <span class="font-medium {% if item.qty_on_hand < 0 %}text-red-600{% elif item.is_low %}text-amber-600{% else %}text-ink-900{% endif %}">
