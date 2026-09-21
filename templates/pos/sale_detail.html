@@ -8,7 +8,12 @@
     <div class="text-sm">
       <p class="text-ink-600">{{ sale.sold_at|date:"j F Y, H:i" }} &middot; {{ sale.branch.name }}</p>
       <p class="text-ink-600">Sold by {{ sale.user.name }}{% if sale.authorised_by %}, approved by {{ sale.authorised_by.name }}{% endif %}</p>
-      {% if sale.customer %}<p class="text-ink-600">{{ sale.customer.name }}</p>{% endif %}
+      {% if sale.customer %}<p class="text-ink-600">{{ sale.customer.name }}</p>
+      {% elif sale.buyer_name or sale.buyer_phone %}
+      <p class="text-ink-600">
+        {{ sale.buyer_name|default:"No name" }}{% if sale.buyer_phone %} &middot; {{ sale.buyer_phone }}{% endif %}
+        <span class="hint">not on the books</span>
+      </p>{% endif %}
       {% if sale.void_reason %}<p class="mt-1 text-red-700">Voided {{ sale.voided_at|date:"j M Y, H:i" }}{% if voided.user %} by {{ voided.user.name }}{% endif %}{% if voided.authorised_by %}, approved by {{ voided.authorised_by.name }}{% endif %}: {{ sale.void_reason }}</p>{% endif %}
       {% if sale.needs_review %}
       <div class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-red-800 ring-1 ring-inset ring-red-600/15">

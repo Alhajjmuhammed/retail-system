@@ -284,6 +284,12 @@ class Sale(BranchModel, SyncableModel):
         "customers.Customer", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="sales",
     )
+    # Somebody who is not on the books. Most sales over a counter are to a
+    # person the shop will never see again, but a few need a name on them: a
+    # delivery, something put aside, a thing that may come back. Neither is
+    # required, and typing one does not add anybody to the customer list.
+    buyer_name = models.CharField(max_length=80, blank=True)
+    buyer_phone = models.CharField(max_length=30, blank=True)
 
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     discount_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)

@@ -236,6 +236,8 @@ def complete_sale(
     authorised_by=None,
     is_offline_origin=False,
     review_notes=None,
+    buyer_name="",
+    buyer_phone="",
 ):
     """
     Turn a basket into a sale: stock out, payments recorded, receipt ready.
@@ -275,6 +277,9 @@ def complete_sale(
         shift=shift,
         user=user,
         customer=cart.customer,
+        # Somebody not on the books: a name on the receipt, nothing more.
+        buyer_name=(buyer_name or "").strip()[:80],
+        buyer_phone=(buyer_phone or "").strip()[:30],
         subtotal=money(subtotal),
         discount_total=money(discount_total),
         tax_total=money(tax_total),

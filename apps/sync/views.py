@@ -320,6 +320,8 @@ def _store_offline_sale(request, entry, shift_id=None):
         sold_at=checked.sold_at,
         is_offline_origin=True,
         review_notes=checked.review,
+        buyer_name=checked.buyer_name,
+        buyer_phone=checked.buyer_phone,
     )
     mark_basket_lines_sold(entry, sale)
     if sale.needs_review:

@@ -46,6 +46,8 @@ class CheckedSale:
     lines: list = field(default_factory=list)
     payments: list = field(default_factory=list)
     customer: object = None
+    buyer_name: str = ""
+    buyer_phone: str = ""
     sold_at: object = None
     review: list = field(default_factory=list)
     total: Decimal = Decimal("0")
@@ -80,6 +82,12 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
             # A sale can reach the server after the customer was removed, so
             # it is kept -- but somebody should look at it.
             checked.review.append(f"{checked.customer.name} was removed from the customer list.")
+    # A name and a phone typed at the till for somebody who is not on the
+    # books. Both optional, both trimmed to what the column holds: this comes
+    # from a device the shop controls, but so does everything else here.
+    checked.buyer_name = str(entry.get("buyer_name") or "").strip()[:80]
+    checked.buyer_phone = str(entry.get("buyer_phone") or "").strip()[:30]
+
     customer_list = None
     if checked.customer is not None and checked.customer.price_list_id and \
             checked.customer.price_list.is_active:

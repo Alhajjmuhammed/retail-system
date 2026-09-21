@@ -197,6 +197,10 @@
       basketOpen: false,
       // Which category tab is showing. Empty means all of them.
       tileGroup: "",
+      // A name and a phone for somebody who is not on the books. Neither is
+      // required, and neither adds anybody to the customer list.
+      buyerName: "",
+      buyerPhone: "",
       // The product waiting on a quantity, and the number typed for it.
       qtyFor: null,
       qtyWanted: 1,
@@ -583,6 +587,8 @@
         this.payMethod = "cash";
         // The next buyer is somebody else until the cashier says otherwise.
         this.customer = null;
+        this.buyerName = "";
+        this.buyerPhone = "";
         // The moment the screen is empty is the moment it is safe to
         // pick up a newer version of the till.
         this.takeUpdateIfSafe();
@@ -668,6 +674,10 @@
           sold_at: new Date().toISOString(),
           shift_id: this.config.shift_id,
           customer_id: this.customer ? this.customer.id : null,
+          // Only meaningful without a customer on the books; a customer's own
+          // name is already on their account.
+          buyer_name: this.customer ? "" : this.buyerName.trim(),
+          buyer_phone: this.customer ? "" : this.buyerPhone.trim(),
           tenant_id: this.config.tenant_id,
           user_id: this.config.user_id,
           lines: lines.map((line) => ({

@@ -9,13 +9,13 @@ second copy of this file.
 {% endcomment %}
 {% with url_name=request.resolver_match.url_name app=request.resolver_match.app_name %}
 
-<div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-ink-100 px-4">
-  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-sm font-bold text-white shadow-sm">
+<div class="nav-head flex h-16 shrink-0 items-center gap-2.5 border-b px-4">
+  <div class="nav-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm">
     {{ tenant.name|slice:":1"|upper|default:"R" }}
   </div>
   <div class="nav-label min-w-0 flex-1">
-    <p class="truncate text-sm font-semibold text-ink-900">{{ tenant.name|default:"Retail" }}</p>
-    {% if branch %}<p class="truncate text-xs text-ink-500">{{ branch.name }}</p>{% endif %}
+    <p class="nav-shop truncate text-sm font-semibold">{{ tenant.name|default:"Retail" }}</p>
+    {% if branch %}<p class="nav-branch truncate text-xs">{{ branch.name }}</p>{% endif %}
   </div>
 </div>
 
@@ -238,11 +238,11 @@ second copy of this file.
 </nav>
 {% endwith %}
 
-<div class="shrink-0 border-t border-ink-100 p-3">
+<div class="nav-foot shrink-0 border-t p-3">
   {% if subscription %}
-  <div class="nav-aside mb-2 rounded-lg bg-ink-50 px-3 py-2.5">
+  <div class="nav-aside nav-plan mb-2 rounded-lg px-3 py-2.5">
     <div class="flex items-center justify-between gap-2">
-      <p class="text-xs font-semibold text-ink-900">{{ subscription.plan.name }}</p>
+      <p class="nav-plan-name text-xs font-semibold">{{ subscription.plan.name }}</p>
       {% if subscription.status == "trialing" %}
         <span class="badge badge-warn">trial</span>
       {% elif subscription.is_read_only %}
@@ -252,7 +252,7 @@ second copy of this file.
       {% endif %}
     </div>
     {% if subscription.status == "trialing" %}
-      <p class="mt-1 text-xs text-ink-500">{{ subscription.days_until_due }} days left</p>
+      <p class="nav-plan-note mt-1 text-xs">{{ subscription.days_until_due }} days left</p>
     {% endif %}
   </div>
   {% endif %}

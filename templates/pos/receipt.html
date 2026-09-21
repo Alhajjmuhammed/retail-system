@@ -30,7 +30,8 @@
   <p>{{ sale.number }}</p>
   <p>{{ sale.sold_at|date:"d/m/Y H:i" }}</p>
   <p>Served by {{ sale.user.name }}</p>
-  {% if sale.customer %}<p>Customer: {{ sale.customer.name }}</p>{% endif %}
+  {% if sale.customer %}<p>Customer: {{ sale.customer.name }}</p>
+  {% elif sale.buyer_name or sale.buyer_phone %}<p>For: {{ sale.buyer_name }}{% if sale.buyer_name and sale.buyer_phone %} &middot; {% endif %}{{ sale.buyer_phone }}</p>{% endif %}
 
   <hr class="my-2 border-dashed border-ink-400">
 

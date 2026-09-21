@@ -279,6 +279,56 @@
     @apply text-current;
   }
 
+  /*
+   * The shop's own sidebar is the same deep green as the panel beside the
+   * sign-in form, so the first screen of the day and every screen after it
+   * belong to each other. Everything on it is restated for a dark ground:
+   * grey-on-white text is unreadable here, and an active link needs to hold
+   * its own against a strong colour rather than a tint of it.
+   */
+  .nav-dark .nav-link {
+    @apply text-brand-100/80 hover:bg-white/10 hover:text-white;
+  }
+  .nav-dark .nav-link svg {
+    @apply text-brand-200/60;
+  }
+  .nav-dark .nav-link-active {
+    @apply bg-white/15 text-white hover:bg-white/15 hover:text-white;
+  }
+  .nav-dark .nav-link-active svg {
+    @apply text-white;
+  }
+  .nav-dark .nav-link-active::before {
+    @apply bg-white;
+  }
+  .nav-dark .nav-section {
+    @apply text-brand-300/70;
+  }
+  .nav-head {
+    @apply border-white/10;
+  }
+  .nav-shop {
+    @apply text-white;
+  }
+  .nav-branch {
+    @apply text-brand-200/80;
+  }
+  .nav-mark {
+    @apply bg-white/15 text-white ring-1 ring-inset ring-white/20;
+  }
+  .nav-foot {
+    @apply border-white/10;
+  }
+  .nav-plan {
+    @apply bg-white/10;
+  }
+  .nav-plan-name {
+    @apply text-white;
+  }
+  .nav-plan-note {
+    @apply text-brand-200/80;
+  }
+
   .nav-link {
     @apply relative flex items-center gap-2.5 rounded-lg px-2.5 py-2
            text-sm font-medium text-ink-600
