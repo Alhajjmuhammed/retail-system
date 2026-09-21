@@ -189,7 +189,6 @@
       customer: null,
       customers: [],
       priceLists: {},
-      customerQuery: "",
       byId: {},
       // Narrow and upright: the basket is a panel at the bottom that opens,
       // so the tiles keep the screen. Wider: it sits beside them.
@@ -333,21 +332,31 @@
       },
 
       get customerMatches() {
-        const term = this.customerQuery.trim().toLowerCase();
+        // The same two boxes do both jobs: what is typed narrows the people
+        // already on the books, and if none of them is the buyer it stays on
+        // the sale as a name and a phone. Two boxes asking the same question
+        // twice is how a cashier ends up typing it twice.
+        const name = this.buyerName.trim().toLowerCase();
+        const phone = this.buyerPhone.trim();
         const all = this.customers;
-        if (!term) return all.slice(0, 20);
-        return all.filter((c) => c.name.toLowerCase().includes(term) ||
-                                 (c.phone || "").includes(term)).slice(0, 20);
+        if (!name && !phone) return all.slice(0, 20);
+        return all.filter((c) =>
+          (!name || c.name.toLowerCase().includes(name)) &&
+          (!phone || (c.phone || "").includes(phone))
+        ).slice(0, 20);
       },
 
       openCustomers() {
-        this.customerQuery = "";
         this.dialog = "customer";
         this.loadCustomers();
       },
 
       async chooseCustomer(customer) {
         this.customer = customer;
+        // Their account carries their own name and number; what was typed to
+        // find them is not a second, worse copy of it.
+        this.buyerName = "";
+        this.buyerPhone = "";
         this.dialog = null;
         await this.reprice();
       },
