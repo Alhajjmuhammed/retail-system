@@ -80,6 +80,5 @@ def test_the_till_page_offers_the_tabs(client, shop, main_branch, register, owne
 def test_the_grid_does_not_cost_a_query_per_tile(
         django_assert_max_num_queries, shop, main_branch, grid):
     """Sixty tiles must not be sixty trips to the database."""
-    with tenant_context(shop, branch=main_branch):
-        with django_assert_max_num_queries(8):
-            [(str(k.variant), k.stock_left) for k in tiles(branch=main_branch)]
+    with tenant_context(shop, branch=main_branch), django_assert_max_num_queries(8):
+        [(str(k.variant), k.stock_left) for k in tiles(branch=main_branch)]
