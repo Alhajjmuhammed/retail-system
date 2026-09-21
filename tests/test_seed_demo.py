@@ -105,3 +105,39 @@ def test_a_customer_buys_on_account_at_wholesale_prices(demo):
 def test_there_is_a_supplier_to_buy_from(demo):
     with tenant_context(demo):
         assert Supplier.objects.count() == 1
+
+
+def test_everybody_seeded_can_finish_their_own_job(demo):
+    """
+    A role with half of what it needs is worse than one with none of it.
+
+    The phone seller was seeded with a payment ceiling and no payment method,
+    which reads as "may take money up to 200,000" and behaves as "may fill a
+    basket and then take nothing for it". The screen hid its own button and
+    said the basket was over a limit it was nowhere near.
+    """
+    from apps.accounts.models import Role
+
+    with tenant_context(demo):
+        phone = Role.objects.get(name="Phone seller")
+        granted = {p.permission.code: p for p in phone.permissions.filter(granted=True)}
+
+        assert "pos.mobile_payment" in granted, "seeded without being able to take payment"
+        methods = granted.get("pos.mobile_methods")
+        assert methods is not None, (
+            "a payment ceiling with no method allowed is a seller who cannot sell"
+        )
+        assert methods.set_value, "the methods permission was granted with nothing in it"
+
+
+def test_a_ceiling_and_a_set_are_stored_in_their_own_columns(demo):
+    """One is a number, the other is a list; neither belongs in the other."""
+    from apps.accounts.models import Role
+
+    with tenant_context(demo):
+        phone = Role.objects.get(name="Phone seller")
+        pay = phone.permissions.get(permission__code="pos.mobile_payment")
+        methods = phone.permissions.get(permission__code="pos.mobile_methods")
+
+        assert pay.limit_value == 200000 and pay.set_value == []
+        assert methods.limit_value is None and "mpesa" in methods.set_value

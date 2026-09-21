@@ -135,7 +135,17 @@ server; the phone only says what and how many.
       <button type="button" @click="handoff()" :disabled="busy" class="btn btn-secondary btn-lg">Send to till</button>
       <button type="button" x-show="canPay" @click="paying = true" :disabled="busy" class="btn btn-primary btn-lg">Take payment</button>
     </div>
-    <p x-show="config.may_pay && !canPay && config.pay_limit" class="text-center text-xs text-ink-500"
+    {% comment %}
+    Two different reasons the button is not there, and they need different
+    answers. Saying "over your limit" to somebody whose role was never given
+    a payment method sends them looking for a smaller basket that will not
+    help.
+    {% endcomment %}
+    <p x-show="config.may_pay && !methods.length" class="text-center text-xs text-ink-500">
+      No way of taking payment on a phone has been set for your role &mdash; send it to a till.
+    </p>
+    <p x-show="config.may_pay && methods.length && !canPay && config.pay_limit"
+       class="text-center text-xs text-ink-500"
        x-text="'Over your phone limit of ' + money(config.pay_limit) + ' — send it to a till.'"></p>
   </footer>
 

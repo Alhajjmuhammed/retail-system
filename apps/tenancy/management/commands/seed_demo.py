@@ -34,7 +34,10 @@ STAFF = [
 # Each is a job somebody actually does behind a counter.
 EXTRA_ROLES = [
     ("Phone seller", "phone@demo.test", "Rehema Phone",
+     # A ceiling with no method allowed is a person who can fill a basket and
+     # then not take a shilling for it, so the methods come with it.
      {"pos.mobile_cart": None, "pos.mobile_payment": Decimal("200000"),
+      "pos.mobile_methods": ["mpesa", "tigopesa", "airtelmoney"],
       "product.view": None}),
     ("Buyer", "buyer@demo.test", "Hamisi Buyer",
      {"po.manage": None, "po.approve": Decimal("1000000"), "supplier.manage": None,
@@ -233,12 +236,18 @@ class Command(BaseCommand):
         catalogue = {p.code: p for p in Permission.objects.all()}
         for role_name, email, person, grants in EXTRA_ROLES:
             role = Role.objects.create(tenant=tenant, name=role_name)
-            for code, limit in grants.items():
+            for code, value in grants.items():
                 permission = catalogue.get(code)
                 if permission is None:
                     continue
-                role.permissions.create(permission=permission, granted=True,
-                                        limit_value=limit)
+                # A list is a set of options (which payment methods), a number
+                # is a ceiling, None is a plain yes.
+                options = value if isinstance(value, list) else []
+                role.permissions.create(
+                    permission=permission, granted=True,
+                    limit_value=None if options else value,
+                    set_value=options,
+                )
             user, _ = User.objects.get_or_create(email=email, defaults={"name": person})
             user.set_password(PASSWORD)
             user.save()
