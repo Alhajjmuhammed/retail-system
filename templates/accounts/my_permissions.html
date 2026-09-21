@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}What you may do{% endblock %}
+{% block heading %}What you may do{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+
+  <div class="card">
+    <div class="card-body flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="text-sm text-ink-600">
+          Your role here is
+          <span class="font-semibold text-ink-900">{{ membership.role.name }}</span>{% if is_owner %},
+          which holds everything by definition{% else %}, and it holds
+          <span class="font-semibold text-ink-900">{{ held }}</span>
+          of the things this system can do{% endif %}.
+        </p>
+        <p class="hint mt-1">
+          Set by the shop, not by you. Ask an owner or a manager for anything missing.
+        </p>
+      </div>
+      <a href="{% url 'accounts:profile' %}" class="btn btn-secondary btn-sm">Back to your account</a>
+    </div>
+  </div>
+
+  {% if is_owner %}
+  <div class="card">
+    <div class="card-body">
+      <p class="text-sm text-ink-700">
+        An owner is not a long list of ticks: the role holds everything, including
+        anything added to the system later. That is why it cannot be edited.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% for module, items in groups.items %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">{{ module }}</h2></div>
+    <div class="divide-y divide-ink-100">
+      {% for item in items %}
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
+        <span class="text-brand-600">{% icon "check" class="h-4 w-4" %}</span>
+        <span class="min-w-0 flex-1 text-sm text-ink-800">{{ item.permission.label }}</span>
+
+        {% if item.limit is not None %}
+        <span class="badge badge-muted">up to {{ item.limit|floatformat:0|intcomma }}{% if item.is_percent %}%{% endif %}</span>
+        {% endif %}
+        {% if item.options %}
+        <span class="badge badge-muted">{{ item.options|join:", " }}</span>
+        {% endif %}
+        {% if item.personal %}
+        {% comment %}
+        An exception is the part somebody will want to argue about, so say it
+        rather than fold it silently into the role.
+        {% endcomment %}
+        <span class="badge badge-warn">just for you</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% empty %}
+  {% if not is_owner %}
+  <div class="card">
+    <div class="empty">
+      <span class="empty-icon">{% icon "shield" class="h-5 w-5" %}</span>
+      <p class="empty-title">Your role does not include anything yet</p>
+      <p class="empty-text">
+        Ask an owner or a manager to give {{ membership.role.name }} what you need,
+        under Settings &rsaquo; Roles.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

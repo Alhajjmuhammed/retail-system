@@ -255,8 +255,9 @@ largest possible targets and nothing to mis-tap while a queue forms.
                 </p>
               </div>
               <button type="button" @click="removeLine(index)"
-                      class="-mr-1 shrink-0 p-1 text-ink-300 transition hover:text-red-600" aria-label="Remove">
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      class="-mr-1 shrink-0 rounded-lg p-1.5 text-ink-300 transition hover:bg-red-50 hover:text-red-600"
+                      :aria-label="'Take ' + line.description + ' off the order'">
+                {% icon "trash" class="h-4 w-4" %}
               </button>
             </div>
             <div class="mt-1.5 flex items-center gap-2">

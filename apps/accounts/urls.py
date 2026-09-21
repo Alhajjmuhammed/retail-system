@@ -15,6 +15,8 @@ app_name = "accounts"
 urlpatterns = [
     path("accounts/login/", views.LoginView.as_view(), name="login"),
     path("accounts/logout/", views.LogoutView.as_view(), name="logout"),
+    path("accounts/profile/", views.profile, name="profile"),
+    path("accounts/profile/permissions/", views.my_permissions, name="my_permissions"),
     path("accounts/password/", views.password_change, name="password_change"),
     path("accounts/password/reset/", views.PasswordResetView.as_view(), name="password_reset"),
     path("accounts/password/reset/sent/",

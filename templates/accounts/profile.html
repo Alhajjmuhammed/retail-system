@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Your account{% endblock %}
+{% block heading %}Your account{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-4">
+
+  {% comment %}
+  Everybody reaches this, whatever their role holds. A cashier who cannot open
+  a single settings page still has a name that might be spelled wrong.
+  {% endcomment %}
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Who you are</h2>
+      <p class="hint">Your name goes on every sale you make.</p>
+    </div>
+    <form method="post" class="card-body grid gap-4 sm:grid-cols-2">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="details">
+      <div>
+        <label class="label" for="name">Name</label>
+        <input name="name" id="name" value="{{ user.name }}" maxlength="120" class="input" required>
+      </div>
+      <div>
+        <label class="label" for="phone">Phone</label>
+        <input name="phone" id="phone" value="{{ user.phone }}" maxlength="30" class="input"
+               placeholder="Optional">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="label" for="email">Email</label>
+        <p class="input flex items-center bg-ink-50 text-ink-600" id="email">{{ user.email }}</p>
+        <p class="hint">
+          How you sign in, and how the shop finds you. Ask an owner or a manager to change it.
+        </p>
+      </div>
+      <div class="sm:col-span-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">What you may do here</h2>
+      <p class="hint">Set by the shop. Ask an owner or a manager to change it.</p>
+    </div>
+    <div class="card-body space-y-3">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div>
+          <p class="label mb-0.5">Shop</p>
+          <p class="text-sm font-medium text-ink-900">{{ tenant.name|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="label mb-0.5">Role</p>
+          <p class="text-sm font-medium text-ink-900">{{ membership.role.name|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="label mb-0.5">Works in</p>
+          <p class="text-sm font-medium text-ink-900">
+            {% if membership.all_branches %}Every branch{% else %}
+              {% for b in branches %}{{ b.name }}{% if not b.is_active %} (closed){% endif %}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      {% if membership %}
+      <a href="{% url 'accounts:my_permissions' %}" class="btn btn-secondary btn-sm">
+        {% icon "shield" class="h-4 w-4" %} See exactly what that allows
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if pin_matters %}
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Your approval PIN</h2>
+      <p class="hint">
+        Typed on somebody else's screen to let through what their own role does not allow.
+        {% if has_pin %}You have one set.{% else %}You do not have one yet.{% endif %}
+      </p>
+    </div>
+    <form method="post" class="card-body grid gap-4 sm:grid-cols-2">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pin">
+      <div>
+        <label class="label" for="pin">New PIN</label>
+        <input type="password" name="pin" id="pin" inputmode="numeric" maxlength="8"
+               autocomplete="new-password" class="input" placeholder="4 to 8 numbers">
+      </div>
+      <div>
+        <label class="label" for="pin_again">Again</label>
+        <input type="password" name="pin_again" id="pin_again" inputmode="numeric" maxlength="8"
+               autocomplete="new-password" class="input">
+      </div>
+      <div class="flex items-center gap-2 sm:col-span-2">
+        <button type="submit" class="btn btn-primary">
+          {% if has_pin %}Change PIN{% else %}Set a PIN{% endif %}
+        </button>
+        {% if has_pin %}
+        <button type="submit" name="remove" value="1" class="btn btn-ghost text-red-700"
+                x-data @click.prevent="$store.confirm.ask($el.form, {
+                  title: 'Remove your approval PIN?',
+                  body: 'Nobody will be able to use your PIN to approve anything until you set a new one.',
+                  label: 'Remove it', danger: true })">Remove it</button>
+        {% endif %}
+      </div>
+      <p class="hint sm:col-span-2">
+        Keep it to yourself. Every approval is recorded under your name, whoever typed it.
+      </p>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Password</h2>
+      <p class="hint">A password somebody else typed in for you stays one they know.</p>
+    </div>
+    <div class="card-body">
+      <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary">
+        {% icon "key" class="h-4 w-4" %} Change your password
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

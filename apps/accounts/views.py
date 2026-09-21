@@ -1173,6 +1173,123 @@ def _save_overrides(request, membership):
 
 
 # --------------------------------------------------------------------------
+# Your own account
+# --------------------------------------------------------------------------
+
+@login_required
+def profile(request):
+    """
+    What the shop knows about you, and the parts of it you may change.
+
+    Everybody gets this, whatever their role holds -- a cashier who cannot
+    reach a single settings page still has a name that might be spelled wrong
+    and a phone number that changes. What they may not change is anything
+    that would be a way around their own permissions: not their email, which
+    is how they sign in and how an owner finds them, and not their role.
+
+    The approval PIN lives here too, for the same reason a password does. A
+    manager whose PIN was typed in for them by somebody else is a manager
+    whose approvals are not theirs.
+    """
+    membership = request.membership
+    if request.method == "POST":
+        action = request.POST.get("action", "details")
+
+        if action == "pin":
+            if membership is None:
+                raise PermissionDenied
+            pin = (request.POST.get("pin") or "").strip()
+            again = (request.POST.get("pin_again") or "").strip()
+            if pin == "" and request.POST.get("remove"):
+                membership.pin_hash = ""
+                membership.save(update_fields=["pin_hash", "updated_at"])
+                audit.record("membership.pin_removed", obj=membership,
+                             ip=audit.client_ip(request))
+                messages.success(request, "Your approval PIN has been removed.")
+            elif not pin.isdigit() or not 4 <= len(pin) <= 8:
+                messages.error(request, "A PIN is between four and eight numbers.")
+            elif pin != again:
+                messages.error(request, "The two PINs are not the same.")
+            else:
+                membership.set_pin(pin)
+                audit.record("membership.pin_set", obj=membership,
+                             ip=audit.client_ip(request))
+                messages.success(request, "Your approval PIN has been changed.")
+            return redirect("accounts:profile")
+
+        name = (request.POST.get("name") or "").strip()[:120]
+        phone = (request.POST.get("phone") or "").strip()[:30]
+        if not name:
+            messages.error(request, "A name is needed: it goes on every sale you make.")
+            return redirect("accounts:profile")
+        before = audit.snapshot(request.user)
+        request.user.name = name
+        request.user.phone = phone
+        request.user.save(update_fields=["name", "phone", "updated_at"])
+        audit.record("user.profile_changed", obj=request.user, before=before,
+                     after=audit.snapshot(request.user), ip=audit.client_ip(request))
+        messages.success(request, "Saved.")
+        return redirect("accounts:profile")
+
+    branches = []
+    if membership is not None:
+        branches = list(membership.branches(include_closed=True))
+    return render(request, "accounts/profile.html", {
+        "membership": membership,
+        "branches": branches,
+        "has_pin": bool(membership and membership.pin_hash),
+        # Only worth offering to somebody whose approvals are ever asked for.
+        "pin_matters": bool(membership and membership.role
+                            and membership.role.permissions.filter(granted=True).exists()),
+    })
+
+
+@login_required
+def my_permissions(request):
+    """
+    What your role actually allows you to do, in plain words.
+
+    Read-only, and for everybody. A cashier who is refused something should
+    be able to find out why without asking the owner to open a settings page
+    they cannot reach themselves -- and an owner should be able to hand
+    somebody this page instead of describing the role from memory.
+    """
+    membership = request.membership
+    if membership is None:
+        raise PermissionDenied
+
+    groups = permission_groups(request.tenant, role=membership.role,
+                               membership=membership)
+    # Only what they hold. The full catalogue belongs on the role screen,
+    # where somebody can act on it.
+    mine: dict[str, list] = {}
+    for module, items in groups.items():
+        kept = []
+        for item in items:
+            override = item["override"]
+            allowed = item["granted"]
+            if override is not None:
+                allowed = override.effect == "allow"
+            if allowed and item["available"]:
+                # "up to 5" and "up to 5%" are different permissions to a
+                # cashier reading this to find out what they may do.
+                kept.append({
+                    **item,
+                    "personal": override is not None,
+                    "is_percent": item["permission"].value_type == ValueType.PERCENT,
+                })
+        if kept:
+            mine[module] = kept
+
+    return render(request, "accounts/my_permissions.html", {
+        "membership": membership,
+        "groups": mine,
+        "held": sum(len(items) for items in mine.values()),
+        "is_owner": guards.is_owner(membership),
+    })
+
+
+# --------------------------------------------------------------------------
 # Your own password
 # --------------------------------------------------------------------------
 

@@ -60,6 +60,9 @@
             {% endwith %}
           </div>
           {% endif %}
+          <a href="{% url 'accounts:profile' %}" class="flex w-full items-center gap-2.5 border-b border-ink-100 px-4 py-2.5 text-left text-sm text-ink-700 hover:bg-ink-50">
+            {% icon "user" %} Your account
+          </a>
           <a href="{% url 'accounts:password_change' %}" class="flex w-full items-center gap-2.5 border-b border-ink-100 px-4 py-2.5 text-left text-sm text-ink-700 hover:bg-ink-50">
             {% icon "key" %} Change password
           </a>
