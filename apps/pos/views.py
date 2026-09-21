@@ -128,8 +128,15 @@ def till(request):
         request,
         "pos/till.html",
         {"shift": shift, "config": json.dumps(config), "tiles": _tiles(request),
+         "tile_categories": _tile_categories(request),
          "offline": config["offline"]},
     )
+
+
+def _tile_categories(request):
+    from apps.catalog.services import tile_categories
+
+    return tile_categories(_tiles(request))
 
 
 def _tiles(request):

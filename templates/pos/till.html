@@ -79,25 +79,57 @@ largest possible targets and nothing to mis-tap while a queue forms.
         </div>
       </div>
 
-      <!-- Tiles. How anything without a barcode gets sold. -->
-      <div class="mt-4 grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2.5 overflow-y-auto sm:grid-cols-3 xl:grid-cols-4">
+      {% comment %}
+      Categories, then the things themselves. A shop with sixty lines is
+      unusable as one long grid, and a cashier who has to scroll past the
+      soap to reach the bread is slower than the queue behind them.
+      {% endcomment %}
+      {% if tile_categories|length > 1 %}
+      <div class="mt-3 flex shrink-0 items-center gap-1.5 overflow-x-auto pb-1">
+        <button type="button" @click="tileGroup = ''"
+                :class="tileGroup === '' ? 'chip-on' : 'chip-off'" class="chip">
+          All items
+          <span class="chip-count">{{ tiles|length }}</span>
+        </button>
+        {% for label, count in tile_categories %}
+        <button type="button" @click="tileGroup = '{{ label|escapejs }}'"
+                :class="tileGroup === '{{ label|escapejs }}' ? 'chip-on' : 'chip-off'" class="chip">
+          {{ label }}
+          <span class="chip-count">{{ count }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="mt-3 grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2.5 overflow-y-auto pb-1 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {% for key in tiles %}
+        {% with product=key.variant.product %}
         <button type="button"
-                @click="addTile({{ key.variant_id }}, '{{ key.variant|escapejs }}', {% with p=key.variant.price_for %}{% if p is None %}null{% else %}{{ p }}{% endif %}{% endwith %}, {{ key.variant.product.tax_rate.rate }})"
+                x-show="tileGroup === '' || tileGroup === '{{ product.category.name|default:"Other"|escapejs }}'"
+                @click="addTile({{ key.variant_id }}, '{{ key.variant|escapejs }}', {% with p=key.variant.price_for %}{% if p is None %}null{% else %}{{ p }}{% endif %}{% endwith %}, {{ product.tax_rate.rate }})"
                 class="tile group">
           <div class="tile-figure">
-            {% if key.variant.product.image %}
-            <img src="{{ key.variant.product.image.url }}" alt="" loading="lazy" class="tile-pic">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" alt="" loading="lazy" class="tile-pic">
             {% else %}
-            <span class="tile-pic-blank" aria-hidden="true">{{ key.variant.product.name|first }}</span>
+            <span class="tile-pic-blank" aria-hidden="true">{{ product.name|first }}</span>
+            {% endif %}
+            {% if key.stock_left is not None %}
+            <span class="tile-stock {% if key.stock_left <= 0 %}tile-stock-out{% endif %}">
+              {% if key.stock_left <= 0 %}None left{% else %}{{ key.stock_left|floatformat:"-3" }} left{% endif %}
+            </span>
             {% endif %}
           </div>
           <span class="tile-body">
             <span class="tile-name">{{ key.variant }}</span>
-            <span class="tile-price"
-                  x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
+            <span class="flex items-end justify-between gap-2">
+              <span class="tile-price"
+                    x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
+              <span class="tile-add" aria-hidden="true">{% icon "plus" class="h-4 w-4" %}</span>
+            </span>
           </span>
         </button>
+        {% endwith %}
         {% empty %}
         <div class="col-span-full rounded-xl border border-dashed border-ink-300 bg-white/50">
           <div class="empty">

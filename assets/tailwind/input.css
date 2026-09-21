@@ -380,7 +380,7 @@
            sm:flex-col sm:items-stretch;
   }
   .tile-figure {
-    @apply w-16 shrink-0 overflow-hidden sm:w-full;
+    @apply relative w-16 shrink-0 overflow-hidden sm:w-full;
   }
   .tile-pic {
     @apply aspect-square h-full w-full object-cover transition duration-300
@@ -398,6 +398,38 @@
   .tile-name {
     @apply line-clamp-2 text-[13px] font-medium leading-snug text-ink-800;
   }
+  /* Category tabs above the grid. */
+  .chip {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5
+           text-sm font-medium transition;
+  }
+  .chip-on {
+    @apply bg-brand-700 text-white shadow-sm;
+  }
+  .chip-off {
+    @apply bg-white text-ink-600 ring-1 ring-inset ring-ink-200 hover:bg-ink-50 hover:text-ink-900;
+  }
+  .chip-count {
+    @apply rounded-full px-1.5 text-xs font-semibold;
+    background-color: color-mix(in oklab, currentcolor 12%, transparent);
+  }
+
+  /* What is left on the shelf, on the corner of the picture. */
+  /* Hidden on a phone: the thumbnail there is too small to write on, and the
+     number would sit across the only picture the cashier has to go by. */
+  .tile-stock {
+    @apply absolute right-1.5 top-1.5 hidden rounded-md bg-ink-900/70 px-1.5
+           py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm sm:block;
+  }
+  .tile-stock-out {
+    @apply bg-red-600/85;
+  }
+  .tile-add {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+           bg-brand-50 text-brand-700 transition
+           group-hover:bg-brand-700 group-hover:text-white;
+  }
+
   .tile-price {
     @apply text-sm font-bold text-brand-700;
     font-variant-numeric: tabular-nums;

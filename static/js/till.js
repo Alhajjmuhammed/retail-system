@@ -195,6 +195,8 @@
       // so the tiles keep the screen. Wider: it sits beside them.
       wide: true,
       basketOpen: false,
+      // Which category tab is showing. Empty means all of them.
+      tileGroup: "",
       // A newer version of the till is cached and waiting. Taken at the next
       // safe moment, which is never in the middle of somebody's shopping.
       updateWaiting: false,

@@ -25,13 +25,21 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   const keep = new Set([PAGES, ASSETS, PICTURES]);
+  let replaced = false;
   event.waitUntil(
     caches.keys()
-      .then((names) => Promise.all(
-        names.filter((n) => n.startsWith("till-") && !keep.has(n)).map((n) => caches.delete(n))
-      ))
+      .then((names) => {
+        const stale = names.filter((n) => n.startsWith("till-") && !keep.has(n));
+        // Something of an older version was here, so this is an upgrade
+        // rather than a first visit. Only an upgrade is worth announcing:
+        // telling a till that has just opened for the first time to reload
+        // is a reload for nothing.
+        replaced = stale.length > 0;
+        return Promise.all(stale.map((n) => caches.delete(n)));
+      })
       .then(() => self.clients.claim())
       .then(async () => {
+        if (!replaced) return;
         // Styles and scripts are served from the cache first, so the load
         // straight after an update gets the new page with the old stylesheet
         // and looks broken. Tell the till a new version is in: it decides

@@ -154,7 +154,43 @@ def tiles(branch=None, limit=60):
     How tomatoes, bread and charcoal reach the cart, and the reason a shop
     with no barcodes at all can still use the till.
     """
-    query = QuickKey.objects.select_related("variant__product")
+    query = QuickKey.objects.select_related(
+        "variant__product__category", "variant__product__base_unit",
+        "variant__product__tax_rate",
+    )
     if branch is not None:
         query = query.filter(Q(branch=branch) | Q(branch__isnull=True))
-    return query.order_by("position")[:limit]
+    keys = list(query.order_by("position")[:limit])
+
+    # What is left on the shelf, for the corner of each tile. One query for
+    # the lot: a cashier's grid should not cost sixty of them.
+    from apps.inventory.models import StockItem
+
+    on_hand = {}
+    if branch is not None:
+        on_hand = dict(
+            StockItem.objects.filter(
+                branch=branch, variant__in=[k.variant_id for k in keys]
+            ).values_list("variant_id", "qty_on_hand")
+        )
+    for key in keys:
+        product = key.variant.product
+        # Services and one-off charges have no shelf to be short on.
+        key.stock_left = on_hand.get(key.variant_id) if product.track_stock else None
+    return keys
+
+
+def tile_categories(tiles):
+    """
+    The categories the tiles actually fall into, in the order they appear.
+
+    Taken from the tiles themselves rather than the category list: a category
+    with nothing tappable in it is a tab that leads to an empty screen.
+    """
+    seen = {}
+    for key in tiles:
+        category = key.variant.product.category
+        label = category.name if category else "Other"
+        seen.setdefault(label, 0)
+        seen[label] += 1
+    return sorted(seen.items())
