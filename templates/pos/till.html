@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load assets %}
 {% load static %}
 {% block title %}Till{% endblock %}
 
@@ -10,13 +11,13 @@ largest possible targets and nothing to mis-tap while a queue forms.
 {% block body %}
 <div x-data="till({{ config }})" class="no-select flex h-full flex-col bg-ink-100">
 
-  <header class="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-ink-200 bg-white px-4">
+  <header class="relative z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-ink-200/80 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
     <div class="flex min-w-0 items-center gap-3">
       <a href="{% url 'core:dashboard' %}" class="btn btn-ghost -ml-1.5 p-2" aria-label="Leave the till">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18 9 12l6-6"/></svg>
       </a>
       <div class="min-w-0">
-        <p class="truncate text-sm font-semibold text-ink-900">{{ shift.register.name }}</p>
+        <p class="truncate text-base font-semibold tracking-tight text-ink-900">{{ shift.register.name }}</p>
         <p class="truncate text-xs text-ink-500">{{ shift.branch.name }} &middot; {{ user.name }}</p>
       </div>
     </div>
@@ -55,6 +56,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
         </span>
         <input type="search" x-model="query" @input.debounce.200ms="search()"
                placeholder="Scan a barcode, or type a name"
+               style="height:3.5rem"
                class="input input-lg pl-11 text-base shadow-sm" autocomplete="off">
 
         <div x-show="results.length" x-cloak @click.outside="results = []"
@@ -205,15 +207,16 @@ largest possible targets and nothing to mis-tap while a queue forms.
         </template>
       </div>
 
-      <div class="shrink-0 border-t border-ink-200 bg-ink-50/60 p-4">
-        <div class="mb-3 space-y-1">
+      <div class="shrink-0 border-t border-ink-200 bg-white p-4">
+        <div class="mb-3 rounded-xl bg-ink-50 px-3.5 py-3 ring-1 ring-inset ring-ink-900/5">
           <div class="flex items-baseline justify-between text-xs text-ink-500">
             <span>VAT included</span>
             <span class="tnum" x-text="money(tax)"></span>
           </div>
-          <div class="flex items-baseline justify-between">
+          <div class="mt-1 flex items-baseline justify-between">
             <span class="text-sm font-medium text-ink-600">Total</span>
-            <span class="tnum text-3xl font-bold tracking-tight text-ink-900" x-text="money(subtotal)"></span>
+            <span class="tnum text-[2rem] font-bold leading-none tracking-tight text-ink-900"
+                  x-text="money(subtotal)"></span>
           </div>
         </div>
 
@@ -389,7 +392,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
   </div>
 </div>
 
-<script src="{% static 'js/till.js' %}"></script>
+<script src="{% versioned_static 'js/till.js' %}"></script>
 <script>
   // Keep a copy of this screen so it still opens with no connection.
   // Only plans that include offline selling keep an offline copy of the till.
@@ -411,7 +414,11 @@ largest possible targets and nothing to mis-tap while a queue forms.
     navigator.serviceWorker.addEventListener("message", (event) => {
       if ((event.data || {}).type !== "worker-updated") return;
       const till = Alpine.$data(document.querySelector("[x-data]"));
-      if (till) till.updateWaiting = true;
+      if (!till) return;
+      till.updateWaiting = true;
+      // Usually there is nothing on the screen when this arrives, and then
+      // there is no reason to make the cashier wait for a sale to finish.
+      till.takeUpdateIfSafe();
     });
   }
 </script>
