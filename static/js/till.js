@@ -195,6 +195,9 @@
       // so the tiles keep the screen. Wider: it sits beside them.
       wide: true,
       basketOpen: false,
+      // A newer version of the till is cached and waiting. Taken at the next
+      // safe moment, which is never in the middle of somebody's shopping.
+      updateWaiting: false,
 
       async init() {
         db = await openDb("till-" + this.config.tenant_id + "-" + this.config.user_id);
@@ -537,6 +540,14 @@
         this.lines.splice(index, 1);
       },
 
+      takeUpdateIfSafe() {
+        // Reloading throws away the basket, so it only happens with nothing
+        // in it and no payment on the screen.
+        if (!this.updateWaiting || this.paying || this.showPayment) return;
+        if (this.lines.length) return;
+        location.reload();
+      },
+
       clear() {
         this.lines = [];
         this.showPayment = false;
@@ -546,6 +557,9 @@
         this.payMethod = "cash";
         // The next buyer is somebody else until the cashier says otherwise.
         this.customer = null;
+        // The moment the screen is empty is the moment it is safe to
+        // pick up a newer version of the till.
+        this.takeUpdateIfSafe();
       },
 
       flash(message, seconds = 4) {

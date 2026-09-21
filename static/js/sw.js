@@ -31,6 +31,14 @@ self.addEventListener("activate", (event) => {
         names.filter((n) => n.startsWith("till-") && !keep.has(n)).map((n) => caches.delete(n))
       ))
       .then(() => self.clients.claim())
+      .then(async () => {
+        // Styles and scripts are served from the cache first, so the load
+        // straight after an update gets the new page with the old stylesheet
+        // and looks broken. Tell the till a new version is in: it decides
+        // when it is safe to take it, which is never in the middle of a sale.
+        const clients = await self.clients.matchAll({ type: "window" });
+        for (const client of clients) client.postMessage({ type: "worker-updated" });
+      })
   );
 });
 

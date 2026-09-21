@@ -82,15 +82,19 @@ largest possible targets and nothing to mis-tap while a queue forms.
         {% for key in tiles %}
         <button type="button"
                 @click="addTile({{ key.variant_id }}, '{{ key.variant|escapejs }}', {% with p=key.variant.price_for %}{% if p is None %}null{% else %}{{ p }}{% endif %}{% endwith %}, {{ key.variant.product.tax_rate.rate }})"
-                class="tile">
-          {% if key.variant.product.image %}
-          <img src="{{ key.variant.product.image.url }}" alt="" loading="lazy" class="tile-pic">
-          {% else %}
-          <span class="tile-pic-blank" aria-hidden="true">{{ key.variant.product.name|first }}</span>
-          {% endif %}
-          <span class="line-clamp-2 flex-1 text-sm font-medium leading-snug text-ink-800">{{ key.variant }}</span>
-          <span class="tnum text-sm font-bold text-brand-700"
-                x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
+                class="tile group">
+          <div class="tile-figure">
+            {% if key.variant.product.image %}
+            <img src="{{ key.variant.product.image.url }}" alt="" loading="lazy" class="tile-pic">
+            {% else %}
+            <span class="tile-pic-blank" aria-hidden="true">{{ key.variant.product.name|first }}</span>
+            {% endif %}
+          </div>
+          <span class="tile-body">
+            <span class="tile-name">{{ key.variant }}</span>
+            <span class="tile-price"
+                  x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
+          </span>
         </button>
         {% empty %}
         <div class="col-span-full rounded-xl border border-dashed border-ink-300 bg-white/50">
@@ -399,6 +403,16 @@ largest possible targets and nothing to mis-tap while a queue forms.
         registration.active.postMessage({ type: "keep-till", assets: assets });
       })
       .catch(() => {});
+
+    // A new version of the styles or the script is served from the cache
+    // first, so the load right after an update shows the new page with the
+    // old stylesheet. The worker says when it has taken over; the till
+    // reloads itself, but never while there is a basket on the screen.
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if ((event.data || {}).type !== "worker-updated") return;
+      const till = Alpine.$data(document.querySelector("[x-data]"));
+      if (till) till.updateWaiting = true;
+    });
   }
 </script>
 {% endblock %}
