@@ -526,6 +526,41 @@
            bg-ink-100 text-ink-500 transition hover:bg-ink-200 hover:text-ink-800;
   }
 
+  /* The three things done to a line on the order. Minus and plus are a pair
+     and read as one control; the bin is red before it is hovered, because a
+     cashier looking for it should not have to find it first. */
+  /*
+   * Settings pages: the heading and its explanation down the left, the thing
+   * being changed on the right. One centred column on a wide screen leaves a
+   * form floating in the middle of an empty page, and pushes every
+   * explanation into the far corner away from the field it explains.
+   */
+  .settings-row {
+    @apply grid gap-3 md:grid-cols-3 md:gap-6;
+  }
+  .settings-aside {
+    @apply md:pt-1;
+  }
+  .settings-lead {
+    @apply text-sm font-semibold text-ink-900;
+  }
+  .settings-note {
+    @apply mt-1 text-sm leading-relaxed text-ink-500;
+  }
+  .settings-body {
+    @apply md:col-span-2;
+  }
+
+  .qty-step {
+    @apply flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50
+           text-lg font-semibold text-brand-700 transition
+           hover:bg-brand-700 hover:text-white active:scale-95;
+  }
+  .line-remove {
+    @apply shrink-0 rounded-lg p-1.5 text-red-500 transition
+           hover:bg-red-50 hover:text-red-700;
+  }
+
   .keypad-key {
     @apply flex h-12 items-center justify-center rounded-xl bg-ink-100
            text-lg font-semibold text-ink-800 transition

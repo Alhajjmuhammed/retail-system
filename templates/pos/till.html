@@ -255,18 +255,18 @@ largest possible targets and nothing to mis-tap while a queue forms.
                 </p>
               </div>
               <button type="button" @click="removeLine(index)"
-                      class="-mr-1 shrink-0 rounded-lg p-1.5 text-ink-300 transition hover:bg-red-50 hover:text-red-600"
+                      class="line-remove -mr-1"
                       :aria-label="'Take ' + line.description + ' off the order'">
                 {% icon "trash" class="h-4 w-4" %}
               </button>
             </div>
             <div class="mt-1.5 flex items-center gap-2">
               <div class="ml-auto flex shrink-0 items-center gap-1">
-                <button type="button" @click="changeQty(line, -1)"
-                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-lg font-semibold text-ink-700 transition active:scale-95 hover:bg-ink-200">&minus;</button>
+                <button type="button" @click="changeQty(line, -1)" class="qty-step"
+                        :aria-label="'One fewer ' + line.description">&minus;</button>
                 <span class="tnum w-8 text-center text-sm font-semibold" x-text="line.qty"></span>
-                <button type="button" @click="changeQty(line, 1)"
-                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-lg font-semibold text-ink-700 transition active:scale-95 hover:bg-ink-200">+</button>
+                <button type="button" @click="changeQty(line, 1)" class="qty-step"
+                        :aria-label="'One more ' + line.description">+</button>
               </div>
               <span class="tnum w-20 shrink-0 text-right text-sm font-bold text-ink-900"
                     x-text="money(line.qty * line.unit_price - line.discount)"></span>

@@ -3,7 +3,7 @@
 {% block heading %}Business settings{% endblock %}
 
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="mx-auto max-w-3xl space-y-5">
+<form method="post" enctype="multipart/form-data" class="mx-auto max-w-5xl space-y-5">
   {% csrf_token %}
   {% if profile.errors or form.errors %}
   <div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
