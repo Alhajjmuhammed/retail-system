@@ -6,51 +6,91 @@
 <div class="space-y-5">
 
   {% comment %}
-  Money first. The counts that were here before said how many shops existed
-  but nothing about whether the business was working.
+  One control for the page, then the money. The counts that were here before
+  said how many shops existed but nothing about whether the business was
+  working, and a figure with nothing to compare it against says almost as
+  little.
   {% endcomment %}
-  <div class="grid gap-4 lg:grid-cols-3">
-
-    <div class="card card-body lg:col-span-1">
-      <p class="stat-label">Monthly recurring</p>
-      <p class="tnum mt-1 text-4xl font-semibold tracking-tight text-ink-900">
-        {{ mrr|floatformat:0|intcomma }}
+  <div class="range-bar">
+    <div>
+      <p class="text-sm font-semibold text-ink-900">{{ period.label }}</p>
+      <p class="text-xs text-ink-500">
+        {% if period.single_day %}{{ period.start|date:"l j F Y" }}{% else %}{{ period.start|date:"j M" }} &ndash; {{ period.end|date:"j M Y" }}{% endif %}
+        &middot; against the {{ period.days }} day{{ period.days|pluralize }} before
       </p>
-      <p class="mt-1 text-xs text-ink-500">
-        From {{ counts.paying }} paying shop{{ counts.paying|pluralize }}, priced per branch.
-      </p>
-      {% if trial_value %}
-      <div class="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2">
-        <span class="text-brand-700">{% icon "trending" class="h-4 w-4" %}</span>
-        <p class="text-xs text-brand-800">
-          <span class="tnum font-semibold">{{ trial_value|floatformat:0|intcomma }}</span>
-          more if the {{ counts.trialing }} trial{{ counts.trialing|pluralize }} convert
-        </p>
-      </div>
-      {% endif %}
     </div>
+    <div class="range-set">
+      {% for key, label in periods %}
+      <a href="?range={{ key }}" class="range-link {% if key == period.key %}range-on{% else %}range-off{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:col-span-2">
-      <div class="stat">
-        <p class="stat-label">Shops</p>
-        <p class="stat-value">{{ counts.total }}</p>
-        <p class="hint">{{ new_this_week }} joined this week</p>
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+    <a href="{{ card.url }}" class="kpi">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="kpi-label">{{ card.label }}</p>
+          <p class="kpi-value">{% if card.money %}{{ card.value|floatformat:0|intcomma }}{% else %}{{ card.value|intcomma }}{% endif %}</p>
+          <p class="kpi-hint">{{ card.hint }}</p>
+        </div>
+        {% if card.change is not None %}
+        <span class="kpi-delta {% if card.change > 0 %}kpi-up{% elif card.change < 0 %}kpi-down{% else %}kpi-flat{% endif %}">
+          {% if card.change > 0 %}&uarr;{% elif card.change < 0 %}&darr;{% else %}&ndash;{% endif %}
+          {# The arrow already carries the sign; "down -23%" reads as a double negative. #}
+          {{ card.change|floatformat:"-1"|cut:"-" }}%
+        </span>
+        {% elif card.standing %}
+        <span class="kpi-delta kpi-flat" title="True as of now, not a figure for the period">now</span>
+        {% else %}
+        <span class="kpi-delta kpi-flat" title="Nothing in the period before to compare with">new</span>
+        {% endif %}
       </div>
-      <div class="stat">
-        <p class="stat-label">On trial</p>
-        <p class="stat-value {% if counts.trialing %}text-brand-700{% endif %}">{{ counts.trialing }}</p>
-        <p class="hint">{{ trials_ending|length }} ending within a week</p>
+      {% if card.spark %}
+      <svg class="kpi-spark" viewBox="0 0 {{ card.spark.width }} {{ card.spark.height }}" preserveAspectRatio="none" aria-hidden="true">
+        <path class="spark-fill" d="{{ card.spark.area }}"/>
+        <polyline class="spark-line" points="{{ card.spark.line }}"/>
+      </svg>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Money collected</h2>
+      <span class="hint">paid invoices, day by day</span>
+    </div>
+    <div class="p-5">
+      {% if chart %}
+      <div class="chart">
+        <div class="chart-scale">
+          {% for line in chart.grid %}<span>{{ line.value|floatformat:0|intcomma }}</span>{% endfor %}
+        </div>
+        <div class="chart-plot">
+          <svg class="chart-svg" viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" aria-hidden="true">
+            {% for line in chart.grid %}
+            <line class="chart-grid" x1="0" x2="{{ chart.width }}"
+                  y1="{% widthratio line.pct 100 chart.height %}" y2="{% widthratio line.pct 100 chart.height %}"/>
+            {% endfor %}
+            <path class="spark-fill" d="{{ chart.area }}"/>
+            <polyline class="spark-line" points="{{ chart.line }}"/>
+          </svg>
+        </div>
       </div>
-      <div class="stat">
-        <p class="stat-label">At risk</p>
-        <p class="stat-value {% if counts.at_risk %}text-amber-600{% endif %}">{{ counts.at_risk }}</p>
-        <p class="hint">Past due or in grace &middot; {{ counts.suspended }} suspended</p>
+      <div class="chart-marks">
+        {% for mark in chart.marks %}<span class="chart-mark" style="left: {{ mark.pct }}%">{{ mark.label }}</span>{% endfor %}
       </div>
-      <div class="stat">
-        <p class="stat-label">Owed to you</p>
-        <p class="stat-value {% if outstanding_total %}text-amber-600{% endif %}">{{ outstanding_total|floatformat:0|intcomma }}</p>
-        <p class="hint">Across {{ outstanding|length }} open invoice{{ outstanding|length|pluralize }}</p>
-      </div>
+      <table class="sr-only">
+        <caption>Money collected by day</caption>
+        <tbody>
+          {% for row in chart_rows %}<tr><th>{{ row.label }}</th><td>{{ row.value|floatformat:0 }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="py-10 text-center text-sm text-ink-500">Nothing collected in this period.</p>
+      {% endif %}
     </div>
   </div>
 

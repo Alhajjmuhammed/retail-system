@@ -141,3 +141,32 @@ def test_a_ceiling_and_a_set_are_stored_in_their_own_columns(demo):
 
         assert pay.limit_value == 200000 and pay.set_value == []
         assert methods.limit_value is None and "mpesa" in methods.set_value
+
+
+def test_the_demo_shop_has_a_month_of_trading_behind_it(demo):
+    """
+    Without it the dashboard opens on a flat line with every comparison
+    reading "new", which teaches a first-time reader nothing.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from apps.pos.models import Sale
+
+    with tenant_context(demo):
+        sales = Sale.objects.all()
+        assert sales.count() > 100
+        days = {s.sold_at.date() for s in sales}
+        today = timezone.localdate()
+        assert len(days) >= 25
+        assert min(days) <= today - timedelta(days=25)
+        # Saturdays busier than Sundays, because a flat month is the one
+        # pattern no real shop has.
+        saturday = sum(1 for d in days if d.weekday() == 5)
+        assert saturday >= 4
+
+        # Receipts carry the day they were rung up, not the day they were seeded.
+        for sale in sales.order_by("sold_at")[:5]:
+            assert f"{sale.sold_at.astimezone().date():%y%m%d}" in sale.number
+        assert sales.filter(returns__isnull=False).exists()

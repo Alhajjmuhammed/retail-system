@@ -44,7 +44,7 @@ def dashboard(request):
     that were here before said how many shops existed but nothing about
     whether the business was working.
     """
-    from django.db.models.functions import TruncMonth
+    from django.db.models.functions import TruncDate, TruncMonth
 
     from apps.accounts.models import PlatformEvent
     from apps.core.context_processors import PLATFORM_NAV
@@ -58,12 +58,14 @@ def dashboard(request):
                 return redirect(name)
         return render(request, "platform/no_access.html", status=403)
 
+    from apps.core import charts, periods
     from apps.core.features import LIMIT_BRANCHES
     from apps.org.models import Device
     from apps.pos.models import FiscalReceipt, FiscalStatus
 
     now = timezone.now()
     today = timezone.localdate()
+    period = periods.resolve(request)
 
     with unscoped():
         subs = Subscription.objects.select_related("plan", "tenant")
@@ -142,7 +144,71 @@ def dashboard(request):
             ).count(),
         }
 
+        # -- what moved in the period the operator asked about --------------
+        # Money collected and shops joined are the two things the platform
+        # can compare honestly: both are stamped with the day they happened.
+        # The standing figures below -- recurring revenue, what is owed --
+        # are true right now and have no yesterday to be measured against,
+        # so they say so rather than inventing a trend.
+        def collected(start, end):
+            return Invoice.objects.filter(
+                status=InvoiceStatus.PAID, paid_at__date__gte=start, paid_at__date__lte=end,
+            ).aggregate(t=Sum("total"))["t"] or Decimal("0")
+
+        def joined(start, end):
+            return tenants.filter(created_at__date__gte=start,
+                                  created_at__date__lte=end).count()
+
+        span = [period["start"] + timedelta(days=n) for n in range(period["days"])]
+        paid_by_day = dict(
+            Invoice.objects.filter(status=InvoiceStatus.PAID,
+                                   paid_at__date__gte=period["start"],
+                                   paid_at__date__lte=period["end"])
+            .annotate(day=TruncDate("paid_at")).values_list("day")
+            .annotate(t=Sum("total"))
+        )
+        joined_by_day = dict(
+            tenants.filter(created_at__date__gte=period["start"],
+                           created_at__date__lte=period["end"])
+            .annotate(day=TruncDate("created_at")).values_list("day")
+            .annotate(n=Count("id"))
+        )
+        money_rows = [{"label": d.strftime("%a %-d %b"), "short": d.strftime("%-d %b"),
+                       "value": paid_by_day.get(d, Decimal("0"))} for d in span]
+
+        took = collected(period["start"], period["end"])
+        took_before = collected(period["previous_start"], period["previous_end"])
+        new_shops = joined(period["start"], period["end"])
+        new_before = joined(period["previous_start"], period["previous_end"])
+
+        cards = [
+            {"label": "Collected", "value": took, "money": True,
+             "change": charts.change(took, took_before),
+             "hint": f"paid invoices, {period['label'].lower()}",
+             "spark": charts.spark([row["value"] for row in money_rows]),
+             "url": reverse("platform:invoices")},
+            {"label": "Monthly recurring", "value": mrr, "money": True,
+             "change": None, "standing": True,
+             "hint": f"from {counts['paying']} paying shop{'' if counts['paying'] == 1 else 's'}"
+                     + (f" · {trial_value:,.0f} more on trial" if trial_value else ""),
+             "url": reverse("platform:tenant_list")},
+            {"label": "New shops", "value": new_shops, "money": False,
+             "change": charts.change(new_shops, new_before),
+             "hint": f"{counts['trialing']} on trial now",
+             "spark": charts.spark([joined_by_day.get(d, 0) for d in span]),
+             "url": reverse("platform:tenant_list")},
+            {"label": "Owed to you", "value": outstanding_total, "money": True,
+             "change": None, "standing": True,
+             "hint": f"across {len(outstanding)} open invoice"
+                     f"{'' if len(outstanding) == 1 else 's'}",
+             "url": reverse("platform:invoices")},
+        ]
+
         context = {
+            "period": period, "periods": periods.PERIODS,
+            "cards": cards,
+            "chart": charts.curve(money_rows),
+            "chart_rows": money_rows,
             "mrr": mrr,
             "trial_value": trial_value,
             "counts": counts,

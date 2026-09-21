@@ -50,27 +50,6 @@
       <a href="{% url 'pos:shift_close' %}" class="btn btn-secondary flex-1 sm:flex-none">Close and count</a>
     </div>
   </div>
-  {% if my_shift.sales %}
-  <div class="card">
-    <div class="card-head"><h2 class="card-title">Your sales this shift</h2><span class="hint">Latest {{ my_shift.sales|length }}</span></div>
-    <div class="divide-y divide-ink-100">
-      {% for s in my_shift.sales %}
-      <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-        <span class="min-w-0">
-          <span class="font-medium text-ink-900">{{ s.number }}</span>
-          <span class="hint">{{ s.sold_at|date:"H:i" }}{% if s.customer %} &middot; {{ s.customer.name }}{% endif %}</span>
-          {% if s.status == "voided" %}<span class="badge badge-danger ml-1">Voided</span>{% elif s.status == "refunded" %}<span class="badge badge-warn ml-1">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn ml-1">Part refunded</span>{% endif %}
-        </span>
-        <span class="flex shrink-0 items-center gap-1">
-          <span class="tnum font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</span>
-          {% if my_shift.may_reprint %}<a href="{% url 'pos:receipt' s.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print the receipt again" aria-label="Print receipt {{ s.number }} again">{% icon "receipt" class="h-4 w-4" %}</a>{% endif %}
-          {% if s.status != "voided" and s.status != "refunded" %}<a href="{% url 'pos:sale_return' s.pk %}" class="btn-icon btn-icon-brand" title="Refund (a manager may need to approve)" aria-label="Refund {{ s.number }}">{% icon "restore" class="h-4 w-4" %}</a>{% endif %}
-        </span>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
   {% elif may_sell %}
   <div class="card card-body flex flex-wrap items-center justify-between gap-4">
     <p class="text-sm text-ink-700">No till open for you yet.</p>
@@ -78,30 +57,188 @@
   </div>
   {% endif %}
 
-  {% if today %}
-  <div class="grid gap-4 sm:grid-cols-3">
-    <a href="{% url 'pos:sale_list' %}" class="stat transition hover:border-brand-300">
-      <p class="stat-label">Sold today</p>
-      <p class="stat-value">{{ today.value|floatformat:0|intcomma }}</p>
-      <p class="hint">{{ today.count }} sale{{ today.count|pluralize }}{% if today.refunded %} &middot; {{ today.refunded|floatformat:0|intcomma }} refunded{% endif %}</p>
-    </a>
-    <div class="stat">
-      <p class="stat-label">Yesterday</p>
-      <p class="stat-value text-ink-700">{{ yesterday.value|floatformat:0|intcomma }}</p>
-      <p class="hint">{{ yesterday.count }} sale{{ yesterday.count|pluralize }}</p>
+  {% if cards %}
+  {% comment %}
+  One control for the whole page. Every figure below -- the cards, the line,
+  what sold, what came in -- answers for the same stretch of time, so nothing
+  on the screen is quietly about a different week.
+  {% endcomment %}
+  <div class="range-bar">
+    <div>
+      <p class="text-sm font-semibold text-ink-900">{{ period.label }}</p>
+      <p class="text-xs text-ink-500">
+        {% if period.single_day %}{{ period.start|date:"l j F Y" }}{% else %}{{ period.start|date:"j M" }} &ndash; {{ period.end|date:"j M Y" }}{% endif %}
+        &middot; against the {{ period.days }} day{{ period.days|pluralize }} before
+      </p>
     </div>
-    <a href="{% url 'reports:index' %}" class="stat transition hover:border-brand-300">
-      <p class="stat-label">Last 7 days</p>
-      <p class="stat-value text-ink-700">{{ week_total|floatformat:0|intcomma }}</p>
-      <div class="mt-2 flex h-10 items-end gap-1">
-        {% for d in week %}<div class="flex-1 rounded-t {% if forloop.last %}bg-brand-600{% else %}bg-brand-200{% endif %}" style="height: {{ d.pct|default:2 }}%" title="{{ d.day|date:'D j M' }}: {{ d.value|floatformat:0|intcomma }}"></div>{% endfor %}
+    <div class="range-set">
+      {% for key, label in periods %}
+      <a href="?range={{ key }}" class="range-link {% if key == period.key %}range-on{% else %}range-off{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+    <a href="{{ card.url }}" class="kpi">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="kpi-label">{{ card.label }}</p>
+          <p class="kpi-value">{% if card.money %}{{ card.value|floatformat:0|intcomma }}{% else %}{{ card.value|intcomma }}{% endif %}</p>
+          <p class="kpi-hint">{{ card.hint }}</p>
+        </div>
+        {% if card.change is not None %}
+        <span class="kpi-delta {% if card.change > 0 %}kpi-up{% elif card.change < 0 %}kpi-down{% else %}kpi-flat{% endif %}">
+          {% if card.change > 0 %}&uarr;{% elif card.change < 0 %}&darr;{% else %}&ndash;{% endif %}
+          {# The arrow already carries the sign; "down -23%" reads as a double negative. #}
+          {{ card.change|floatformat:"-1"|cut:"-" }}%
+        </span>
+        {% else %}
+        <span class="kpi-delta kpi-flat" title="Nothing in the period before to compare with">new</span>
+        {% endif %}
       </div>
+      {% if card.spark %}
+      <svg class="kpi-spark" viewBox="0 0 {{ card.spark.width }} {{ card.spark.height }}" preserveAspectRatio="none" aria-hidden="true">
+        <path class="spark-fill" d="{{ card.spark.area }}"/>
+        <polyline class="spark-line" points="{{ card.spark.line }}"/>
+      </svg>
+      {% endif %}
     </a>
+    {% endfor %}
+  </div>
+
+  <div class="grid gap-5 xl:grid-cols-3">
+    <div class="card xl:col-span-2">
+      <div class="card-head">
+        <h2 class="card-title">{% if period.single_day %}Through the day{% else %}Takings, day by day{% endif %}</h2>
+        <span class="hint">after refunds</span>
+      </div>
+      <div class="p-5">
+        {% if chart %}
+        <div class="chart">
+          <div class="chart-scale">
+            {% for line in chart.grid %}<span>{{ line.value|floatformat:0|intcomma }}</span>{% endfor %}
+          </div>
+          <div class="chart-plot">
+            <svg class="chart-svg" viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" aria-hidden="true">
+              {% for line in chart.grid %}
+              <line class="chart-grid" x1="0" x2="{{ chart.width }}"
+                    y1="{% widthratio line.pct 100 chart.height %}" y2="{% widthratio line.pct 100 chart.height %}"/>
+              {% endfor %}
+              <path class="spark-fill" d="{{ chart.area }}"/>
+              <polyline class="spark-line" points="{{ chart.line }}"/>
+            </svg>
+          </div>
+        </div>
+        <div class="chart-marks">
+          {% for mark in chart.marks %}<span class="chart-mark" style="left: {{ mark.pct }}%">{{ mark.label }}</span>{% endfor %}
+        </div>
+        {% comment %}
+        The figures the line is drawn from, for a screen reader and for
+        anyone who wants the numbers rather than the shape.
+        {% endcomment %}
+        <table class="sr-only">
+          <caption>Takings by {% if period.single_day %}hour{% else %}day{% endif %}</caption>
+          <tbody>
+            {% for row in chart_rows %}<tr><th>{{ row.label }}</th><td>{{ row.value|floatformat:0 }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="py-10 text-center text-sm text-ink-500">Nothing sold in this period yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Selling best</h2>
+        <span class="hint">by money</span>
+      </div>
+      <div class="space-y-1 p-3">
+        {% for row in top %}
+        <div class="rank">
+          <span class="rank-fill" style="width: {{ row.pct }}%"></span>
+          <span class="rank-name">{{ row.item }} <span class="text-ink-400">&times; {{ row.qty_sold|floatformat:"-3" }}</span></span>
+          <span class="rank-value">{{ row.value|floatformat:0|intcomma }}</span>
+        </div>
+        {% empty %}
+        <p class="px-2 py-8 text-center text-sm text-ink-500">Nothing sold in this period.</p>
+        {% endfor %}
+      </div>
+      {% if by_method %}
+      <div class="border-t border-ink-100 px-3 pb-3 pt-2">
+        <p class="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-500">How they paid</p>
+        {% for row in by_method %}
+        <div class="rank">
+          <span class="rank-fill bg-ink-100" style="width: {{ row.pct }}%"></span>
+          <span class="rank-name">{{ row.label }}</span>
+          <span class="rank-value">{{ row.total|floatformat:0|intcomma }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if recent or feed %}
+  <div class="grid items-start gap-5 xl:grid-cols-2">
+    {% if recent %}
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Latest sales</h2>
+        <a href="{% url 'pos:sale_list' %}" class="text-xs font-semibold text-brand-700 hover:underline">See all</a>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Receipt</th><th>When</th><th>Customer</th><th class="text-right">Total</th></tr></thead>
+          <tbody>
+            {% for s in recent %}
+            <tr>
+              <td class="font-medium text-ink-900">
+                {{ s.number }}
+                {% if s.status == "refunded" %}<span class="badge badge-warn ml-1">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn ml-1">Part refunded</span>{% endif %}
+              </td>
+              <td class="whitespace-nowrap text-ink-500">{{ s.sold_at|date:"j M H:i" }}</td>
+              <td class="truncate text-ink-600">{{ s.customer.name|default:"Walk-in" }}</td>
+              <td class="tnum text-right font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if feed %}
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">What has been happening</h2>
+        <a href="{% url 'accounts:audit_log' %}" class="text-xs font-semibold text-brand-700 hover:underline">See all</a>
+      </div>
+      <div class="divide-y divide-ink-100">
+        {% for item in feed %}
+        <a href="{% url 'accounts:audit_entry' item.row.pk %}" class="feed-row transition hover:bg-ink-50">
+          <span class="feed-icon feed-{{ item.tone }}">{% icon item.icon class="h-4 w-4" %}</span>
+          <span class="min-w-0 flex-1">
+            <span class="feed-text">{{ item.text }}</span>
+            <span class="feed-meta block">
+              {{ item.who }} &middot; {{ item.when|ago }}
+              {% if item.approved_by %}&middot; approved by {{ item.approved_by }}{% endif %}
+              {% if item.row.branch %}&middot; {{ item.row.branch.name }}{% endif %}
+            </span>
+          </span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 
   <div class="grid gap-5 lg:grid-cols-3">
-    <div class="space-y-5 lg:col-span-2">
+    {# Without an aside the lists take the whole width rather than two thirds of it. #}
+    <div class="space-y-5 {% if quick_actions %}lg:col-span-2{% else %}lg:col-span-3{% endif %}">
       {% if no_access %}
       <div class="card card-body">
         <p class="text-sm font-medium text-ink-900">Your role does not include anything yet.</p>
@@ -119,6 +256,28 @@
           </a>
           {% empty %}
           <p class="flex items-center gap-2 px-5 py-6 text-sm text-ink-500">{% icon "check" class="h-4 w-4 text-emerald-600" %} Nothing needs you right now.</p>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if my_shift.sales %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Your sales this shift</h2><span class="hint">Latest {{ my_shift.sales|length }}</span></div>
+        <div class="divide-y divide-ink-100">
+          {% for s in my_shift.sales %}
+          <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+            <span class="min-w-0">
+              <span class="font-medium text-ink-900">{{ s.number }}</span>
+              <span class="hint">{{ s.sold_at|date:"H:i" }}{% if s.customer %} &middot; {{ s.customer.name }}{% endif %}</span>
+              {% if s.status == "voided" %}<span class="badge badge-danger ml-1">Voided</span>{% elif s.status == "refunded" %}<span class="badge badge-warn ml-1">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn ml-1">Part refunded</span>{% endif %}
+            </span>
+            <span class="flex shrink-0 items-center gap-1">
+              <span class="tnum font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</span>
+              {% if my_shift.may_reprint %}<a href="{% url 'pos:receipt' s.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print the receipt again" aria-label="Print receipt {{ s.number }} again">{% icon "receipt" class="h-4 w-4" %}</a>{% endif %}
+              {% if s.status != "voided" and s.status != "refunded" %}<a href="{% url 'pos:sale_return' s.pk %}" class="btn-icon btn-icon-brand" title="Refund (a manager may need to approve)" aria-label="Refund {{ s.number }}">{% icon "restore" class="h-4 w-4" %}</a>{% endif %}
+            </span>
+          </div>
           {% endfor %}
         </div>
       </div>
@@ -142,40 +301,18 @@
       {% endif %}
     </div>
 
+    {% if quick_actions %}
     <div class="space-y-5">
-      {% if today %}
-      <div class="card">
-        <div class="card-head"><h2 class="card-title">Today, by how people paid</h2></div>
-        <div class="divide-y divide-ink-100 text-sm">
-          {% for row in by_method %}
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-700">{{ row.label }}</span><span class="tnum font-medium text-ink-900">{{ row.total|floatformat:0|intcomma }}</span></div>
-          {% empty %}<p class="px-5 py-5 text-center text-ink-500">No sales yet today.</p>{% endfor %}
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2 class="card-title">Selling best today</h2></div>
-        <div class="divide-y divide-ink-100 text-sm">
-          {% for row in top_today %}{% if row.lines__description %}
-          <div class="flex justify-between gap-3 px-5 py-2.5"><span class="truncate text-ink-700">{{ row.lines__description }} <span class="text-ink-400">&times; {{ row.qty|floatformat:"-3" }}</span></span><span class="tnum shrink-0 font-medium text-ink-900">{{ row.value|floatformat:0|intcomma }}</span></div>
-          {% endif %}{% empty %}<p class="px-5 py-5 text-center text-ink-500">Nothing sold yet today.</p>{% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% can_do "pos.mobile_cart" as may_phone %}{% can_do "product.manage" as may_products %}{% can_do "stock.receive" as may_receive %}{% can_do "expense.create" as may_expense %}{% can_do "report.sales" as may_reports %}
-      {% if may_phone or may_products or may_receive or may_expense or may_reports %}
       <div class="card">
         <div class="card-head"><h2 class="card-title">Quick actions</h2></div>
         <div class="space-y-1 p-3">
-          {% if may_phone %}<a href="{% url 'pos:phone' %}" class="nav-link">{% icon "tag" %} Sell on phone</a>{% endif %}
-          {% if may_products %}<a href="{% url 'catalog:product_create' %}" class="nav-link">{% icon "plus" %} Add a product</a>{% endif %}
-          {% if may_receive %}<a href="{% url 'purchasing:receipt_create' %}" class="nav-link">{% icon "layers" %} Receive goods</a>{% endif %}
-          {% if may_expense %}<a href="{% url 'finance:expense_list' %}" class="nav-link">{% icon "wallet" %} Record an expense</a>{% endif %}
-          {% if may_reports %}<a href="{% url 'reports:index' %}" class="nav-link">{% icon "chart" %} Sales reports</a>{% endif %}
+          {% for action in quick_actions %}
+          <a href="{{ action.url }}" class="nav-link">{% icon action.icon %} {{ action.label }}</a>
+          {% endfor %}
         </div>
       </div>
-      {% endif %}
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

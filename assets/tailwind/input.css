@@ -207,8 +207,11 @@
 
   /* ---- Surfaces ------------------------------------------------------ */
 
+  /* min-w-0 so a card in a grid can shrink: a wide table inside one used to
+     push the whole column past the edge of a phone instead of scrolling
+     inside its own box. */
   .card {
-    @apply rounded-xl border border-ink-200/80 bg-white shadow-card;
+    @apply min-w-0 rounded-xl border border-ink-200/80 bg-white shadow-card;
   }
   .card-body {
     @apply p-5;
@@ -415,6 +418,143 @@
     @apply h-px w-full bg-ink-200/80;
   }
 
+  /* ---- Dashboard ----------------------------------------------------- */
+
+  /* The period the whole page is describing. One control, at the top, so
+     every figure below is answering the same question. */
+  .range-bar {
+    @apply flex flex-wrap items-center justify-between gap-3 rounded-2xl
+           border border-ink-200/80 bg-white px-4 py-3 shadow-card;
+  }
+  .range-set {
+    @apply flex flex-wrap items-center gap-1 rounded-xl bg-ink-100/70 p-1;
+  }
+  .range-link {
+    @apply rounded-lg px-3 py-1.5 text-sm font-semibold transition;
+  }
+  .range-on {
+    @apply bg-white text-brand-700 shadow-card;
+  }
+  .range-off {
+    @apply text-ink-500 hover:text-ink-900;
+  }
+
+  /* A headline figure: what it is, what it is, how it moved, and the shape
+     it made getting there. */
+  .kpi {
+    @apply flex flex-col gap-3 rounded-2xl border border-ink-200/80 bg-white
+           p-4 shadow-card transition sm:p-5;
+  }
+  a.kpi {
+    @apply hover:border-brand-300 hover:shadow-raised;
+  }
+  .kpi-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-ink-500;
+  }
+  .kpi-value {
+    @apply mt-1 text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-hint {
+    @apply mt-1 text-xs text-ink-500;
+  }
+  /* Up is not always good -- refunds rising is not a success -- so the arrow
+     says direction and the colour is left to the reader. Green for up is the
+     convention on the one thing every card here counts: money coming in. */
+  .kpi-delta {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-up {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+  .kpi-down {
+    @apply bg-red-50 text-red-700;
+  }
+  .kpi-flat {
+    @apply bg-ink-100 text-ink-500;
+  }
+  .kpi-spark {
+    @apply h-8 w-full text-brand-600;
+  }
+
+  /* Both charts are drawn on the server, so they are here on the first
+     paint with no script and no second request. */
+  .spark-line {
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.75;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .spark-fill {
+    fill: currentcolor;
+    opacity: 0.12;
+    stroke: none;
+  }
+  .chart {
+    @apply flex gap-3;
+  }
+  .chart-scale {
+    @apply flex w-16 shrink-0 flex-col justify-between py-0.5 text-right
+           text-[11px] font-medium text-ink-400;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-plot {
+    @apply relative h-44 min-w-0 flex-1 sm:h-52;
+  }
+  .chart-svg {
+    @apply h-full w-full text-brand-600;
+  }
+  .chart-grid {
+    stroke: currentcolor;
+    stroke-width: 1;
+    opacity: 0.12;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+  }
+  .chart-marks {
+    @apply relative ml-[4.75rem] mt-2 h-4;
+  }
+  .chart-mark {
+    @apply absolute -translate-x-1/2 whitespace-nowrap text-[11px] text-ink-500;
+  }
+
+  /* A ranked list with the bar behind the words rather than beside them:
+     beside them it costs a column the phone does not have. */
+  .rank {
+    @apply relative flex items-center justify-between gap-3 overflow-hidden
+           rounded-xl px-3 py-2.5 text-sm;
+  }
+  .rank-fill {
+    @apply absolute inset-y-0 left-0 rounded-xl bg-brand-100/70;
+  }
+  .rank-name {
+    @apply relative min-w-0 truncate font-medium text-ink-800;
+  }
+  .rank-value {
+    @apply relative shrink-0 font-semibold text-ink-900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The activity feed: who did what, most recent first. */
+  .feed-row {
+    @apply flex items-start gap-3 px-5 py-3;
+  }
+  .feed-icon {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg;
+  }
+  .feed-brand { @apply bg-brand-50 text-brand-700; }
+  .feed-amber { @apply bg-amber-50 text-amber-700; }
+  .feed-red   { @apply bg-red-50 text-red-700; }
+  .feed-ink   { @apply bg-ink-100 text-ink-600; }
+  .feed-text {
+    @apply text-sm font-medium text-ink-900;
+  }
+  .feed-meta {
+    @apply mt-0.5 text-xs text-ink-500;
+  }
+
   /* ---- Till ---------------------------------------------------------- */
 
   /* A tile is mostly its picture: a cashier with a queue recognises a photo
@@ -422,46 +562,63 @@
      costs too many rows, so there the picture steps aside and the tile is a
      short strip. A product with no photograph keeps the same shape either
      way, so the grid stays a grid. */
-  .tile {
-    @apply flex flex-row items-center overflow-hidden rounded-xl border
-           border-ink-200 bg-white text-left shadow-card transition
-           hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-raised
-           active:translate-y-0 active:scale-[0.98]
-           sm:flex-col sm:items-stretch;
+  /* The category deck. The chosen category is a tab in the true sense: it
+     rises out of the row and joins the white panel the goods sit on, so the
+     eye runs from the word straight down into the shelf it opened. */
+  .deck {
+    @apply flex min-h-0 flex-1 flex-col;
   }
-  .tile-figure {
-    @apply relative w-16 shrink-0 overflow-hidden sm:w-full;
+  .deck-tabs {
+    @apply flex shrink-0 items-end gap-1 overflow-x-auto px-7;
+    scrollbar-width: none;
   }
-  .tile-pic {
-    @apply aspect-square h-full w-full object-cover transition duration-300
-           group-hover:scale-[1.03] sm:aspect-[5/4];
+  .deck-tabs::-webkit-scrollbar {
+    display: none;
   }
-  .tile-pic-blank {
-    @apply flex aspect-square h-full w-full items-center justify-center
-           bg-gradient-to-br from-ink-100 to-ink-200/70 text-xl font-bold
-           uppercase tracking-tight text-ink-400 sm:aspect-[5/4] sm:text-2xl;
-  }
-  .tile-body {
-    @apply flex flex-1 flex-col justify-center gap-0.5 px-2.5 py-2
-           sm:justify-between sm:gap-1;
-  }
-  .tile-name {
-    @apply line-clamp-2 text-[13px] font-medium leading-snug text-ink-800;
-  }
-  /* Category tabs. The chosen one is lifted onto white; the rest are just
-     words, so the eye goes to the one that is on. */
   .tab {
-    @apply shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition;
+    @apply relative flex shrink-0 items-center gap-2 rounded-t-xl px-5 pb-3
+           pt-2.5 text-sm font-semibold transition duration-150;
   }
-  .tab-on {
-    @apply bg-white text-brand-700 shadow-card ring-1 ring-inset ring-ink-900/5;
+  .tab:focus-visible {
+    @apply outline-none ring-2 ring-inset ring-brand-500/50;
   }
   .tab-off {
-    @apply text-ink-500 hover:bg-white/60 hover:text-ink-800;
+    @apply text-ink-600 hover:text-ink-900;
+  }
+  .tab-on {
+    @apply bg-white text-brand-700;
+  }
+  /* The two curves that tie the raised tab back into the panel. Without
+     them the tab is a floating box and the join reads as a mistake. */
+  .tab-on::before,
+  .tab-on::after {
+    content: "";
+    @apply absolute bottom-0 h-3 w-3 bg-white;
+  }
+  .tab-on::before {
+    left: -0.75rem;
+    -webkit-mask-image: radial-gradient(circle 0.75rem at 0 0, transparent 0.73rem, black 0.75rem);
+    mask-image: radial-gradient(circle 0.75rem at 0 0, transparent 0.73rem, black 0.75rem);
+  }
+  .tab-on::after {
+    right: -0.75rem;
+    -webkit-mask-image: radial-gradient(circle 0.75rem at 100% 0, transparent 0.73rem, black 0.75rem);
+    mask-image: radial-gradient(circle 0.75rem at 100% 0, transparent 0.73rem, black 0.75rem);
   }
   .tab-count {
-    @apply ml-1.5 rounded-full px-1.5 text-xs font-semibold;
-    background-color: color-mix(in oklab, currentcolor 12%, transparent);
+    @apply min-w-5 rounded-full px-1.5 py-0.5 text-center text-xs font-bold leading-4;
+    font-variant-numeric: tabular-nums;
+  }
+  .tab-on .tab-count {
+    @apply bg-brand-50 text-brand-700;
+  }
+  .tab-off .tab-count {
+    @apply bg-ink-100 text-ink-500;
+  }
+  /* The shelf itself. No ring: a hairline across the top would cut the
+     raised tab off from the panel it is supposed to be part of. */
+  .deck-panel {
+    @apply min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white p-3 shadow-card;
   }
 
   /* A product card: the photograph in its own box with room around it, what

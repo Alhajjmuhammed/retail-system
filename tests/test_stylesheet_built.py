@@ -18,6 +18,7 @@ from django.conf import settings
 
 SOURCE = Path(settings.BASE_DIR) / "assets" / "tailwind" / "input.css"
 BUILT = Path(settings.BASE_DIR) / "static" / "css" / "app.css"
+TILL = Path(settings.BASE_DIR) / "templates" / "pos" / "till.html"
 
 
 @pytest.fixture(scope="module")
@@ -41,9 +42,20 @@ def test_the_stylesheet_was_built_from_the_current_source(defined):
     )
 
 
-def test_the_till_tiles_are_styled(defined):
-    """The one screen where unstyled markup is money on the floor."""
+def test_the_till_is_styled(defined):
+    """
+    The one screen where unstyled markup is money on the floor.
+
+    The list is what the till's own markup asks for, so a class renamed in
+    the template without being renamed in the stylesheet fails here rather
+    than in front of a queue.
+    """
     built = BUILT.read_text()
-    for name in ("tile", "tile-pic", "tile-body", "tile-name", "tile-price"):
-        assert name in defined, f"{name} is no longer defined in the source"
-        assert f".{name}" in built, f"{name} never reached the built stylesheet"
+    wanted = set(re.findall(r'class="([^"]+)"', TILL.read_text()))
+    used = {token for group in wanted for token in group.split()
+            if token in defined}
+    assert {"tile", "tile-pic", "tile-name", "tile-price", "tab", "deck-panel"} <= used, (
+        "the till stopped using the classes this test exists to protect: " + str(sorted(used))
+    )
+    missing = sorted(name for name in used if f".{name}" not in built)
+    assert not missing, f"never reached the built stylesheet: {missing}"

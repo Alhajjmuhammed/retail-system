@@ -84,22 +84,23 @@ largest possible targets and nothing to mis-tap while a queue forms.
       unusable as one long grid, and a cashier who has to scroll past the
       soap to reach the bread is slower than the queue behind them.
       {% endcomment %}
-      {% if tile_categories|length > 1 %}
-      <div class="mt-3 flex shrink-0 items-center gap-1 overflow-x-auto rounded-2xl bg-ink-100/70 p-1">
-        <button type="button" @click="tileGroup = ''"
-                :class="tileGroup === '' ? 'tab-on' : 'tab-off'" class="tab">
-          All items<span class="tab-count">{{ tiles|length }}</span>
-        </button>
-        {% for label, count in tile_categories %}
-        <button type="button" @click="tileGroup = '{{ label|escapejs }}'"
-                :class="tileGroup === '{{ label|escapejs }}' ? 'tab-on' : 'tab-off'" class="tab">
-          {{ label }}<span class="tab-count">{{ count }}</span>
-        </button>
-        {% endfor %}
-      </div>
-      {% endif %}
+      <div class="deck mt-3">
+        {% if tile_categories|length > 1 %}
+        <div class="deck-tabs">
+          <button type="button" @click="tileGroup = ''"
+                  :class="tileGroup === '' ? 'tab-on' : 'tab-off'" class="tab">
+            All items<span class="tab-count">{{ tiles|length }}</span>
+          </button>
+          {% for label, count in tile_categories %}
+          <button type="button" @click="tileGroup = '{{ label|escapejs }}'"
+                  :class="tileGroup === '{{ label|escapejs }}' ? 'tab-on' : 'tab-off'" class="tab">
+            {{ label }}<span class="tab-count">{{ count }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
 
-      <div class="mt-3 grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2.5 overflow-y-auto pb-1 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div class="deck-panel grid auto-rows-min grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {% for key in tiles %}
         {% with product=key.variant.product %}
         <div x-show="tileGroup === '' || tileGroup === '{{ product.category.name|default:"Other"|escapejs }}'"
@@ -156,6 +157,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
           </div>
         </div>
         {% endfor %}
+        </div>
       </div>
 
       <div class="mt-3 flex shrink-0 flex-wrap gap-2">

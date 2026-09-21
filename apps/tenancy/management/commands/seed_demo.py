@@ -147,6 +147,7 @@ class Command(BaseCommand):
 
             self._stock_the_shop(tenant, stone_town, owner)
             self._extra_roles(tenant, stone_town)
+            self._trade(tenant, stone_town, owner)
 
         self.stdout.write(self.style.SUCCESS(f"\n{tenant.name} created.\n"))
         self.stdout.write(f"  Password for everyone: {PASSWORD}\n")
@@ -228,6 +229,94 @@ class Command(BaseCommand):
             name="Azam Distributors", contact_name="Juma", phone="0712000111",
             payment_terms_days=14,
         )
+
+    def _trade(self, tenant, branch, seller, days=30):
+        """
+        A month of trading behind the demo shop.
+
+        Without it the dashboard opens on a flat line and every comparison
+        reads "new", which teaches a first-time reader nothing about what the
+        screen is for. The week has a shape -- Saturday busy, Sunday quiet --
+        because a month of identical days is the one pattern no real shop has.
+        """
+        import random
+        from datetime import datetime, time, timedelta
+
+        from django.utils import timezone
+
+        from apps.catalog.models import Product
+        from apps.inventory.models import MovementReason, StockItem
+        from apps.inventory.services import record_movement
+        from apps.pos.models import PaymentMethod, Sale
+        from apps.pos.services import add_to_cart, complete_sale, create_return, new_cart
+
+        rng = random.Random(2026)
+        costs = {name: Decimal(cost) for name, _, _, cost, *_ in SHELF}
+        variants = [p.default_variant for p in Product.objects.all()]
+        held = {
+            row["variant_id"]: row["avg_cost"]
+            for row in StockItem.objects.filter(branch=branch).values("variant_id", "avg_cost")
+        }
+
+        def cost_of(variant):
+            """
+            What it cost, in the order the shop itself would know it: what is
+            on the shelf, then the opening price list, then a guess off the
+            selling price. A flat guess for every line would make the margin
+            figures on the dashboard fiction.
+            """
+            known = held.get(variant.pk) or costs.get(variant.product.name)
+            if known:
+                return known
+            price = variant.price_for() or Decimal("1000")
+            return (price * Decimal("0.65")).quantize(Decimal("0.01"))
+
+        # A month of selling needs more on the shelf than the opening count,
+        # or the demo spends its first minute in the red.
+        for variant in variants:
+            record_movement(
+                variant=variant, qty_delta=700, reason=MovementReason.PURCHASE,
+                branch=branch, unit_cost=cost_of(variant),
+                note="Stocked up for the month", user=seller,
+            )
+
+        code = (branch.code or branch.name[:3]).upper()[:3]
+        today = timezone.localdate()
+        sales = []
+        for offset in range(days, 0, -1):
+            day = today - timedelta(days=offset)
+            stem = f"{code}{day:%y%m%d}"
+            # A day may already have sales on it -- this can be run against a
+            # shop that has been clicked around in -- and two receipts with
+            # one number is a database error, not a cosmetic one.
+            taken = (Sale.objects_all.filter(tenant=tenant, number__startswith=stem)
+                     .order_by("-number").values_list("number", flat=True).first())
+            first = int(taken[len(stem):]) + 1 if taken else 1
+            busy = {5: 15, 6: 5}.get(day.weekday(), 9)
+            for counter in range(first, first + max(2, int(rng.gauss(busy, 2)))):
+                when = timezone.make_aware(datetime.combine(
+                    day, time(rng.randrange(8, 20), rng.randrange(60))))
+                cart = new_cart(branch=branch)
+                for variant in rng.sample(variants, rng.randint(1, 3)):
+                    add_to_cart(cart, variant, qty=rng.randint(1, 4))
+                method = PaymentMethod.CASH if rng.random() < 0.72 else PaymentMethod.MPESA
+                sale = complete_sale(
+                    cart, [{"method": method, "amount": cart.subtotal}],
+                    user=seller, sold_at=when,
+                )
+                # The receipt number is built from the day it is rung up, and
+                # these are being rung up out of time.
+                Sale.objects.filter(pk=sale.pk).update(number=f"{stem}{counter:04d}")
+                sales.append(sale)
+
+        # Two things given back, so refunds are not a column of zeroes.
+        for sale in rng.sample(sales[: len(sales) // 2], 2):
+            line = sale.lines.first()
+            if line is not None:
+                # Money goes back the way it came, which is what the till
+                # insists on for a real refund too.
+                create_return(sale, {line.pk: 1}, reason="Wrong size",
+                              method=sale.payments.first().method)
 
     def _extra_roles(self, tenant, branch):
         """Roles this shop invented for itself, and somebody in each."""

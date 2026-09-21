@@ -29,17 +29,23 @@ DANGEROUS = [
 ]
 
 
-def _visible(request):
+def visible_to(membership):
     """
     The activity this person may read: everything for an owner or someone
     across all branches; otherwise their branches plus shop-wide events.
+
+    Taken by membership rather than by request because the dashboard shows
+    the same rows in its activity feed and must scope them the same way.
     """
     rows = AuditLog.objects.all()
-    m = request.membership
-    if not (m.role.is_owner_role or m.all_branches):
+    if not (membership.role.is_owner_role or membership.all_branches):
         rows = rows.filter(Q(branch__isnull=True)
-                           | Q(branch__in=m.branches(include_closed=True)))
+                           | Q(branch__in=membership.branches(include_closed=True)))
     return rows
+
+
+def _visible(request):
+    return visible_to(request.membership)
 
 
 @login_required

@@ -103,3 +103,48 @@ def record_platform(request, action: str, target: str = "", **detail):
         detail={key: value for key, value in detail.items() if value not in (None, "")},
         ip=client_ip(request),
     )
+
+
+# Which picture goes with which kind of event. Keyed on the part before the
+# dot, so a new action lands on a sensible icon without being listed here.
+FEED_ICONS = {
+    "sale": ("cart", "brand"), "fiscal": ("receipt", "brand"),
+    "shift": ("clock", "brand"), "cashup": ("wallet", "brand"),
+    "cash": ("wallet", "brand"), "credit": ("wallet", "amber"),
+    "expense": ("wallet", "amber"), "supplier": ("truck", "amber"),
+    "po": ("clipboard", "amber"), "goods": ("box", "amber"),
+    "stock": ("layers", "amber"), "transfer": ("truck", "amber"),
+    "count": ("clipboard", "amber"), "product": ("tag", "ink"),
+    "tile": ("tag", "ink"), "barcode": ("tag", "ink"),
+    "pricelist": ("tag", "ink"), "customer": ("users", "ink"),
+    "staff": ("users", "ink"), "membership": ("users", "ink"),
+    "role": ("shield", "red"), "approval": ("shield", "red"),
+    "platform": ("shield", "red"), "branch": ("building", "ink"),
+    "register": ("building", "ink"), "device": ("building", "ink"),
+    "user": ("user", "ink"),
+}
+
+
+def describe(row) -> dict:
+    """
+    An audit row as a line in a feed.
+
+    The action codes read as code -- ``stock.adjusted``, ``po.approved`` --
+    and a shopkeeper should not have to learn them to read their own
+    dashboard. Turned into words by rule rather than by a table, so an action
+    added next year is legible on the day it is written.
+    """
+    family, _, rest = row.action.partition(".")
+    # "stock.adjusted" reads as "Stock adjusted"; an action with no family
+    # keeps its own word rather than saying it twice.
+    words = f"{family} {rest}" if rest else family
+    icon, tone = FEED_ICONS.get(family, ("activity", "ink"))
+    return {
+        "row": row,
+        "text": words.replace("_", " ").replace(".", " ").capitalize(),
+        "who": row.user.name if row.user else "the system",
+        "approved_by": row.authorised_by.name if row.authorised_by else "",
+        "when": row.created_at,
+        "icon": icon,
+        "tone": tone,
+    }

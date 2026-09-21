@@ -21,7 +21,8 @@ from apps.core.decorators import requires
 from apps.core.parsing import date_or
 from apps.finance.models import Expense
 from apps.inventory.models import StockItem
-from apps.pos.models import Return, ReturnLine, Sale, SaleLine, SaleStatus, Shift
+from apps.pos.models import Return, ReturnLine, SaleLine, Shift
+from apps.reports.services import COUNTED, refunds_for, sales_in
 
 PRESETS = [("today", "Today"), ("7d", "Last 7 days"), ("30d", "Last 30 days"),
            ("month", "This month"), ("last_month", "Last month")]
@@ -90,26 +91,19 @@ def _context(request, start, end, **extra):
     }
 
 
-# Every sale that took money. Refunded ones count here and their refunds
-# are subtracted, so a sale and its refund always net out -- the dashboard,
-# this report and the export used to disagree about fully refunded sales.
-COUNTED = [SaleStatus.COMPLETED, SaleStatus.PART_REFUNDED, SaleStatus.REFUNDED]
+# Which sales count, and what a refund does to them, is defined once in
+# apps.reports.services -- the dashboard reads the same definitions. They
+# used to be written out separately here and disagreed about fully refunded
+# sales.
 
 
 def _sales(request, start, end):
-    return Sale.objects.filter(
-        branch__in=_branches(request),
-        status__in=COUNTED,
-        sold_at__date__gte=start,
-        sold_at__date__lte=end,
-    )
+    return sales_in(_branches(request), start, end)
 
 
 def _refunds(request, start, end):
     """Money given back on sales made in the period."""
-    return Return.objects.filter(
-        sale__in=_sales(request, start, end)
-    ).aggregate(total=Coalesce(Sum("total"), Decimal("0")))["total"]
+    return refunds_for(_sales(request, start, end))
 
 
 @login_required
