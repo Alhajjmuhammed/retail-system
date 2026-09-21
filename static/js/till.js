@@ -197,6 +197,9 @@
       basketOpen: false,
       // Which category tab is showing. Empty means all of them.
       tileGroup: "",
+      // The product waiting on a quantity, and the number typed for it.
+      qtyFor: null,
+      qtyWanted: 1,
       // A newer version of the till is cached and waiting. Taken at the next
       // safe moment, which is never in the middle of somebody's shopping.
       updateWaiting: false,
@@ -464,12 +467,13 @@
         this.results = [];
       },
 
-      async addTile(id, name, price, taxRate) {
+      async addTile(id, name, price, taxRate, image, qty) {
         // The stored product carries every list's price; the tile only the usual one.
         const stored = await get("variants", id);
         this.addLine(
-          stored || { id: id, name: name, price: price, tax_rate: taxRate, decimal: false },
-          1,
+          stored || { id: id, name: name, price: price, tax_rate: taxRate,
+                      decimal: false, image: image || null },
+          qty || 1,
           "tile"
         );
       },
@@ -502,7 +506,27 @@
           tax_rate: parseFloat(variant.tax_rate || 0),
           added_via: via,
           decimal: variant.decimal,
+          // For the thumbnail beside the line in the order summary. Kept on
+          // the line itself so it survives the basket being restored.
+          image: variant.image || null,
         });
+      },
+
+      askQty(id, name, price, taxRate, image) {
+        // Twelve sodas at a time is a normal order, and tapping a tile twelve
+        // times is how a queue builds up.
+        this.qtyFor = { id, name, price, taxRate, image };
+        this.qtyWanted = 1;
+        this.dialog = "qty";
+      },
+
+      addWanted() {
+        const want = parseFloat(this.qtyWanted);
+        if (!this.qtyFor || !(want > 0)) return;
+        const item = this.qtyFor;
+        this.dialog = null;
+        this.addTile(item.id, item.name, item.price, item.taxRate, item.image, want);
+        this.qtyFor = null;
       },
 
       openItem() {
@@ -593,6 +617,11 @@
       },
 
       // ---- totals -----------------------------------------------------
+
+      get totalItems() {
+        // What the customer is carrying, not how many lines it took.
+        return this.lines.reduce((sum, line) => sum + (parseFloat(line.qty) || 0), 0);
+      },
 
       get subtotal() {
         return this.lines.reduce(

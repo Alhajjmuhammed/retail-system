@@ -398,41 +398,82 @@
   .tile-name {
     @apply line-clamp-2 text-[13px] font-medium leading-snug text-ink-800;
   }
-  /* Category tabs above the grid. */
-  .chip {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5
-           text-sm font-medium transition;
+  /* Category tabs. The chosen one is lifted onto white; the rest are just
+     words, so the eye goes to the one that is on. */
+  .tab {
+    @apply shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition;
   }
-  .chip-on {
-    @apply bg-brand-700 text-white shadow-sm;
+  .tab-on {
+    @apply bg-white text-brand-700 shadow-card ring-1 ring-inset ring-ink-900/5;
   }
-  .chip-off {
-    @apply bg-white text-ink-600 ring-1 ring-inset ring-ink-200 hover:bg-ink-50 hover:text-ink-900;
+  .tab-off {
+    @apply text-ink-500 hover:bg-white/60 hover:text-ink-800;
   }
-  .chip-count {
-    @apply rounded-full px-1.5 text-xs font-semibold;
+  .tab-count {
+    @apply ml-1.5 rounded-full px-1.5 text-xs font-semibold;
     background-color: color-mix(in oklab, currentcolor 12%, transparent);
   }
 
-  /* What is left on the shelf, on the corner of the picture. */
-  /* Hidden on a phone: the thumbnail there is too small to write on, and the
-     number would sit across the only picture the cashier has to go by. */
+  /* A product card: the photograph in its own box with room around it, what
+     is left in the corner, then the name, the price and the way in. */
+  /* Card on a tablet and above. On a phone the pane is only a couple of rows
+     tall, so the same card becomes a strip: thumbnail, name, price, and the
+     whole strip adds. There is no room there for a separate button, and a
+     card clipped in half is worse than no picture at all. */
+  .tile {
+    @apply flex flex-row items-center gap-2 rounded-2xl border border-ink-200/80
+           bg-white p-2 text-left shadow-card transition
+           hover:border-brand-300 hover:shadow-raised sm:flex-col sm:items-stretch sm:gap-0;
+  }
+  .tile-main {
+    @apply flex flex-1 flex-row items-center gap-2 text-left sm:flex-col sm:items-stretch sm:gap-0;
+  }
+  .tile-figure {
+    @apply relative w-14 shrink-0 overflow-hidden rounded-xl bg-ink-50 sm:w-full;
+  }
+  .tile-pic {
+    @apply aspect-square w-full object-cover transition duration-300
+           group-hover:scale-[1.04] sm:aspect-[4/3];
+  }
+  .tile-pic-blank {
+    @apply flex aspect-square w-full items-center justify-center
+           bg-gradient-to-br from-ink-100 to-ink-200/70 text-lg font-bold
+           uppercase tracking-tight text-ink-400 sm:aspect-[4/3] sm:text-2xl;
+  }
+  /* Amber, because it is a warning about the shelf and not a part of the
+     picture. Hidden on a phone, where it would cover the photograph. */
   .tile-stock {
-    @apply absolute right-1.5 top-1.5 hidden rounded-md bg-ink-900/70 px-1.5
-           py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm sm:block;
+    @apply absolute right-2 top-2 hidden rounded-full bg-amber-400/95 px-2
+           py-0.5 text-[11px] font-bold text-amber-950 shadow-sm sm:block;
   }
   .tile-stock-out {
-    @apply bg-red-600/85;
+    @apply bg-red-500/95 text-white;
+  }
+  /* Name over price until the card is wide enough to carry both on one line.
+     Three columns on a tablet leaves about 130px, and "Unga wa Sembe 2kg"
+     beside a price in that space is two truncated words. */
+  .tile-head {
+    @apply flex min-w-0 flex-1 flex-col gap-0.5 sm:mt-2 sm:px-1
+           xl:flex-row xl:items-start xl:justify-between xl:gap-2;
+  }
+  .tile-name {
+    @apply line-clamp-2 text-[13px] font-semibold leading-snug text-ink-900;
+  }
+  .tile-price {
+    @apply shrink-0 text-sm font-bold text-ink-900;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile-actions {
+    @apply hidden items-center gap-1.5 sm:mt-2 sm:flex;
   }
   .tile-add {
-    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
-           bg-brand-50 text-brand-700 transition
-           group-hover:bg-brand-700 group-hover:text-white;
+    @apply flex h-9 flex-1 items-center justify-center gap-1 rounded-xl
+           bg-brand-50 text-[13px] font-semibold text-brand-800 transition
+           hover:bg-brand-700 hover:text-white active:scale-[0.98];
   }
-
-  .tile-price {
-    @apply text-sm font-bold text-brand-700;
-    font-variant-numeric: tabular-nums;
+  .tile-more {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl
+           bg-ink-100 text-ink-500 transition hover:bg-ink-200 hover:text-ink-800;
   }
 
   .keypad-key {
