@@ -20,20 +20,26 @@ to show a shape. Touch has no hover, so there they stay visible.
       How your products are grouped. Three deep at most &mdash; Drinks, then
       Soda, then Bottles &mdash; and the till turns the top two into its tabs.
     </p>
-    <div class="flex shrink-0 items-center gap-6">
-      <div>
-        <p class="tnum text-2xl font-bold leading-none text-ink-900">{{ categories|length }}</p>
-        <p class="mt-1 text-xs uppercase tracking-wide text-ink-400">shelves</p>
-      </div>
-      <div class="h-9 w-px bg-ink-200"></div>
-      <div>
-        <p class="tnum text-2xl font-bold leading-none text-ink-900">{{ filed }}</p>
-        <p class="mt-1 text-xs uppercase tracking-wide text-ink-400">products filed</p>
-      </div>
+    {% comment %}
+    A number with a one-word label under it left an owner asking what it
+    counted -- "8 shelves" when the screen showed four cards, and "products
+    filed" in nobody's words but mine. It says the whole thing now.
+    {% endcomment %}
+    <div class="flex shrink-0 flex-wrap items-center gap-5 text-sm">
+      <p class="text-ink-600">
+        <span class="tnum font-semibold text-ink-900">{{ shelves|length }}</span> main
+        {{ shelves|length|pluralize:"category,categories" }}{% if inner %},
+        <span class="tnum font-semibold text-ink-900">{{ inner }}</span> inside them{% endif %}
+      </p>
+      <span class="h-4 w-px bg-ink-200"></span>
+      <p class="text-ink-600">
+        <span class="tnum font-semibold text-ink-900">{{ filed }}</span> of
+        <span class="tnum">{{ filed|add:unfiled }}</span> products are in one
+      </p>
       {% if unfiled %}
-      <a href="{% url 'catalog:product_list' %}" class="rounded-xl bg-amber-50 px-3.5 py-2 ring-1 ring-inset ring-amber-600/15 transition hover:bg-amber-100">
-        <p class="tnum text-2xl font-bold leading-none text-amber-800">{{ unfiled }}</p>
-        <p class="mt-1 text-xs uppercase tracking-wide text-amber-700/80">with no shelf</p>
+      <a href="{% url 'catalog:product_list' %}?category=none"
+         class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-600/15 transition hover:bg-amber-100">
+        {% icon "alert" class="h-3.5 w-3.5" %}{{ unfiled }} with none &rarr;
       </a>
       {% endif %}
     </div>
@@ -93,7 +99,7 @@ to show a shape. Touch has no hover, so there they stay visible.
     </section>
     {% empty %}
     <div class="col-span-full rounded-2xl bg-white px-5 py-12 text-center shadow-card">
-      <p class="text-base font-medium text-ink-800">No shelves yet</p>
+      <p class="text-base font-medium text-ink-800">No categories yet</p>
       <p class="mt-1 text-sm text-ink-500">Start with one like <span class="font-medium text-ink-700">Drinks</span> or <span class="font-medium text-ink-700">Food</span>.</p>
     </div>
     {% endfor %}
@@ -102,7 +108,7 @@ to show a shape. Touch has no hover, so there they stay visible.
       {% csrf_token %}<input type="hidden" name="kind" value="category">
       <input type="hidden" name="parent" :value="inside">
       <label class="label flex items-center gap-1.5" for="cat_name">
-        <span x-show="!inside">New shelf</span>
+        <span x-show="!inside">New category</span>
         <span x-show="inside" x-cloak class="flex items-center gap-1.5">
           Inside <span x-text="insideName" class="font-semibold text-ink-800"></span>
         </span>
@@ -113,7 +119,7 @@ to show a shape. Touch has no hover, so there they stay visible.
       </div>
       <button type="button" x-show="inside" x-cloak @click="inside = ''; insideName = ''"
               class="mt-2 self-start text-xs font-medium text-ink-500 hover:text-ink-800">
-        &larr; put it on the top instead
+        &larr; make it a main category instead
       </button>
     </form>
   </div>

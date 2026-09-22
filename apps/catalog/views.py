@@ -69,9 +69,14 @@ def product_list(request):
     elif status == "inactive":
         products = products.filter(is_active=False)
 
-    if category:
-        # Everything under the chosen shelf, not only what is filed directly
-        # on it: picking Drinks has to find the soda and the bottles too.
+    if category == "none":
+        # The count on the categories page links here, so it has to be a
+        # list of exactly those products and not everything.
+        products = products.filter(category__isnull=True)
+    elif category:
+        # Everything under the chosen category, not only what is filed
+        # directly on it: picking Drinks has to find the soda and the
+        # bottles too.
         products = products.filter(category_id__in=category_family(int_or(category)))
 
     if term:
@@ -571,6 +576,7 @@ def taxonomy(request, only=None):
             "categories": category_tree(),
             "category_depth": CATEGORY_DEPTH,
             "filed": filed,
+            "inner": sum(1 for row in category_tree() if row.level > 1),
             "unfiled": Product.objects.filter(is_active=True, category__isnull=True).count(),
             "retired": [("category", "Category",
                          Category.objects.filter(is_active=False).order_by("name"))],
