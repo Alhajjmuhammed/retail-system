@@ -217,3 +217,42 @@ def test_the_platform_overview_answers_for_the_period_asked_for(client, shop, ow
     client.force_login(owner)
     r = client.get(reverse("platform:dashboard") + "?range=today")
     assert r.context["period"]["key"] == "today" and r.context["period"]["days"] == 1
+
+
+def test_the_cashier_sees_how_the_money_arrived(client, shop, main_branch, register,
+                                                cashier, owner, stocked):
+    """
+    A till screen with a total and nothing else leaves the person holding
+    the drawer to guess how much of it is cash. What should be *in* the
+    drawer stays off this page on purpose -- that belongs on the closing
+    page, after they have counted.
+    """
+    from decimal import Decimal
+
+    from django.urls import reverse
+
+    from apps.accounts.models import Membership, Role
+    from apps.core.context import tenant_context
+    from apps.pos.services import add_to_cart, complete_sale, new_cart, open_shift
+
+    with tenant_context(shop, branch=main_branch, user=cashier):
+        Membership.objects.create(
+            tenant=shop, user=cashier, role=Role.objects.get(name="Cashier"))
+        shift = open_shift(register=register, opening_float=Decimal("10000"))
+        for method in ("cash", "mpesa"):
+            cart = new_cart(branch=main_branch)
+            add_to_cart(cart, stocked["Mkate"], qty=Decimal("1"))
+            complete_sale(cart, [{"method": method, "amount": cart.subtotal}],
+                          shift=shift, user=cashier)
+
+    client.force_login(cashier)
+    page = client.get(reverse("core:dashboard"))
+    paid = {row["label"]: row["value"] for row in page.context["my_shift"]["paid"]}
+    assert paid["Cash"] > 0
+    assert paid["Mobile money"] == paid["Cash"]      # one sale each way
+
+    body = page.content.decode()
+    assert "Mobile money" in body
+    # The opening float, and therefore what the drawer should hold, is not
+    # on this screen anywhere.
+    assert "10,000" not in body

@@ -195,9 +195,14 @@ def dashboard(request):
             mine = shift.sales.exclude(status=SaleStatus.VOIDED).aggregate(v=Sum("total"), n=Count("id"))
             context["my_shift"] = {
                 "shift": shift, "value": mine["v"] or 0, "count": mine["n"] or 0,
+                "paid": _how_it_was_paid(shift),
+                "refunded": shift.returns.aggregate(t=Sum("total"))["t"] or 0,
                 # The till staff's own receipts, to reprint or refund: they
                 # cannot see the shop's sales list.
-                "sales": shift.sales.select_related("customer").order_by("-sold_at")[:10],
+                "sales": (shift.sales.select_related("customer")
+                          .prefetch_related("payments")
+                          .annotate(items=Count("lines"))
+                          .order_by("-sold_at")[:10]),
                 "may_reprint": can("pos.reprint"),
             }
         # A prompt to open a till is for till staff, not for an owner
@@ -278,3 +283,44 @@ def healthz(request):
             "\n".join(problems), content_type="text/plain", status=503
         )
     return HttpResponse("ok", content_type="text/plain")
+
+
+def _how_it_was_paid(shift):
+    """
+    What the person at the till has taken, split by how it arrived.
+
+    The cash line is the one that matters to them, because it is the money
+    they will count at the end. What the drawer *should* hold is deliberately
+    not here: that belongs on the closing page, after they have counted, or
+    the count is just a copy of the figure on the screen.
+
+    The three mobile-money wallets are one line. A cashier does not care
+    which network a shilling came over, and three near-empty rows crowd out
+    the one they are looking for.
+    """
+    from django.db.models import Sum
+
+    from apps.pos.models import PaymentMethod, SalePayment, SaleStatus
+
+    WALLETS = {PaymentMethod.MPESA, PaymentMethod.TIGOPESA, PaymentMethod.AIRTELMONEY}
+    taken = {
+        row["method"]: row["total"] or 0
+        for row in SalePayment.objects.filter(sale__shift=shift)
+        .exclude(sale__status=SaleStatus.VOIDED)
+        .values("method")
+        .annotate(total=Sum("amount"))
+    }
+
+    wallets = sum(taken.get(method, 0) for method in WALLETS)
+    rows = [
+        # Always shown, even at zero: its absence would read as "no cash yet"
+        # only if you already knew the line existed.
+        {"label": "Cash", "icon": "wallet", "value": taken.get(PaymentMethod.CASH, 0),
+         "always": True},
+        {"label": "Mobile money", "icon": "activity", "value": wallets},
+        {"label": "Card", "icon": "credit-card", "value": taken.get(PaymentMethod.CARD, 0)},
+        {"label": "On account", "icon": "users",
+         "value": taken.get(PaymentMethod.CREDIT, 0)},
+        {"label": "Voucher", "icon": "tag", "value": taken.get(PaymentMethod.VOUCHER, 0)},
+    ]
+    return [row for row in rows if row["value"] or row.get("always")]

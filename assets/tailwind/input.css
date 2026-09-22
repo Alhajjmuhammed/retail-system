@@ -584,6 +584,30 @@
      costs too many rows, so there the picture steps aside and the tile is a
      short strip. A product with no photograph keeps the same shape either
      way, so the grid stays a grid. */
+  /* The cashier's shift, at the top of their screen. Dark, because it is
+     the one thing on the page and a white card on a white page has nothing
+     to be the front of. */
+  .shift-panel {
+    @apply relative overflow-hidden rounded-2xl bg-brand-800 p-5 shadow-card sm:p-6;
+    background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.07) 1px, transparent 0);
+    background-size: 26px 26px;
+  }
+  .paid-tile {
+    @apply flex items-center gap-2.5 rounded-xl bg-white/[0.07] px-3.5 py-2.5
+           ring-1 ring-inset ring-white/10;
+  }
+  .paid-icon {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+           bg-white/10 text-brand-100;
+  }
+  /* Buttons that sit on the dark panel rather than on the page. */
+  .btn-white {
+    @apply bg-white text-brand-800 hover:bg-brand-50;
+  }
+  .btn-onbrand {
+    @apply bg-white/10 text-white ring-1 ring-inset ring-white/25 hover:bg-white/20;
+  }
+
   /* The packages on the signup page. A radio wearing a card: the whole
      thing is a label, so a tap anywhere on it picks that package, and it
      still works with JavaScript off. */

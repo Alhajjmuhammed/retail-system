@@ -39,16 +39,49 @@
   {% endif %}
 
   {% if my_shift %}
-  <div class="card card-body flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <p class="text-xs uppercase tracking-wide text-ink-500">Your shift on {{ my_shift.shift.register }}</p>
-      <p class="mt-1 text-2xl font-bold text-ink-900">{{ my_shift.value|floatformat:0|intcomma }} <span class="text-sm font-normal text-ink-500">from {{ my_shift.count }} sale{{ my_shift.count|pluralize }}</span></p>
-      <p class="hint">Open since {{ my_shift.shift.opened_at|date:"H:i" }} ({{ my_shift.shift.opened_at|ago }})</p>
+  {% comment %}
+  The cashier's own screen. Their shift is the whole of it: what they have
+  taken, how it arrived, and the two things they do next. An owner sees this
+  strip too, above their figures, whenever they have a till open.
+
+  What the drawer should hold is deliberately absent. That number lives on
+  the closing page, after the money has been counted -- a cashier who can
+  read it all day types it back at closing time and a shortage never exists.
+  {% endcomment %}
+  <div class="shift-panel">
+    <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+      <div class="min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-wide text-brand-200">
+          Your till &middot; {{ my_shift.shift.register }}
+        </p>
+        <p class="mt-1.5 flex flex-wrap items-baseline gap-x-2.5">
+          <span class="text-3xl font-bold tracking-tight text-white sm:text-4xl">{{ my_shift.value|floatformat:0|intcomma }}</span>
+          <span class="text-sm text-brand-100/80">taken from {{ my_shift.count }} sale{{ my_shift.count|pluralize }}</span>
+        </p>
+        <p class="mt-1 text-sm text-brand-200/80">
+          Open since {{ my_shift.shift.opened_at|date:"H:i" }} ({{ my_shift.shift.opened_at|ago }})
+          {% if my_shift.refunded %}&middot; {{ my_shift.refunded|floatformat:0|intcomma }} refunded{% endif %}
+        </p>
+      </div>
+      <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+        <a href="{% url 'pos:till' %}" class="btn btn-white flex-1 sm:flex-none">{% icon "cart" %} Back to the till</a>
+        <a href="{% url 'pos:shift_close' %}" class="btn btn-onbrand flex-1 sm:flex-none">Close and count</a>
+      </div>
     </div>
-    <div class="flex w-full flex-wrap gap-2 sm:w-auto">
-      <a href="{% url 'pos:till' %}" class="btn btn-primary flex-1 sm:flex-none">{% icon "cart" %} Back to the till</a>
-      <a href="{% url 'pos:shift_close' %}" class="btn btn-secondary flex-1 sm:flex-none">Close and count</a>
+
+    {% if my_shift.paid %}
+    <div class="mt-5 flex flex-wrap gap-2.5 border-t border-white/10 pt-5">
+      {% for row in my_shift.paid %}
+      <div class="paid-tile min-w-44 max-w-64 flex-1">
+        <span class="paid-icon">{% icon row.icon class="h-4 w-4" %}</span>
+        <span class="min-w-0">
+          <span class="block text-xs text-brand-200/80">{{ row.label }}</span>
+          <span class="tnum block font-semibold text-white">{{ row.value|floatformat:0|intcomma }}</span>
+        </span>
+      </div>
+      {% endfor %}
     </div>
+    {% endif %}
   </div>
   {% elif may_sell %}
   <div class="card card-body flex flex-wrap items-center justify-between gap-4">
@@ -244,7 +277,7 @@
         <p class="text-sm font-medium text-ink-900">Your role does not include anything yet.</p>
         <p class="hint mt-1">Ask the owner or a manager to give your role what you need, under Settings &rarr; Roles &amp; permissions.</p>
       </div>
-      {% else %}
+      {% elif attention or cards %}
       <div class="card">
         <div class="card-head"><h2 class="card-title"><span class="card-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>Needs attention</h2></div>
         <div class="divide-y divide-ink-100">
@@ -266,16 +299,30 @@
         <div class="card-head"><h2 class="card-title"><span class="card-icon">{% icon "receipt" class="h-3.5 w-3.5" %}</span>Your sales this shift</h2><span class="hint">Latest {{ my_shift.sales|length }}</span></div>
         <div class="divide-y divide-ink-100">
           {% for s in my_shift.sales %}
-          <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-            <span class="min-w-0">
-              <span class="font-medium text-ink-900">{{ s.number }}</span>
-              <span class="hint">{{ s.sold_at|date:"H:i" }}{% if s.customer %} &middot; {{ s.customer.name }}{% endif %}</span>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
+            <span class="min-w-0 flex-1">
+              <span class="font-medium text-ink-900">{{ s.sold_at|date:"H:i" }}</span>
+              <span class="hint"><span class="hidden sm:inline">&middot; {{ s.number }}</span>{% if s.customer %} &middot; {{ s.customer.name }}{% endif %}</span>
               {% if s.status == "voided" %}<span class="badge badge-danger ml-1">Voided</span>{% elif s.status == "refunded" %}<span class="badge badge-warn ml-1">Refunded</span>{% elif s.status == "part_refunded" %}<span class="badge badge-warn ml-1">Part refunded</span>{% endif %}
             </span>
-            <span class="flex shrink-0 items-center gap-1">
-              <span class="tnum font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</span>
-              {% if my_shift.may_reprint %}<a href="{% url 'pos:receipt' s.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print the receipt again" aria-label="Print receipt {{ s.number }} again">{% icon "receipt" class="h-4 w-4" %}</a>{% endif %}
-              {% if s.status != "voided" and s.status != "refunded" %}<a href="{% url 'pos:sale_return' s.pk %}" class="btn-icon btn-icon-brand" title="Refund (a manager may need to approve)" aria-label="Refund {{ s.number }}">{% icon "restore" class="h-4 w-4" %}</a>{% endif %}
+            <span class="hidden w-28 shrink-0 text-ink-600 sm:block">
+              {{ s.items }} item{{ s.items|pluralize }}
+            </span>
+            <span class="hidden w-36 shrink-0 text-ink-600 md:block">
+              {% for p in s.payments.all %}{% if forloop.first %}{% if s.payments.all|length > 1 %}Split payment{% else %}{{ p.get_method_display }}{% endif %}{% endif %}{% empty %}&mdash;{% endfor %}
+            </span>
+            <span class="tnum w-24 shrink-0 text-right font-semibold text-ink-900">{{ s.total|floatformat:0|intcomma }}</span>
+            <span class="flex shrink-0 items-center gap-1.5">
+              {% if my_shift.may_reprint %}
+              <a href="{% url 'pos:receipt' s.pk %}" target="_blank" class="btn btn-secondary btn-sm" aria-label="Print receipt {{ s.number }} again">
+                {% icon "receipt" class="h-4 w-4" %}<span class="hidden lg:inline">Receipt</span>
+              </a>
+              {% endif %}
+              {% if s.status != "voided" and s.status != "refunded" %}
+              <a href="{% url 'pos:sale_return' s.pk %}" class="btn btn-secondary btn-sm" aria-label="Refund {{ s.number }}" title="A manager may need to approve">
+                {% icon "restore" class="h-4 w-4" %}<span class="hidden lg:inline">Refund</span>
+              </a>
+              {% endif %}
             </span>
           </div>
           {% endfor %}
