@@ -207,6 +207,43 @@ def category_tree(include_inactive=False):
     return ordered
 
 
+def category_forest():
+    """
+    The shelves as a shape rather than a list: each top shelf carrying what
+    is inside it, and each of those carrying its own.
+
+    Every row also knows how many products sit on it and how many sit
+    anywhere beneath it -- an empty shelf is worth seeing, and so is a shelf
+    whose children hold everything.
+    """
+    from django.db.models import Count
+
+    rows = category_tree()
+    counts = dict(
+        Product.objects.filter(is_active=True, category__isnull=False)
+        .values_list("category_id")
+        .annotate(n=Count("id"))
+    )
+
+    for row in rows:
+        row.kids = []
+        row.direct = counts.get(row.pk, 0)
+        row.total = row.direct
+
+    by_pk = {row.pk: row for row in rows}
+    top = []
+    for row in rows:
+        parent = by_pk.get(row.parent_id)
+        (parent.kids if parent else top).append(row)
+
+    # Deepest first, so a shelf's total is complete before its parent adds it.
+    for row in reversed(rows):
+        parent = by_pk.get(row.parent_id)
+        if parent is not None:
+            parent.total += row.total
+    return top
+
+
 def category_family(category_id, include_inactive=True):
     """
     A category and everything filed inside it, as ids.

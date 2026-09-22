@@ -563,9 +563,15 @@ def taxonomy(request, only=None):
         return redirect(_taxonomy_home(only))
 
     if only == "category":
+        from apps.catalog.services import category_forest
+
+        filed = Product.objects.filter(is_active=True, category__isnull=False).count()
         return render(request, "catalog/categories.html", {
+            "shelves": category_forest(),
             "categories": category_tree(),
             "category_depth": CATEGORY_DEPTH,
+            "filed": filed,
+            "unfiled": Product.objects.filter(is_active=True, category__isnull=True).count(),
             "retired": [("category", "Category",
                          Category.objects.filter(is_active=False).order_by("name"))],
         })
