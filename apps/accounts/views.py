@@ -90,6 +90,11 @@ class LoginView(auth_views.LoginView):
     template_name = "accounts/login.html"
     redirect_authenticated_user = True
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["show_signup"] = settings.SHOW_SIGNUP_LINK
+        return context
+
     def get_form_kwargs(self):
         # Emails are stored lower-case; "Owner@Shop.co.tz" must still sign in.
         kwargs = super().get_form_kwargs()

@@ -135,6 +135,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Whether the sign-in page offers "start a free trial". Signing up still
+# works and the address is still open; this only decides whether the door is
+# advertised there, which is a decision about selling, not about security.
+SHOW_SIGNUP_LINK = env.bool("SHOW_SIGNUP_LINK", default=False)
+
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"

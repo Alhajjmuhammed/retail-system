@@ -786,3 +786,20 @@ def test_a_plan_that_is_not_offered_cannot_be_asked_for(client, db):
     })
     with unscoped():
         assert not Tenant.objects.filter(name="Duka la Siri").exists()
+
+
+def test_the_sign_in_page_does_not_advertise_signup_unless_asked(client, db, settings):
+    """
+    Hidden by default: the address still works and a link to it still works,
+    which is how a shop is signed up today. Turning it back on is one line
+    in .env, not a deploy.
+    """
+    from django.urls import reverse
+
+    page = client.get(reverse("accounts:login"))
+    assert "Start a free trial" not in page.content.decode()
+    assert client.get(reverse("signup")).status_code == 200
+
+    settings.SHOW_SIGNUP_LINK = True
+    page = client.get(reverse("accounts:login"))
+    assert "Start a free trial" in page.content.decode()
