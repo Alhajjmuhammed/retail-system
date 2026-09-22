@@ -16,6 +16,15 @@ class Feature:
     key: str
     label: str
     description: str = ""
+    # What a shop owner choosing a package reads. The label above is for the
+    # people who administer plans; "Fiscal receipts" and "Report export" are
+    # the right words there and the wrong ones on a page somebody is deciding
+    # whether to pay from.
+    public_label: str = ""
+
+    @property
+    def for_shops(self) -> str:
+        return self.public_label or self.label
 
 
 MULTI_BRANCH = "multi_branch"
@@ -32,18 +41,30 @@ REPORT_EXPORT = "report_export"
 SMS_NOTIFICATIONS = "sms_notifications"
 
 ALL_FEATURES = [
-    Feature(MULTI_BRANCH, "Multiple branches", "More than one shop under one business."),
-    Feature(STOCK_TRANSFERS, "Stock transfers", "Move stock between branches."),
-    Feature(PURCHASING, "Purchasing", "Purchase orders, suppliers and goods received."),
-    Feature(CUSTOMER_CREDIT, "Customer credit", "Sell on account and track what is owed."),
-    Feature(LOYALTY, "Loyalty", "Points earned and redeemed."),
-    Feature(BATCH_EXPIRY, "Batches and expiry", "Track batch numbers and expiry dates."),
-    Feature(FISCAL_RECEIPTS, "Fiscal receipts", "EFD/VFD submission to the revenue authority."),
-    Feature(OFFLINE_POS, "Offline selling", "Keep selling when the connection drops."),
-    Feature(MOBILE_SELLING, "Phone selling", "Build baskets in the aisle on a phone."),
-    Feature(WHOLESALE_PRICING, "Wholesale pricing", "A second price list for bulk buyers."),
-    Feature(REPORT_EXPORT, "Report export", "Download reports as CSV or PDF."),
-    Feature(SMS_NOTIFICATIONS, "SMS", "Send receipts and alerts by SMS."),
+    Feature(MULTI_BRANCH, "Multiple branches", "More than one shop under one business.",
+            "More than one shop"),
+    Feature(STOCK_TRANSFERS, "Stock transfers", "Move stock between branches.",
+            "Send stock between your shops"),
+    Feature(PURCHASING, "Purchasing", "Purchase orders, suppliers and goods received.",
+            "Suppliers, orders and deliveries"),
+    Feature(CUSTOMER_CREDIT, "Customer credit", "Sell on account and track what is owed.",
+            "Sell on credit, and see who owes you"),
+    Feature(LOYALTY, "Loyalty", "Points earned and redeemed.",
+            "Points for regular customers"),
+    Feature(BATCH_EXPIRY, "Batches and expiry", "Track batch numbers and expiry dates.",
+            "Expiry dates, before things go off"),
+    Feature(FISCAL_RECEIPTS, "Fiscal receipts", "EFD/VFD submission to the revenue authority.",
+            "Receipts for the revenue authority"),
+    Feature(OFFLINE_POS, "Offline selling", "Keep selling when the connection drops.",
+            "Keep selling when the internet goes"),
+    Feature(MOBILE_SELLING, "Phone selling", "Build baskets in the aisle on a phone.",
+            "Sell from a phone, anywhere in the shop"),
+    Feature(WHOLESALE_PRICING, "Wholesale pricing", "A second price list for bulk buyers.",
+            "A second price for bulk buyers"),
+    Feature(REPORT_EXPORT, "Report export", "Download reports as CSV or PDF.",
+            "Download your reports"),
+    Feature(SMS_NOTIFICATIONS, "SMS", "Send receipts and alerts by SMS.",
+            "Send an SMS receipt"),
 ]
 
 FEATURES_BY_KEY = {f.key: f for f in ALL_FEATURES}

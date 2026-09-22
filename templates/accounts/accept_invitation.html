@@ -1,13 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Join {{ invitation.tenant.name }}{% endblock %}
 
 {% block body %}
 <div class="flex min-h-full items-center justify-center px-5 py-12">
   <div class="w-full max-w-sm">
     <div class="mb-7">
-      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">
-        {{ invitation.tenant.name|slice:":1"|upper }}
-      </div>
+      <img src="{% static 'img/easyfix.png' %}" alt="Easyfix" class="h-9 w-auto" width="266" height="85">
       <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Join {{ invitation.tenant.name }}</h1>
       <p class="mt-1.5 text-sm text-ink-500">
         You have been invited as <strong>{{ invitation.role.name }}</strong>.

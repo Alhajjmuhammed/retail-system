@@ -38,6 +38,22 @@ class SignupForm(TailwindMixin, forms.Form):
     email = forms.EmailField(label="Email")
     phone = forms.CharField(label="Phone", max_length=30, required=False)
     password = forms.CharField(label="Password", widget=forms.PasswordInput)
+    plan = forms.ModelChoiceField(
+        label="Package", queryset=None, empty_label=None,
+        widget=forms.RadioSelect, required=True,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only what is offered at signup, and never an id typed by hand into
+        # a form: a private plan is private.
+        from apps.tenancy.models import Plan
+
+        plans = Plan.objects.filter(is_public=True).order_by("sort_order", "price_monthly")
+        self.fields["plan"].queryset = plans
+        self.fields["plan"].initial = (
+            plans.filter(code="starter").first() or plans.first()
+        )
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower()

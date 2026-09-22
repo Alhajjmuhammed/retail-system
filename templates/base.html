@@ -14,7 +14,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link rel="icon" type="image/png" href="{% versioned_static 'img/easyfix-icon.png' %}">
+  <link rel="apple-touch-icon" href="{% versioned_static 'img/easyfix-icon.png' %}">
   <link rel="stylesheet" href="{% versioned_static 'css/app.css' %}">
   {% comment %}
   Served from here, not a CDN: without them no form opens and no button

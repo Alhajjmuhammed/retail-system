@@ -150,7 +150,7 @@ def signup(request):
     form = SignupForm(request.POST or None)
     if request.method == "POST" and throttle.signups_exhausted(audit.client_ip(request)):
         form.add_error(None, "Too many shops opened from here just now. Try again later.")
-        return render(request, "accounts/signup.html", {"form": form})
+        return render(request, "accounts/signup.html", _signup_context(form))
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
             user = User.objects.create_user(
@@ -160,7 +160,8 @@ def signup(request):
                 phone=form.cleaned_data["phone"],
             )
             tenant, _membership = create_tenant(
-                name=form.cleaned_data["business_name"], owner=user
+                name=form.cleaned_data["business_name"], owner=user,
+                plan=form.cleaned_data["plan"],
             )
 
         throttle.record_signup(audit.client_ip(request))
@@ -177,7 +178,15 @@ def signup(request):
         )
         return redirect("core:dashboard")
 
-    return render(request, "accounts/signup.html", {"form": form})
+    return render(request, "accounts/signup.html", _signup_context(form))
+
+
+def _signup_context(form):
+    from apps.tenancy.packages import packages
+
+    chosen = form.data.get("plan") or (form.fields["plan"].initial and
+                                       form.fields["plan"].initial.pk)
+    return {"form": form, "packages": packages(), "chosen": str(chosen or "")}
 
 
 @login_required

@@ -10,7 +10,7 @@ from apps.core.views import healthz
 urlpatterns = [
     path("healthz", healthz),
     # Asked for by every browser before it reads the page's own icon link.
-    path("favicon.ico", RedirectView.as_view(url="/static/favicon.svg", permanent=True)),
+    path("favicon.ico", RedirectView.as_view(url="/static/img/easyfix-icon.png", permanent=True)),
     path("django-admin/", admin.site.urls),
     path("signup/", account_views.signup, name="signup"),
     path("", include("apps.accounts.urls")),

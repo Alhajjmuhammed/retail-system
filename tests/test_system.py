@@ -735,3 +735,54 @@ def test_the_screens_do_not_talk_like_an_accountant():
                 if word.lower() in visible.lower():
                     found.append(f"{template}: {visible.strip()[:60]}")
     assert not found, "accounting words on screen: " + "; ".join(found)
+
+
+def test_every_package_offered_at_signup_can_be_chosen(client, db):
+    """
+    The page used to say "free for 14 days" and put every shop on Free
+    whatever it said, because the plan was never asked for. Each package
+    offered has to be a real choice, and the one picked has to be the one
+    the shop ends up on.
+    """
+    from django.urls import reverse
+
+    from apps.core.context import unscoped
+    from apps.tenancy.models import Plan, Tenant
+    from apps.tenancy.packages import packages
+
+    offered = packages()
+    assert [p.plan.code for p in offered] == ["free", "starter", "business", "enterprise"]
+    # Each one says what it adds to the one before, not everything it holds.
+    assert offered[1].inherits == "Everything in Free"
+    assert "Suppliers, orders and deliveries" in offered[1].adds
+    assert "Suppliers, orders and deliveries" not in offered[2].adds
+
+    business = Plan.objects.get(code="business")
+    page = client.get(reverse("signup"))
+    assert page.status_code == 200
+    assert f'value="{business.pk}"' in page.content.decode()
+
+    response = client.post(reverse("signup"), {
+        "business_name": "Duka la Mwanzo", "name": "Salma", "email": "s@duka.test",
+        "phone": "", "password": "ChaiNaMaziwa2026", "plan": business.pk,
+    }, follow=True)
+    assert response.status_code == 200
+    with unscoped():
+        shop = Tenant.objects.get(name="Duka la Mwanzo")
+        assert shop.subscription.plan.code == "business"
+
+
+def test_a_plan_that_is_not_offered_cannot_be_asked_for(client, db):
+    """A private plan is private, whatever is typed into the form."""
+    from django.urls import reverse
+
+    from apps.core.context import unscoped
+    from apps.tenancy.models import Plan, Tenant
+
+    hidden = Plan.objects.create(code="secret", name="Secret", is_public=False)
+    client.post(reverse("signup"), {
+        "business_name": "Duka la Siri", "name": "Salma", "email": "siri@duka.test",
+        "phone": "", "password": "ChaiNaMaziwa2026", "plan": hidden.pk,
+    })
+    with unscoped():
+        assert not Tenant.objects.filter(name="Duka la Siri").exists()

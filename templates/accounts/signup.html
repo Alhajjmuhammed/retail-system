@@ -1,28 +1,68 @@
 {% extends "base.html" %}
-{% block title %}Start a trial{% endblock %}
+{% load humanize static %}
+{% block title %}Set up your shop{% endblock %}
+
+{% comment %}
+One form across two columns: the shop's details on the left, the packages on
+the right. The packages are radio buttons wearing cards, so the page works
+with JavaScript switched off -- picking one is a real form control, and
+Alpine only moves the price on the button.
+
+On a phone the order flips: choose the package first, then fill the form,
+then the button that says what you are about to get.
+{% endcomment %}
 
 {% block body %}
-<div class="flex min-h-full">
-  <div class="flex w-full flex-col justify-center px-5 py-10 sm:px-10 lg:w-[520px] lg:shrink-0 lg:px-14">
+<form method="post" x-data="{
+        plan: '{{ chosen|escapejs }}',
+        prices: { {% for p in packages %}'{{ p.plan.pk }}': { name: '{{ p.plan.name|escapejs }}', trial: {{ p.plan.trial_days }}, free: {% if p.is_free %}true{% else %}false{% endif %} }{% if not forloop.last %},{% endif %}{% endfor %} },
+        get chosenPlan() { return this.prices[this.plan] || { name: '', trial: 0, free: true } }
+      }" class="flex min-h-full flex-col lg:flex-row">
+  {% csrf_token %}
+
+  {# ---------------------------------------------------------------- #}
+  {# The shop's details                                                #}
+  {# ---------------------------------------------------------------- #}
+  <div class="order-2 flex w-full flex-col justify-center px-5 py-10 sm:px-10 lg:order-1 lg:w-[480px] lg:shrink-0 lg:px-14 xl:w-[540px]">
     <div class="mx-auto w-full max-w-sm">
       <div class="mb-7">
-        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700 text-lg font-bold text-white shadow-sm">R</div>
+        <img src="{% static 'img/easyfix.png' %}" alt="Easyfix" class="h-9 w-auto" width="266" height="85">
         <h1 class="mt-6 text-2xl font-semibold tracking-tight text-ink-900">Set up your shop</h1>
-        <p class="mt-1.5 text-sm text-ink-500">Free for 14 days. No card needed.</p>
+        <p class="mt-1.5 text-sm text-ink-500">
+          <span x-show="chosenPlan.free">Free, and it stays free. No card needed.</span>
+          <span x-show="!chosenPlan.free" x-cloak>
+            <span x-text="chosenPlan.trial"></span> days free on
+            <span x-text="chosenPlan.name" class="font-medium text-ink-700"></span>, then pay monthly. No card needed to start.
+          </span>
+        </p>
       </div>
 
-      <form method="post" class="space-y-4">
-        {% csrf_token %}
-        {% for field in form %}
+      {% if form.non_field_errors %}
+      <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">
+        {{ form.non_field_errors.0 }}
+      </div>
+      {% endif %}
+
+      <div class="space-y-4">
+        {% for field in form %}{% if field.name != "plan" %}
         <div>
           <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
           {{ field }}
           {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
           {% if field.errors %}<p class="error-text">{{ field.errors.0 }}</p>{% endif %}
         </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary btn-lg w-full">Create my shop</button>
-      </form>
+        {% endif %}{% endfor %}
+
+        {# On a phone the packages are above; this says which one is picked. #}
+        <p class="text-sm text-ink-500 lg:hidden">
+          Package: <span x-text="chosenPlan.name" class="font-medium text-ink-800"></span>
+        </p>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full">
+          Create my shop
+        </button>
+        {% if form.plan.errors %}<p class="error-text">{{ form.plan.errors.0 }}</p>{% endif %}
+      </div>
 
       <p class="mt-6 text-center text-sm text-ink-500">
         Already have an account?
@@ -31,37 +71,99 @@
     </div>
   </div>
 
-  <div class="relative hidden flex-1 overflow-hidden bg-brand-900 lg:block">
+  {# ---------------------------------------------------------------- #}
+  {# The packages                                                      #}
+  {# ---------------------------------------------------------------- #}
+  <div class="relative order-1 flex-1 overflow-hidden bg-brand-900 px-5 py-10 sm:px-10 lg:order-2 lg:px-12 lg:py-14">
     <div class="absolute inset-0 opacity-[0.07]"
          style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 28px 28px;"></div>
-    <div class="absolute -right-20 top-1/4 h-96 w-96 rounded-full bg-brand-700/40 blur-3xl"></div>
-    <div class="relative flex h-full flex-col justify-center p-14">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-brand-300">What you get on day one</h2>
-      <ul class="mt-6 space-y-5">
-        {% for title, text in features %}{% endfor %}
-        <li class="flex gap-3.5">
-          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "cart" class="h-4 w-4" %}</span>
-          <div>
-            <p class="font-medium text-white">A till that works offline</p>
-            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Scan, search or tap. Sales queue on the device and send themselves when the line comes back.</p>
+    <div class="absolute -right-24 top-0 h-96 w-96 rounded-full bg-brand-700/40 blur-3xl"></div>
+
+    <div class="relative mx-auto flex h-full max-w-6xl flex-col justify-center">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-brand-300">Choose your package</h2>
+          <p class="mt-1.5 text-brand-100/80">Priced per shop, never per person. Change or stop it whenever you like.</p>
+        </div>
+        <p class="text-sm text-brand-200/70">All prices in TZS</p>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {% for package in packages %}
+        <label class="plan-card" :class="plan === '{{ package.plan.pk }}' ? 'plan-card-on' : 'plan-card-off'">
+          <input type="radio" name="plan" value="{{ package.plan.pk }}" x-model="plan" class="sr-only"
+                 {% if chosen == package.plan.pk|stringformat:"s" %}checked{% endif %}>
+
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-base font-semibold text-white">{{ package.plan.name }}</p>
+              {% if package.plan.trial_days %}
+              <p class="text-xs text-brand-300">{{ package.plan.trial_days }} days free</p>
+              {% else %}
+              <p class="text-xs text-brand-300">No card, ever</p>
+              {% endif %}
+            </div>
+            <div class="flex shrink-0 items-center gap-1.5">
+              {% if package.popular %}<span class="plan-flag">Most shops</span>{% endif %}
+              <span class="plan-tick" x-show="plan === '{{ package.plan.pk }}'" x-cloak>{% icon "check" class="h-3.5 w-3.5" %}</span>
+            </div>
           </div>
-        </li>
-        <li class="flex gap-3.5">
-          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "shield" class="h-4 w-4" %}</span>
-          <div>
-            <p class="font-medium text-white">You decide who can do what</p>
-            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Build your own roles, cap discounts and voids per person, and keep cost prices off the shop floor.</p>
+
+          <p class="mt-3.5">
+            {% if package.is_free %}
+            <span class="text-xl font-bold text-white sm:text-2xl">Free</span>
+            {% else %}
+            <span class="text-xl font-bold text-white sm:text-2xl">{{ package.plan.price_monthly|floatformat:0|intcomma }}</span>
+            <span class="text-sm text-brand-200/70">/month</span>
+            {% endif %}
+          </p>
+          {% if package.months_free_on_annual %}
+          <p class="text-xs text-brand-300/90">or {{ package.plan.price_annual|floatformat:0|intcomma }} a year &mdash; {{ package.months_free_on_annual }} months free</p>
+          {% else %}
+          <p class="text-xs text-brand-300/90">&nbsp;</p>
+          {% endif %}
+
+          {% comment %}
+          On a phone, four packages opened out is two thousand pixels of
+          scrolling before the first form field. Down there each card is its
+          name, its price and one line; the detail starts at tablet.
+          {% endcomment %}
+          <p class="mt-3 border-t border-white/10 pt-3 text-sm text-brand-100/80 sm:hidden">
+            {{ package.plan.description }}
+          </p>
+
+          <ul class="mt-4 hidden space-y-1.5 border-t border-white/10 pt-4 text-sm text-brand-100/90 sm:block">
+            {% for line in package.allowance %}<li>{{ line }}</li>{% endfor %}
+          </ul>
+
+          <div class="hidden sm:block">
+            {% if package.inherits %}
+            <p class="mt-4 text-xs font-medium uppercase tracking-wide text-brand-300">{{ package.inherits }}{% if package.adds %}, plus{% endif %}</p>
+            {% endif %}
+            <ul class="mt-2 space-y-1.5 text-sm text-brand-100/90">
+              {% for line in package.adds %}
+              <li class="flex gap-2">
+                <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-400"></span>{{ line }}
+              </li>
+              {% empty %}
+              {% comment %}
+              Enterprise adds no feature to Business -- what it removes is the
+              limits -- so the plan's own sentence says it instead.
+              {% endcomment %}
+              <li class="flex gap-2">
+                <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-400"></span>{{ package.plan.description }}
+              </li>
+              {% endfor %}
+            </ul>
           </div>
-        </li>
-        <li class="flex gap-3.5">
-          <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-800 text-brand-200">{% icon "credit-card" class="h-4 w-4" %}</span>
-          <div>
-            <p class="font-medium text-white">Know what is missing</p>
-            <p class="mt-0.5 text-sm leading-relaxed text-brand-200/80">Every shift counts the drawer and records the difference against a name.</p>
-          </div>
-        </li>
-      </ul>
+        </label>
+        {% endfor %}
+      </div>
+
+      <p class="mt-5 text-sm text-brand-200/70">
+        Nothing is charged today. Start on any package and move to another when the shop needs it.
+      </p>
     </div>
   </div>
-</div>
+</form>
 {% endblock %}

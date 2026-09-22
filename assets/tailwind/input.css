@@ -584,6 +584,32 @@
      costs too many rows, so there the picture steps aside and the tile is a
      short strip. A product with no photograph keeps the same shape either
      way, so the grid stays a grid. */
+  /* The packages on the signup page. A radio wearing a card: the whole
+     thing is a label, so a tap anywhere on it picks that package, and it
+     still works with JavaScript off. */
+  .plan-card {
+    @apply relative flex cursor-pointer flex-col rounded-2xl p-5 text-left
+           ring-1 transition duration-150;
+  }
+  .plan-card-off {
+    @apply bg-white/[0.04] ring-white/10 hover:bg-white/[0.07] hover:ring-white/20;
+  }
+  .plan-card-on {
+    @apply bg-white/[0.11] ring-2 ring-brand-400 shadow-lg shadow-black/20;
+  }
+  /* Keyboard users get the same ring the mouse does. */
+  .plan-card:focus-within {
+    @apply ring-2 ring-brand-300;
+  }
+  .plan-tick {
+    @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-full
+           bg-brand-400 text-brand-950;
+  }
+  .plan-flag {
+    @apply shrink-0 rounded-full bg-brand-400/15 px-2.5 py-1 text-[11px]
+           font-semibold uppercase tracking-wide text-brand-300;
+  }
+
   /* The category deck. The chosen category is a tab in the true sense: it
      rises out of the row and joins the white panel the goods sit on, so the
      eye runs from the word straight down into the shelf it opened. */
