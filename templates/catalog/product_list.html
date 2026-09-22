@@ -27,6 +27,12 @@
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">
       {% can_do "product.manage" as may_manage %}
       {% if may_manage %}
+        {% comment %}
+        The shelves are one click from the products that sit on them, not
+        three clicks away in Settings.
+        {% endcomment %}
+        {% can_do "settings.edit" as may_shelve %}
+        {% if may_shelve %}<a href="{% url 'catalog:taxonomy' %}" class="btn btn-secondary flex-1 sm:flex-none">{% icon "tag" %} Categories</a>{% endif %}
         <a href="{% url 'catalog:product_import' %}" class="btn btn-secondary flex-1 sm:flex-none">{% icon "upload" %} Import</a>
         <a href="{% url 'catalog:product_create' %}" hx-get="{% url 'catalog:product_create' %}" hx-target="#modal" class="btn btn-primary flex-1 sm:flex-none">{% icon "plus" %} New product</a>
       {% endif %}

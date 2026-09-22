@@ -123,10 +123,10 @@ def _create_defaults(tenant, branch):
         Unit.objects.create(name=unit_name, code=code, allows_decimal=decimal)
 
     vat = TaxRate.objects.create(
-        name="VAT 18%", rate=18, is_inclusive=True, is_default=True
+        name="VAT 18%", rate=18, is_default=True
     )
-    TaxRate.objects.create(name="Zero rated", rate=0, is_inclusive=True)
-    TaxRate.objects.create(name="Exempt", rate=0, is_inclusive=True)
+    TaxRate.objects.create(name="Zero rated", rate=0)
+    TaxRate.objects.create(name="Exempt", rate=0)
 
     PriceList.objects.create(name="Retail", kind=PriceListKind.RETAIL, is_default=True)
 

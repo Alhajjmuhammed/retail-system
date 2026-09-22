@@ -104,7 +104,6 @@ class TenantSettings(TenantModel):
         blank=True,
         related_name="+",
     )
-    prices_include_tax = models.BooleanField(default=True)
 
     fiscal_provider = models.CharField(max_length=40, blank=True)
     fiscal_config = models.JSONField(default=dict, blank=True)

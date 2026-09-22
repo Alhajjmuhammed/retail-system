@@ -116,9 +116,18 @@ class Unit(TenantModel):
 
 
 class TaxRate(TenantModel):
+    """
+    A VAT rate a product can carry.
+
+    Prices include VAT. That is how a shop here quotes -- the price on the
+    shelf is what the customer hands over -- and the tax is worked out of it
+    rather than added to it. There used to be a switch on this row and
+    another on the business settings offering to change that; neither was
+    ever read by the till, so both said something untrue.
+    """
+
     name = models.CharField(max_length=40)
     rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    is_inclusive = models.BooleanField(default=True)
     # The code the revenue authority expects on a fiscal receipt.
     fiscal_code = models.CharField(max_length=10, blank=True)
     is_default = models.BooleanField(default=False)

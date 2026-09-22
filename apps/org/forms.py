@@ -67,7 +67,7 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = TenantSettings
         fields = [
-            "cost_method", "prices_include_tax", "default_tax_rate",
+            "cost_method", "default_tax_rate",
             "negative_stock_allowed", "low_stock_alerts", "expiry_warning_days",
             "receipt_header", "receipt_footer", "show_tin_on_receipt",
             "fiscal_provider",
@@ -86,10 +86,6 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "What an item costs you",
             "Used to work out profit. Best chosen once: changing it later "
             "re-works the profit on everything you have already sold.",
-        ),
-        "prices_include_tax": (
-            "Shelf prices already include VAT",
-            "Normal in Tanzania. The price on the shelf is what the customer pays.",
         ),
         "default_tax_rate": (
             "VAT on a new product",

@@ -41,16 +41,12 @@
   <div>
     <label class="label" for="rate">Rate %</label>
     <input type="number" step="0.01" min="0" max="100" name="rate" id="rate" value="{{ request.POST.rate|default:object.rate }}" class="input" required>
-    <p class="hint">Sales already made keep the rate they were charged at.</p>
+    <p class="hint">Prices include this &mdash; a product priced 1,000 at 18% is 847.46 of goods and 152.54 of VAT. Sales already made keep the rate they were charged at.</p>
   </div>
   <div>
     <label class="label" for="fiscal_code">Code for the revenue authority</label>
     <input name="fiscal_code" id="fiscal_code" value="{{ object.fiscal_code }}" maxlength="10" class="input">
   </div>
-  <label class="flex items-center gap-2.5 text-sm text-ink-700">
-    <input type="checkbox" name="is_inclusive" class="checkbox" {% if object.is_inclusive %}checked{% endif %}>
-    Prices already include this
-  </label>
   <label class="flex items-center gap-2.5 text-sm text-ink-700">
     <input type="checkbox" name="is_default" class="checkbox" {% if object.is_default %}checked disabled{% endif %}>
     Use for new products{% if object.is_default %} <span class="hint">(choose another rate to change this)</span>{% endif %}

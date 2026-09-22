@@ -243,3 +243,47 @@ def test_the_products_page_does_not_cost_a_query_per_shelf(
         assert client.get(url, filtered).status_code == 200
 
     assert len(many) == len(few), f"{len(few)} -> {len(many)} with 12 more shelves"
+
+
+def test_a_shelf_can_be_made_while_adding_the_product(shop, main_branch, owner, client):
+    """
+    Sending an owner to Settings to invent "Food" before they can save sugar
+    is the errand that ends with every product in one category. Typed beside
+    a chosen shelf, the new one goes inside it.
+    """
+    from apps.catalog.models import TaxRate, Unit
+
+    client.force_login(owner)
+    with tenant_context(shop, branch=main_branch):
+        piece = Unit.objects.get(code="pc")
+        vat = TaxRate.objects.filter(is_default=True).first()
+        drinks = Category.objects.create(name="Vinywaji")
+
+    def add(name, category, fresh):
+        return client.post(reverse("catalog:product_create"), {
+            "name": name, "sku": "", "barcode": "", "category": category or "",
+            "new_category": fresh, "brand": "", "base_unit": piece.pk,
+            "tax_rate": vat.pk, "description": "", "price": "1000", "cost": "",
+            "opening_qty": "", "reorder_level": "", "min_price": "",
+            "track_stock": "on", "sellable_at_pos": "on", "is_active": "on",
+        }, follow=True)
+
+    add("Soda 350ml", drinks.pk, "Soda")
+    with tenant_context(shop, branch=main_branch):
+        soda = Category.objects.get(name="Soda")
+        assert soda.parent_id == drinks.pk           # inside the one chosen
+        assert Product.objects.get(name="Soda 350ml").category_id == soda.pk
+
+    # Nothing chosen above: a new top shelf.
+    add("Sabuni", "", "Nyumbani")
+    with tenant_context(shop, branch=main_branch):
+        assert Category.objects.get(name="Nyumbani").parent_id is None
+
+    # And it still refuses a fourth level.
+    with tenant_context(shop, branch=main_branch):
+        bottles = Category.objects.create(
+            name="Chupa", parent=Category.objects.get(name="Soda"))
+    response = add("Nusu lita", bottles.pk, "Ndogo")
+    assert "as deep as a category goes" in response.content.decode()
+    with tenant_context(shop, branch=main_branch):
+        assert not Category.objects.filter(name="Ndogo").exists()

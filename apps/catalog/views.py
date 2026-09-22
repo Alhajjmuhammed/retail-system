@@ -549,7 +549,6 @@ def taxonomy(request):
                 return redirect("catalog:taxonomy")
             obj = TaxRate.objects.create(
                 name=name, rate=rate,
-                is_inclusive=request.POST.get("is_inclusive") == "on",
                 fiscal_code=request.POST.get("fiscal_code", "").strip()[:10],
             )
         audit.record(f"{kind}.created", obj=obj, after={"name": name},
@@ -659,7 +658,6 @@ def taxonomy_edit(request, kind, pk):
             if rate is None or not (0 <= rate <= 100):
                 return form("A VAT rate is a percentage between 0 and 100.")
             obj.rate = rate
-            obj.is_inclusive = request.POST.get("is_inclusive") == "on"
             obj.fiscal_code = request.POST.get("fiscal_code", "").strip()[:10]
             if request.POST.get("is_default") == "on":
                 model.objects.exclude(pk=obj.pk).update(is_default=False)

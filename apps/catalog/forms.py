@@ -18,6 +18,10 @@ class ProductForm(TailwindMixin, forms.ModelForm):
         label="Selling price", max_digits=12, decimal_places=2, required=False, min_value=0
     )
     barcode = forms.CharField(label="Barcode", max_length=64, required=False)
+    new_category = forms.CharField(
+        label="or add a new one", max_length=80, required=False,
+        help_text="It goes inside the one chosen above. Leave that empty for a new top shelf.",
+    )
     opening_qty = forms.DecimalField(
         label="Stock on hand", max_digits=14, decimal_places=3, required=False, min_value=0,
         help_text="Only on a new product. Adjust stock afterwards instead.",
@@ -114,6 +118,27 @@ class ProductForm(TailwindMixin, forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+
+        # A shelf can be made here rather than in Settings: an owner adding
+        # sugar should not have to leave the product to invent "Food" first.
+        # Typed alongside a chosen category, it goes inside it -- which is
+        # also the clearest way to show that shelves nest at all.
+        fresh = (data.get("new_category") or "").strip()
+        if fresh:
+            from apps.catalog.models import CATEGORY_DEPTH, Category
+
+            parent = data.get("category")
+            if parent is not None and parent.level >= CATEGORY_DEPTH:
+                self.add_error(
+                    "new_category",
+                    f"{parent.path_label} is as deep as a category goes. "
+                    "Choose one further up, or leave it empty.",
+                )
+            else:
+                data["category"], _ = Category.objects.get_or_create(
+                    name=fresh, parent=parent, defaults={"is_active": True}
+                )
+
         price, floor = data.get("price"), data.get("min_price")
         if floor is not None and floor < 0:
             self.add_error("min_price", "Cannot be below zero.")
@@ -148,7 +173,7 @@ class CategoryForm(TailwindMixin, forms.ModelForm):
 class TaxRateForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = TaxRate
-        fields = ["name", "rate", "is_inclusive", "fiscal_code", "is_default"]
+        fields = ["name", "rate", "fiscal_code", "is_default"]
 
 
 class UnitForm(TailwindMixin, forms.ModelForm):

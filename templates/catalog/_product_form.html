@@ -25,7 +25,22 @@ forms inside forms are ignored by browsers.
     {% include "catalog/_field.html" with field=form.name label="Name" cls="sm:col-span-2" %}
     {% if form.barcode %}{% include "catalog/_field.html" with field=form.barcode label="Barcode" hint="Scan it into this box, or leave empty for loose goods." %}{% endif %}
     {% include "catalog/_field.html" with field=form.sku label="Your own code" %}
-    {% include "catalog/_field.html" with field=form.category label="Category" %}
+    <div>
+      <label class="label" for="{{ form.category.id_for_label }}">Category</label>
+      {{ form.category }}
+      {% if form.category.errors %}<p class="hint text-red-600">{{ form.category.errors.0 }}</p>{% endif %}
+      {% comment %}
+      Making a shelf belongs here, beside the product going on it. Sending an
+      owner to Settings to invent "Food" before they can save sugar is the
+      kind of errand that ends with everything in one category.
+      {% endcomment %}
+      <div class="mt-2">
+        <label class="label" for="{{ form.new_category.id_for_label }}">{{ form.new_category.label }}</label>
+        {{ form.new_category }}
+        {% if form.new_category.errors %}<p class="hint text-red-600">{{ form.new_category.errors.0 }}</p>
+        {% else %}<p class="hint">{{ form.new_category.help_text }}</p>{% endif %}
+      </div>
+    </div>
     {% include "catalog/_field.html" with field=form.brand label="Brand" %}
     {% include "catalog/_field.html" with field=form.base_unit label="Sold by" %}
     {% include "catalog/_field.html" with field=form.tax_rate label="VAT" %}

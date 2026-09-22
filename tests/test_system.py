@@ -803,3 +803,39 @@ def test_the_sign_in_page_does_not_advertise_signup_unless_asked(client, db, set
     settings.SHOW_SIGNUP_LINK = True
     page = client.get(reverse("accounts:login"))
     assert "Start a free trial" in page.content.decode()
+
+
+def test_vat_comes_out_of_the_price_and_nothing_offers_otherwise():
+    """
+    A shelf price is what the customer hands over; the VAT is inside it.
+
+    Two switches used to offer the opposite -- one on each VAT rate, one on
+    the business settings -- and neither was read by the till. Unticking
+    either charged the customer exactly the same and declared the tax as
+    though it were inside, which is wrong in a way nobody notices until an
+    audit. They are gone, and this is what stops them coming back.
+    """
+    from decimal import Decimal
+    from pathlib import Path
+
+    from apps.pos.services import _tax_for
+
+    class Line:
+        qty, discount = Decimal("1"), Decimal("0")
+
+        def __init__(self, price, rate):
+            self.unit_price, self.tax_rate = Decimal(price), Decimal(rate)
+
+    # 1,000 at 18% is 847.46 of goods and 152.54 of VAT -- not 1,180.
+    assert _tax_for(Line("1000", "18"), "TZS") == Decimal("152.54")
+    assert _tax_for(Line("1000", "0"), "TZS") == Decimal("0")
+
+    for name in ("apps/catalog/models.py", "apps/org/models.py",
+                 "apps/catalog/forms.py", "apps/org/forms.py"):
+        source = Path(name).read_text()
+        assert "is_inclusive" not in source, name
+        assert "prices_include_tax" not in source, name
+
+    for name in ("templates/catalog/taxonomy.html",
+                 "templates/catalog/_taxonomy_form.html"):
+        assert "is_inclusive" not in Path(name).read_text(), name

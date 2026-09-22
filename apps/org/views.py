@@ -104,7 +104,7 @@ def business(request):
     # are a yes/no. The template lays each group out; the words are the
     # form's.
     boxes = ["cost_method", "default_tax_rate", "expiry_warning_days", "fiscal_provider"]
-    switches = ["prices_include_tax", "negative_stock_allowed",
+    switches = ["negative_stock_allowed",
                 "low_stock_alerts", "show_tin_on_receipt"]
     return render(
         request,
