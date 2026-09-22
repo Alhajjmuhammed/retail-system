@@ -24,10 +24,15 @@ DB_NAME="${DB_NAME:-retail}"
 
 AS=""
 [ -n "${PG_SUDO_USER:-}" ] && AS="sudo -u ${PG_SUDO_USER}"
+# A machine with two clusters on it has two sets of clients, and the one
+# on PATH is whichever Debian made the default -- pg_dump refuses to talk
+# to a newer server. PG_BIN_DIR names the right one outright. It has to be
+# a path, not an environment variable like PGCLUSTER: sudo drops those.
+PG="${PG_BIN_DIR:+${PG_BIN_DIR%/}/}"
 
 if [ -n "${DATABASE_URL:-}" ]; then
     TARGET="${DATABASE_URL%%\?*}"
-    run_restore() { $AS pg_restore --dbname="$DATABASE_URL" "$@"; }
+    run_restore() { $AS ${PG}pg_restore --dbname="$DATABASE_URL" "$@"; }
 else
     TARGET="${DB_NAME} in the ${DB_SERVICE} container"
     run_restore() { $COMPOSE exec -T "$DB_SERVICE" \

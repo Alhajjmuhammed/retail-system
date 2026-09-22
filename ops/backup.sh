@@ -33,12 +33,17 @@ FILE="${BACKUP_DIR}/retail-${STAMP}.dump"
 # dump would be refused.
 AS=""
 [ -n "${PG_SUDO_USER:-}" ] && AS="sudo -u ${PG_SUDO_USER}"
+# A machine with two clusters on it has two sets of clients, and the one
+# on PATH is whichever Debian made the default -- pg_dump refuses to talk
+# to a newer server. PG_BIN_DIR names the right one outright. It has to be
+# a path, not an environment variable like PGCLUSTER: sudo drops those.
+PG="${PG_BIN_DIR:+${PG_BIN_DIR%/}/}"
 
 # Both clients run in the same place, so their versions always match the
 # server's -- a mismatch is the usual reason a dump refuses to restore.
 if [ -n "${DATABASE_URL:-}" ]; then
-    run_dump()    { $AS pg_dump --format=custom --no-owner --dbname="$DATABASE_URL"; }
-    run_restore() { $AS pg_restore "$@"; }
+    run_dump()    { $AS ${PG}pg_dump --format=custom --no-owner --dbname="$DATABASE_URL"; }
+    run_restore() { $AS ${PG}pg_restore "$@"; }
 else
     run_dump()    { $COMPOSE exec -T "$DB_SERVICE" \
                         pg_dump --format=custom --no-owner \

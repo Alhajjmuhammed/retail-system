@@ -198,11 +198,20 @@ to be taken by the superuser -- the application's own role is bound by
 row-level security and `pg_dump` refuses rather than handing back a file
 with no rows in it:
 
+Put it in `/etc/cron.d/retail-backup`, where a machine's other projects
+keep theirs, rather than in root's personal crontab:
+
 ```
-0 2 * * * cd /var/www/retail && PG_SUDO_USER=postgres \
+# Nightly backup of the retail system (03:10 UTC)
+10 3 * * * root cd /var/www/retail && PG_BIN_DIR=/usr/lib/postgresql/16/bin \
+    PG_SUDO_USER=postgres BACKUP_DIR=/var/backups/retail \
     DATABASE_URL='postgresql:///retail?host=/var/run/postgresql&port=5433' \
     ops/backup.sh >> /var/log/retail-backup.log 2>&1
 ```
+
+`PG_BIN_DIR` matters on a host with more than one cluster installed: the
+`pg_dump` on PATH is whichever Debian made the default, and it refuses to
+dump a newer server.
 
 It dumps, refuses to keep a dump it cannot read back, refuses to keep one
 that is suspiciously small, copies it off the machine and keeps 30 days.
