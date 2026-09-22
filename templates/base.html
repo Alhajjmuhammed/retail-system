@@ -27,6 +27,14 @@
   confirms, and a till that cannot load its scripts cannot sell offline.
   {% endcomment %}
   <script src="{% versioned_static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
+  {% comment %}
+  Before Alpine, not after: this registers the confirm store on alpine:init,
+  and deferred scripts run in the order they appear. At the foot of the body
+  -- where the dialog's markup lives -- Alpine had already started, the event
+  had already fired, and every delete button threw "$store.confirm is
+  undefined" and did nothing.
+  {% endcomment %}
+  <script src="{% versioned_static 'js/confirm.js' %}" defer></script>
   <script src="{% versioned_static 'vendor/alpine-3.14.9.min.js' %}" defer></script>
 </head>
 <body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
