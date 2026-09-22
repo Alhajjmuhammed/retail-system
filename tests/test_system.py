@@ -526,6 +526,7 @@ SETTINGS_SCREENS = [
     "org:branches",
     "org:branch_create",
     "catalog:taxonomy",
+    "catalog:categories",
     "catalog:tiles",
 ]
 
@@ -603,7 +604,7 @@ def test_a_shop_can_add_its_own_vat_rate_and_unit(client, shop, owner):
 
     client.force_login(owner)
     client.post(reverse("catalog:taxonomy"),
-                {"kind": "tax", "name": "VAT 15%", "rate": "15", "is_inclusive": "on"},
+                {"kind": "tax", "name": "VAT 15%", "rate": "15"},
                 follow=True)
     client.post(reverse("catalog:taxonomy"),
                 {"kind": "unit", "name": "Metre", "code": "m", "allows_decimal": "on"},
@@ -837,5 +838,6 @@ def test_vat_comes_out_of_the_price_and_nothing_offers_otherwise():
         assert "prices_include_tax" not in source, name
 
     for name in ("templates/catalog/taxonomy.html",
+                 "templates/catalog/categories.html",
                  "templates/catalog/_taxonomy_form.html"):
         assert "is_inclusive" not in Path(name).read_text(), name

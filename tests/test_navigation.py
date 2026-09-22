@@ -27,6 +27,7 @@ PAGES = [
     ("core:dashboard", "Dashboard"),
     ("pos:sale_list", "Sales"),
     ("catalog:product_list", "Products"),
+    ("catalog:categories", "How your products are grouped"),
     ("inventory:stock_list", "Stock"),
     ("inventory:transfer_list", "Move stock between branches"),
     ("inventory:count_list", "Count the shelves"),

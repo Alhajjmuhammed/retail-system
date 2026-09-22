@@ -459,12 +459,15 @@ def product_search(request):
 
 @login_required
 @requires("settings.edit")
-def taxonomy(request):
+def taxonomy(request, only=None):
     """
-    Categories, brands, units and tax rates on one screen.
+    The small lists behind a product: brands, units and tax rates -- and,
+    through its own door, the categories.
 
-    Four small lists that a shop touches rarely. Giving each its own page
-    would be four clicks to do one setup job.
+    One view, two pages. Categories belong beside the products that sit on
+    them, in Inventory; the rest are setup a shop touches twice a year and
+    stay in Settings. Splitting the handling as well would mean two copies
+    of the add-restore-clash logic, which is where the two would drift.
     """
     from apps.catalog.models import Brand, TaxRate, Unit
 
@@ -472,7 +475,7 @@ def taxonomy(request):
         kind = request.POST.get("kind")
         if kind not in TAXONOMY_MODELS:
             messages.error(request, "Unknown list.")
-            return redirect("catalog:taxonomy")
+            return redirect(_taxonomy_home(only))
         label, model = _taxonomy_model(kind)
 
         if request.POST.get("action") == "restore":
@@ -481,19 +484,19 @@ def taxonomy(request):
             obj.save(update_fields=["is_active", "updated_at"])
             audit.record(f"{kind}.restored", obj=obj, ip=audit.client_ip(request))
             messages.success(request, f"{obj.name} is back on.")
-            return redirect("catalog:taxonomy")
+            return redirect(_taxonomy_home(only))
 
         name = request.POST.get("name", "").strip()
         if not name:
             messages.error(request, "A name is required.")
-            return redirect("catalog:taxonomy")
+            return redirect(_taxonomy_home(only))
         # Lengths from the model: too long used to reach the database as a 500.
         limit = model._meta.get_field("name").max_length
         code = request.POST.get("code", "").strip()
         if len(name) > limit or (kind == "unit" and len(code) > 10):
             messages.error(request, f"Too long: a name is at most {limit} characters"
                                     + (", a unit code at most 10." if kind == "unit" else "."))
-            return redirect("catalog:taxonomy")
+            return redirect(_taxonomy_home(only))
 
         # Already there? Say so -- or switch it back on if it was retired.
         # "Added" used to show for a name that already existed, and a retired
@@ -504,14 +507,14 @@ def taxonomy(request):
                 pk=int_or(request.POST.get("parent")), is_active=True).first()
             if parent is None:
                 messages.error(request, "That category is no longer there.")
-                return redirect("catalog:taxonomy")
+                return redirect(_taxonomy_home(only))
             if parent.level >= CATEGORY_DEPTH:
                 messages.error(
                     request,
                     f"A category goes three deep at most, like "
                     f"{parent.path_label}. Put this one further up.",
                 )
-                return redirect("catalog:taxonomy")
+                return redirect(_taxonomy_home(only))
 
         if kind == "unit":
             code = code or name[:10].lower()
@@ -531,7 +534,7 @@ def taxonomy(request):
                 clash.save(update_fields=["is_active", "updated_at"])
                 audit.record(f"{kind}.restored", obj=clash, ip=audit.client_ip(request))
                 messages.success(request, f"{clash.name} was switched off; it is back on.")
-            return redirect("catalog:taxonomy")
+            return redirect(_taxonomy_home(only))
 
         if kind == "category":
             obj = Category.objects.create(name=name, parent=parent)
@@ -546,7 +549,7 @@ def taxonomy(request):
             rate = decimal_or_none(request.POST.get("rate"))
             if rate is None or rate < 0 or rate > 100:
                 messages.error(request, "A VAT rate is a percentage between 0 and 100.")
-                return redirect("catalog:taxonomy")
+                return redirect(_taxonomy_home(only))
             obj = TaxRate.objects.create(
                 name=name, rate=rate,
                 fiscal_code=request.POST.get("fiscal_code", "").strip()[:10],
@@ -557,25 +560,35 @@ def taxonomy(request):
             request,
             f"{name} added inside {parent.path_label}." if parent else f"{name} added.",
         )
-        return redirect("catalog:taxonomy")
+        return redirect(_taxonomy_home(only))
+
+    if only == "category":
+        return render(request, "catalog/categories.html", {
+            "categories": category_tree(),
+            "category_depth": CATEGORY_DEPTH,
+            "retired": [("category", "Category",
+                         Category.objects.filter(is_active=False).order_by("name"))],
+        })
 
     return render(
         request,
         "catalog/taxonomy.html",
         {
-            "categories": category_tree(),
-            "category_depth": CATEGORY_DEPTH,
             "brands": Brand.objects.filter(is_active=True).order_by("name"),
             "units": Unit.objects.filter(is_active=True).order_by("name"),
             "taxes": TaxRate.objects.filter(is_active=True).order_by("name"),
             "retired": [
                 ("tax", "VAT rate", TaxRate.objects.filter(is_active=False).order_by("name")),
                 ("unit", "Unit", Unit.objects.filter(is_active=False).order_by("name")),
-                ("category", "Category", Category.objects.filter(is_active=False).order_by("name")),
                 ("brand", "Brand", Brand.objects.filter(is_active=False).order_by("name")),
             ],
         },
     )
+
+
+def _taxonomy_home(only):
+    """Back to the door this came in through."""
+    return "catalog:categories" if only == "category" else "catalog:taxonomy"
 
 
 TAXONOMY_MODELS = {
@@ -667,7 +680,7 @@ def taxonomy_edit(request, kind, pk):
         audit.record(f"{kind}.updated", obj=obj, before=before,
                      after=audit.snapshot(obj), ip=audit.client_ip(request))
         messages.success(request, f"{obj.name} saved.")
-        return close_modal(request, reverse("catalog:taxonomy"))
+        return close_modal(request, reverse(_taxonomy_home(kind)))
 
     return form()
 
@@ -719,7 +732,7 @@ def taxonomy_delete(request, kind, pk):
         messages.warning(request, outcome.message)
     else:
         messages.success(request, outcome.message)
-    return redirect("catalog:taxonomy")
+    return redirect(_taxonomy_home(kind))
 
 
 @login_required

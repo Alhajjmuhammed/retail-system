@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Categories, units and VAT{% endblock %}
-{% block heading %}Categories, units and VAT{% endblock %}
+{% block title %}Units, brands and VAT{% endblock %}
+{% block heading %}Units, brands and VAT{% endblock %}
 
 {% block content %}
 <p class="section-lead mb-5">Click anything to change or remove it. A rate that has already been charged is switched off rather than deleted, so your returns stay correct.</p>
@@ -48,46 +48,6 @@
       <div class="min-w-28 flex-1"><label class="label" for="unit_name">Name</label><input name="name" id="unit_name" class="input" placeholder="Kilogram" maxlength="40" required></div>
       <div class="w-20"><label class="label" for="unit_code">Short</label><input name="code" id="unit_code" class="input" placeholder="kg" maxlength="10"></div>
       <label class="flex items-center gap-2 pb-2.5 text-xs text-ink-600"><input type="checkbox" name="allows_decimal" class="checkbox"> half units</label>
-      <button type="submit" class="btn btn-secondary">Add</button>
-    </form>
-  </div>
-
-  <div class="card" x-data="{ inside: '', insideName: '' }">
-    <div class="card-head">
-      <h2 class="card-title">Categories</h2>
-      <span class="hint">Drinks, then Soda, then Bottles &mdash; three deep at most.</span>
-    </div>
-    {% comment %}
-    A shelf per row with what is inside it stepped in under it. Badges in one
-    wrapped block could not show what sat inside what, which is the only
-    reason this list is worth having.
-    {% endcomment %}
-    <div class="divide-y divide-ink-100">
-      {% for category in categories %}
-      <div class="flex items-center justify-between gap-2 px-5 py-2 text-sm hover:bg-ink-50">
-        <a href="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-target="#modal"
-           class="flex flex-1 items-center gap-2 py-0.5 {% if category.level == 1 %}font-semibold text-ink-800{% elif category.level == 2 %}pl-5 text-ink-700{% else %}pl-10 text-ink-600{% endif %}">
-          {% if category.level > 1 %}<span class="text-ink-300" aria-hidden="true">&#8735;</span>{% endif %}
-          {{ category.name }}
-        </a>
-        {% if category.level < category_depth %}
-        <button type="button" @click="inside = '{{ category.pk }}'; insideName = '{{ category.name|escapejs }}'; $nextTick(() => $refs.catName.focus())"
-                class="btn btn-secondary btn-sm">{% icon "plus" class="h-4 w-4" %} Add inside</button>
-        {% endif %}
-      </div>
-      {% empty %}<p class="px-5 py-3 text-sm text-ink-500">None yet. Start with a shelf like Drinks.</p>{% endfor %}
-    </div>
-    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
-      {% csrf_token %}<input type="hidden" name="kind" value="category">
-      <input type="hidden" name="parent" :value="inside">
-      <div class="flex-1">
-        <label class="label" for="cat_name">
-          <span x-show="!inside">New category</span>
-          <span x-show="inside" x-cloak>Inside <span x-text="insideName" class="font-semibold"></span></span>
-        </label>
-        <input name="name" id="cat_name" x-ref="catName" class="input" placeholder="Drinks" maxlength="80" required>
-      </div>
-      <button type="button" x-show="inside" x-cloak @click="inside = ''; insideName = ''" class="btn btn-secondary">Cancel</button>
       <button type="submit" class="btn btn-secondary">Add</button>
     </form>
   </div>

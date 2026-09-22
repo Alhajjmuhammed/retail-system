@@ -14,6 +14,7 @@ urlpatterns = [
     path("search/", views.product_search, name="product_search"),
     path("variants/<int:pk>/barcodes/", views.barcode_add, name="barcode_add"),
     path("barcodes/<int:pk>/delete/", views.barcode_delete, name="barcode_delete"),
+    path("categories/", views.taxonomy, {"only": "category"}, name="categories"),
     path("settings/taxonomy/", views.taxonomy, name="taxonomy"),
     path("settings/taxonomy/<str:kind>/<int:pk>/", views.taxonomy_edit, name="taxonomy_edit"),
     path("settings/taxonomy/<str:kind>/<int:pk>/delete/", views.taxonomy_delete, name="taxonomy_delete"),

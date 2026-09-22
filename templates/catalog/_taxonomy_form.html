@@ -55,7 +55,7 @@
 
   <div class="flex justify-end gap-2">
     {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>
-    {% else %}<a href="{% url 'catalog:taxonomy' %}" class="btn btn-secondary">Cancel</a>{% endif %}
+    {% else %}<a href="{% if kind == 'category' %}{% url 'catalog:categories' %}{% else %}{% url 'catalog:taxonomy' %}{% endif %}" class="btn btn-secondary">Cancel</a>{% endif %}
     <button type="submit" class="btn btn-primary">Save</button>
   </div>
 </form>
