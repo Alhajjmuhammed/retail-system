@@ -6,6 +6,10 @@ the fiscal receipts page used to light "Goods received", because the check
 was a substring test and "fiscal_receipts" contains "receipt". Two, a shop
 carrying words it has never used: a duka that has never moved stock between
 branches should not read "Move stock" every day.
+
+The fiscal page is no longer in the menu at all -- nothing is submitted to
+the revenue authority yet, so it was a door onto an empty room -- but the
+lighting rule it taught is why every entry is scoped to its own app.
 """
 
 import re
@@ -32,7 +36,6 @@ PAGES = [
     ("purchasing:supplier_list", "Who you buy from"),
     ("customers:customer_list", "Customers"),
     ("finance:expense_list", "Expenses"),
-    ("pos:fiscal_receipts", "Tax copies sent to TRA"),
     ("finance:cashups", "Counting the drawer at the end of a shift"),
     ("reports:index", "Sales report"),
     ("reports:margin", "Profit"),

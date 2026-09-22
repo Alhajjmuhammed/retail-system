@@ -64,10 +64,13 @@ def test_a_paid_plan_still_gets_its_trial(db, owner):
 
 def test_the_welcome_message_says_something_true(client, db):
     """"On a 0-day trial" is not a sentence anybody should read."""
+    from apps.tenancy.models import Plan
+
     response = client.post(reverse("signup"), {
         "business_name": "Duka la Mwanzo", "name": "Asha",
         "email": "asha@mwanzo.test", "phone": "0712000000",
         "password": "chamchama12345",
+        "plan": Plan.objects.get(code="free").pk,
     }, follow=True)
     assert response.status_code == 200
     body = response.content.decode()

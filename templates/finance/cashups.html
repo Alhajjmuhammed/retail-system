@@ -11,7 +11,17 @@
 
   {% if open_shifts %}
   <div class="card">
-    <div class="card-head"><h2 class="card-title">Still open</h2><span class="hint">A drawer left open keeps its till locked. Count it and close it here.</span></div>
+    <div class="card-head">
+      <h2 class="card-title">Still open</h2>
+      <span class="hint">A drawer left open keeps its till locked.</span>
+    </div>
+    <p class="border-b border-ink-100 px-5 pb-3 text-sm text-ink-600">
+      Go to the till, count the notes and coins in the drawer, and type the
+      total here. The system then says what should have been there and
+      records the difference against whoever had the till &mdash; so count
+      the money <span class="font-medium text-ink-800">before</span> you look
+      at the figure. That order is the point.
+    </p>
     <div class="divide-y divide-ink-100">
       {% for sh in open_shifts %}
       <form method="post" action="{% url 'pos:shift_force_close' sh.pk %}" class="flex flex-wrap items-end gap-3 px-5 py-3" x-data
@@ -21,7 +31,11 @@
           <p class="text-sm font-medium text-ink-800">{{ sh.user.name }} &middot; {{ sh.register }}</p>
           <p class="hint">{{ sh.branch }} &middot; open since {{ sh.opened_at|date:"j M H:i" }} ({{ sh.opened_at|ago }})</p>
         </div>
-        <div class="w-36"><label class="label" for="counted-{{ sh.pk }}">Cash counted</label><input type="number" step="0.01" min="0" name="counted_cash" id="counted-{{ sh.pk }}" class="input" required></div>
+        <div class="w-40">
+          <label class="label" for="counted-{{ sh.pk }}">What you counted</label>
+          <input type="number" step="0.01" min="0" name="counted_cash" id="counted-{{ sh.pk }}"
+                 inputmode="numeric" class="input" placeholder="e.g. 120,000" required>
+        </div>
         <button type="submit" class="btn btn-secondary">Close it</button>
       </form>
       {% endfor %}

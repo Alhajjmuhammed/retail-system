@@ -17,6 +17,10 @@ pytestmark = pytest.mark.django_db
 
 
 def test_signup_creates_a_working_shop(client):
+    # Signing up asks which package, so the form carries one. Free here,
+    # because what this checks is the shop underneath it.
+    from apps.tenancy.models import Plan
+
     response = client.post(
         reverse("signup"),
         {
@@ -25,6 +29,7 @@ def test_signup_creates_a_working_shop(client):
             "email": "salma@example.com",
             "phone": "0777000000",
             "password": "correct-horse-battery",
+            "plan": Plan.objects.get(code="free").pk,
         },
         follow=True,
     )
@@ -35,8 +40,8 @@ def test_signup_creates_a_working_shop(client):
         # A shop is usable the moment it is created: an owner, a branch, a
         # till, roles, units, tax rates and a price list.
         #
-        # Signing up lands on Free, which has no trial days -- so the shop is
-        # simply on the plan. It used to be given a trial of zero days, which
+        # Free has no trial days, so the shop is simply on the plan. It used
+        # to be given a trial of zero days, which
         # the nightly job then read as a shop that had failed to pay for
         # something free: past due, grace, and finally suspended.
         assert tenant.subscription.plan.code == "free"
