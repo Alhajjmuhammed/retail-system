@@ -1,0 +1,43 @@
+[Unit]
+Description=Retail System (Django via gunicorn)
+Documentation=https://retail.easyfixsoft.com
+After=network.target postgresql@16-main.service redis-server.service
+Wants=postgresql@16-main.service redis-server.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/retail
+EnvironmentFile=/var/www/retail/.env
+Environment=PYTHONUNBUFFERED=1
+# www-data's home is not writable; gunicorn keeps its control socket under $HOME.
+Environment=HOME=/run/retail
+
+# Two workers, two threads: this box also runs a mail server and nine other
+# sites. The threads keep the till's offline sync answering while a report
+# runs. A unix socket keeps the app off the network and needs no port.
+RuntimeDirectory=retail
+RuntimeDirectoryMode=0755
+ExecStart=/var/www/retail/venv/bin/gunicorn \
+    --workers 2 \
+    --threads 2 \
+    --worker-class gthread \
+    --timeout 60 \
+    --bind unix:/run/retail/gunicorn.sock \
+    --access-logfile - \
+    --error-logfile - \
+    config.wsgi:application
+
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

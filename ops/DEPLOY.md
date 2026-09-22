@@ -117,6 +117,46 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: app.example.com' \
      -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/healthz     # 200
 ```
 
+## 3b. Or the ordinary way, without containers
+
+On a machine that already runs other Django sites, installing this one the
+same way they are installed is usually less trouble than adding a container
+engine. `ops/systemd/` has the three unit files and
+`ops/nginx-site-example.conf` the site, both taken from a real install.
+
+```
+# Python 3.11 or newer: the permission catalogue uses StrEnum.
+git clone <your remote> /var/www/retail && cd /var/www/retail
+python3.12 -m venv venv && ./venv/bin/pip install -r requirements.txt
+
+# The database, as a role that is NOT a superuser -- row-level security is
+# bypassed entirely by one, and tenant isolation would rest on the
+# application alone.
+sudo -u postgres psql -c "CREATE ROLE retail_app LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS"
+sudo -u postgres psql -c "CREATE DATABASE retail OWNER retail_app"
+sudo -u postgres psql -d retail -c "ALTER SCHEMA public OWNER TO retail_app"
+
+cp .env.example .env     # DATABASE_URL, REDIS_URL, the keys from step 2
+mkdir -p media private staticfiles
+./venv/bin/python manage.py migrate
+./venv/bin/python manage.py sync_permissions
+./venv/bin/python manage.py seed_plans
+./venv/bin/python manage.py apply_rls          # the second lock
+./venv/bin/python manage.py collectstatic --noinput
+chown -R www-data:www-data media private
+
+cp ops/systemd/*.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now retail retail-worker retail-beat
+```
+
+**If the machine shares its Redis with other projects**, give this one a
+database of its own: `redis-cli info keyspace` shows which are taken, then
+`REDIS_URL=redis://127.0.0.1:6379/3` and a different one for Celery.
+
+gunicorn listens on a unix socket, so there is no port to reserve and
+nothing of this is reachable from outside nginx.
+
 ## 4. TLS and nginx
 
 ```
@@ -151,6 +191,17 @@ containers**, not root's — `crontab -e`, not `sudo crontab -e`:
 ```
 crontab -e
 0 2 * * * cd /opt/retail && BACKUP_REMOTE=you@backup-host:/backups BACKUP_DIR=$HOME/backups ops/backup.sh >> $HOME/retail-backup.log 2>&1
+```
+
+Installed without containers, the database is on the host and the dump has
+to be taken by the superuser -- the application's own role is bound by
+row-level security and `pg_dump` refuses rather than handing back a file
+with no rows in it:
+
+```
+0 2 * * * cd /var/www/retail && PG_SUDO_USER=postgres \
+    DATABASE_URL='postgresql:///retail?host=/var/run/postgresql&port=5433' \
+    ops/backup.sh >> /var/log/retail-backup.log 2>&1
 ```
 
 It dumps, refuses to keep a dump it cannot read back, refuses to keep one

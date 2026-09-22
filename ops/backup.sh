@@ -27,11 +27,18 @@ DB_NAME="${DB_NAME:-retail}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 FILE="${BACKUP_DIR}/retail-${STAMP}.dump"
 
+# On a normal install the database is on the host and DATABASE_URL points at
+# it. PG_SUDO_USER runs the client as somebody else -- set it to `postgres`,
+# because the application's own role is bound by row-level security and its
+# dump would be refused.
+AS=""
+[ -n "${PG_SUDO_USER:-}" ] && AS="sudo -u ${PG_SUDO_USER}"
+
 # Both clients run in the same place, so their versions always match the
 # server's -- a mismatch is the usual reason a dump refuses to restore.
 if [ -n "${DATABASE_URL:-}" ]; then
-    run_dump()    { pg_dump --format=custom --no-owner --dbname="$DATABASE_URL"; }
-    run_restore() { pg_restore "$@"; }
+    run_dump()    { $AS pg_dump --format=custom --no-owner --dbname="$DATABASE_URL"; }
+    run_restore() { $AS pg_restore "$@"; }
 else
     run_dump()    { $COMPOSE exec -T "$DB_SERVICE" \
                         pg_dump --format=custom --no-owner \

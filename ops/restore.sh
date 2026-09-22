@@ -22,9 +22,12 @@ DB_SERVICE="${DB_SERVICE:-db}"
 DB_USER="${DB_USER:-retail_app}"
 DB_NAME="${DB_NAME:-retail}"
 
+AS=""
+[ -n "${PG_SUDO_USER:-}" ] && AS="sudo -u ${PG_SUDO_USER}"
+
 if [ -n "${DATABASE_URL:-}" ]; then
     TARGET="${DATABASE_URL%%\?*}"
-    run_restore() { pg_restore --dbname="$DATABASE_URL" "$@"; }
+    run_restore() { $AS pg_restore --dbname="$DATABASE_URL" "$@"; }
 else
     TARGET="${DB_NAME} in the ${DB_SERVICE} container"
     run_restore() { $COMPOSE exec -T "$DB_SERVICE" \

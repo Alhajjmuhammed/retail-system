@@ -1,0 +1,29 @@
+[Unit]
+Description=Retail System clock (Celery beat)
+After=network.target redis-server.service retail-worker.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/retail
+EnvironmentFile=/var/www/retail/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/run/retail-beat
+RuntimeDirectory=retail-beat
+# The schedule file has to survive a restart, or a missed night is silent.
+StateDirectory=retail
+ExecStart=/var/www/retail/venv/bin/celery -A config beat \
+    --loglevel=info --schedule=/var/lib/retail/celerybeat-schedule
+
+Restart=on-failure
+RestartSec=10s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

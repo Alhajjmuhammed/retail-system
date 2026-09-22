@@ -1,0 +1,30 @@
+[Unit]
+Description=Retail System background jobs (Celery worker)
+After=network.target postgresql@16-main.service redis-server.service
+Wants=postgresql@16-main.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/retail
+EnvironmentFile=/var/www/retail/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/run/retail-worker
+RuntimeDirectory=retail-worker
+
+# Trials, usage, the fiscal queue and stock alerts. Without this the platform
+# needs somebody watching it. One process: the jobs are small and nightly.
+ExecStart=/var/www/retail/venv/bin/celery -A config worker \
+    --loglevel=info --concurrency=1 --without-gossip --without-mingle
+
+Restart=on-failure
+RestartSec=10s
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
