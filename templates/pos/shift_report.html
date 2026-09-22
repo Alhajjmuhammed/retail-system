@@ -57,7 +57,7 @@
       <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Should be in the drawer</span><span class="font-semibold">{{ expected|floatformat:0|intcomma }}</span></div>
       {% if shift.counted_cash is not None %}
       <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Counted</span><span class="font-medium">{{ shift.counted_cash|floatformat:0|intcomma }}</span></div>
-      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Variance</span><span class="font-semibold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ shift.variance|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Short by</span><span class="font-semibold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ shift.variance|floatformat:0|intcomma }}</span></div>
       {% if shift.variance_note %}<p class="px-5 py-2.5 text-ink-600">Note: {{ shift.variance_note }}</p>{% endif %}
       {% endif %}
     </div>

@@ -712,3 +712,26 @@ def test_supplier_list_cost_does_not_grow_with_the_number_of_suppliers(
     assert len(large) <= len(small), (
         f"{len(small)} queries for 3 suppliers, {len(large)} for 33"
     )
+
+
+def test_the_screens_do_not_talk_like_an_accountant():
+    """
+    Salma runs a duka with three staff, not a finance department. The words
+    below are correct and unusable, and they creep back in one template at a
+    time -- "Variance" survived a whole pass through the system sitting on
+    the cash-up report, beside a "Short by" that said the same thing.
+    """
+    import re
+    from pathlib import Path
+
+    JARGON = ("Variance", "Gross margin", "Weighted average", "COGS",
+              "Accrual", "Credit note", "Debit", "Ledger")
+    found = []
+    for template in Path("templates").rglob("*.html"):
+        text = template.read_text()
+        # Only what a person reads: between tags, not in classes or code.
+        for visible in re.findall(r">([^<>{}]+)<", text):
+            for word in JARGON:
+                if word.lower() in visible.lower():
+                    found.append(f"{template}: {visible.strip()[:60]}")
+    assert not found, "accounting words on screen: " + "; ".join(found)
