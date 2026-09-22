@@ -12,7 +12,7 @@
 
     <div class="flex gap-2">
       <input type="text" readonly value="{{ link }}" id="invite-link"
-             class="input font-mono text-xs" onclick="this.select()">
+             class="input font-mono text-xs" x-data @click="$el.select()">
       <button type="button" class="btn btn-primary shrink-0"
               @click="navigator.clipboard.writeText($refs.link.value); copied = true; setTimeout(() => copied = false, 2000)"
               x-ref="linkbtn">

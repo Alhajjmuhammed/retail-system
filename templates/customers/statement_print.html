@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static %}{% load assets %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -41,9 +41,10 @@
       <tfoot><tr><td colspan="4" class="py-3 text-right font-semibold">Balance due</td><td class="py-3 text-right text-lg font-bold">{{ customer.balance|floatformat:0|intcomma }}</td></tr></tfoot>
     </table>
     <div class="no-print mt-8 flex gap-2">
-      <button onclick="window.print()" class="btn btn-primary">Print or save as PDF</button>
+      <button type="button" data-print class="btn btn-primary">Print or save as PDF</button>
       <a href="{% url 'customers:customer_detail' customer.pk %}" class="btn btn-secondary">Back</a>
     </div>
   </div>
+<script src="{% versioned_static 'js/print-button.js' %}" defer></script>
 </body>
 </html>

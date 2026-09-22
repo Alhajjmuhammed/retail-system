@@ -192,3 +192,54 @@ def test_the_machine_decides_how_many_workers():
 
     assert "WEB_WORKERS" in Path("Dockerfile").read_text()
     assert "CELERY_CONCURRENCY" in Path("compose.yaml").read_text()
+
+
+def test_no_template_carries_script_the_browser_will_refuse():
+    """
+    The site sends `script-src 'self'`, so an inline <script> block and an
+    `onclick=` attribute are both simply not run -- and nothing says so
+    except the browser console, which nobody is watching in production.
+
+    This was not theory: the confirm dialog's store, the till's service
+    worker, the Print buttons and the web font were all inline, and all
+    dead on the live site while every page still returned 200.
+    """
+    import re
+    from pathlib import Path
+
+    inline_block = re.compile(r"<script(?![^>]*\b(src=|type=[\"']application/json))[^>]*>")
+    handler = re.compile(r"\son(?:click|submit|change|load|error|input|focus|blur)\s*=\s*[\"']")
+
+    offences = []
+    for template in Path("templates").rglob("*.html"):
+        text = template.read_text()
+        for pattern, what in ((inline_block, "inline <script>"), (handler, "inline handler")):
+            for match in pattern.finditer(text):
+                line = text[:match.start()].count("\n") + 1
+                offences.append(f"{template}:{line} {what}")
+    assert not offences, (
+        "These do not run under the site's Content-Security-Policy. Move the "
+        "code to a file in static/js/ and pass any values as data- attributes:"
+        "\n    " + "\n    ".join(offences)
+    )
+
+
+def test_the_policy_allows_the_javascript_this_site_actually_ships():
+    """
+    Alpine's standard build evaluates every x-show and @click through
+    `new Function()`. Without 'unsafe-eval' the whole interface is inert:
+    tabs do nothing, the basket never opens, and each page still returns 200.
+    """
+    from pathlib import Path
+
+    alpine = list(Path("static/vendor").glob("alpine-*.js"))
+    assert alpine, "Alpine is no longer shipped; this rule can go"
+
+    for name in ("ops/nginx.conf", "ops/nginx-site-example.conf"):
+        conf = Path(name).read_text()
+        script_src = [line for line in conf.splitlines() if "script-src" in line]
+        assert script_src, f"{name} sends no script-src"
+        assert "'unsafe-eval'" in script_src[0], (
+            f"{name}: Alpine cannot run under this policy. Either allow "
+            "'unsafe-eval' or move to Alpine's CSP build."
+        )

@@ -12,7 +12,12 @@
   {% endcomment %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+  {% comment %}
+  Loaded plainly. The usual trick -- media="print" with an onload that
+  switches it to all -- is an inline event handler, which is script, and the
+  policy this site sends blocks it: the font simply never applied.
+  {% endcomment %}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
   <link rel="icon" type="image/png" href="{% versioned_static 'img/easyfix-icon.png' %}">
   <link rel="apple-touch-icon" href="{% versioned_static 'img/easyfix-icon.png' %}">

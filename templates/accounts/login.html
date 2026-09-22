@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load assets %}
 {% load static %}
 {% block title %}Sign in{% endblock %}
 
@@ -163,10 +164,12 @@ weighs a few kilobytes and renders the same on every screen.
             <button type="submit" class="btn btn-primary btn-lg w-full">Sign in</button>
           </form>
 
+          {% if show_signup %}
           <p class="mt-6 text-center text-sm text-ink-500">
             New here?
             <a href="{% url 'signup' %}" class="font-medium text-brand-700 hover:underline">Start a free trial</a>
           </p>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -185,13 +188,5 @@ weighs a few kilobytes and renders the same on every screen.
   </div>
 </div>
 
-<script>
-  // Whoever signs in next must not be handed the previous person's till.
-  // Queued, unsent sales live in IndexedDB and are left alone.
-  if ("caches" in window) {
-    caches.keys().then((names) => names
-      .filter((name) => name.startsWith("till-pages"))
-      .forEach((name) => caches.delete(name))).catch(() => {});
-  }
-</script>
+<script src="{% versioned_static 'js/signed-out.js' %}" defer></script>
 {% endblock %}

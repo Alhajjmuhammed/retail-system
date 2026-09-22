@@ -527,33 +527,8 @@ largest possible targets and nothing to mis-tap while a queue forms.
 </div>
 
 <script src="{% versioned_static 'js/till.js' %}"></script>
-<script>
-  // Keep a copy of this screen so it still opens with no connection.
-  // Only plans that include offline selling keep an offline copy of the till.
-  if ({{ offline|yesno:"true,false" }} && "serviceWorker" in navigator) {
-    navigator.serviceWorker.register("{% url 'pos:service_worker' %}", { scope: "{% url 'pos:till' %}" })
-      .then(() => navigator.serviceWorker.ready)
-      .then((registration) => {
-        const assets = [...document.querySelectorAll("script[src], link[rel=stylesheet][href], link[rel=icon][href]")]
-          .map((el) => el.src || el.href)
-          .filter((url) => url.startsWith(location.origin + "/static/"));
-        registration.active.postMessage({ type: "keep-till", assets: assets });
-      })
-      .catch(() => {});
-
-    // A new version of the styles or the script is served from the cache
-    // first, so the load right after an update shows the new page with the
-    // old stylesheet. The worker says when it has taken over; the till
-    // reloads itself, but never while there is a basket on the screen.
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      if ((event.data || {}).type !== "worker-updated") return;
-      const till = Alpine.$data(document.querySelector("[x-data]"));
-      if (!till) return;
-      till.updateWaiting = true;
-      // Usually there is nothing on the screen when this arrives, and then
-      // there is no reason to make the cashier wait for a sale to finish.
-      till.takeUpdateIfSafe();
-    });
-  }
-</script>
+<script src="{% versioned_static 'js/till-offline.js' %}"
+        data-offline="{{ offline|yesno:"true,false" }}"
+        data-worker="{% url 'pos:service_worker' %}"
+        data-scope="{% url 'pos:till' %}" defer></script>
 {% endblock %}
