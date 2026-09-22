@@ -5,15 +5,19 @@
 <div class="space-y-4">
   {% include "reports/_range.html" with presets=None hide_dates=True %}
   <div class="grid grid-cols-2 gap-3 {% if no_cost and can_see_cost %}lg:grid-cols-3{% endif %}">
-    {% if can_see_cost %}<div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>On the shelves at cost</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p><p class="hint">{% if branch_id %}One branch{% else %}All your branches{% endif %}, today</p></div>{% endif %}
+    {% if can_see_cost %}<div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>What the shelves cost you</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p><p class="hint">{% if branch_id %}One branch{% else %}All your branches{% endif %}, today</p></div>{% endif %}
     <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Lines in stock</p><p class="stat-value">{{ page.paginator.count|intcomma }}</p></div>
     {% if no_cost and can_see_cost %}<div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>With no cost price</p><p class="stat-value text-amber-700">{{ no_cost }}</p><p class="hint">Counted as zero. Receive them with a cost to fix.</p></div>{% endif %}
   </div>
-  <form method="get" class="flex gap-2">
-    {% if branch_id %}<input type="hidden" name="branch" value="{{ branch_id }}">{% endif %}
-    <input type="search" name="q" value="{{ q }}" placeholder="Product" aria-label="Find a product" class="input w-full sm:w-64">
-  </form>
-  <div class="table-wrap">
+  <div class="card">
+    <form method="get" class="card-head flex-wrap gap-3">
+      {% if branch_id %}<input type="hidden" name="branch" value="{{ branch_id }}">{% endif %}
+      <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Product" aria-label="Find a product" class="input w-full pl-9 sm:w-64">
+      </div>
+    </form>
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Item</th>{% if all_branches|length > 1 %}<th>Branch</th>{% endif %}<th class="text-right">On hand</th>{% if can_see_cost %}<th class="text-right">Unit cost</th><th class="text-right">Value</th>{% endif %}</tr></thead>
       <tbody>

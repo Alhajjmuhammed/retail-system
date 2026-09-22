@@ -1,18 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Expiry{% endblock %}
-{% block heading %}Batches and expiry{% endblock %}
+{% block heading %}Expiry{% endblock %}
 
 {% block content %}
 <div class="space-y-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="section-lead">
-      Batches carry the date the goods go off. What is close to it is listed
-      here while there is still time to sell it or send it back &mdash; after
-      that it is money already spent.
-    </p>
-    <a href="{% url 'purchasing:receipt_create' %}" class="btn btn-secondary">{% icon "layers" %} Receive with dates</a>
-  </div>
-
   {% if expired %}
   <div class="card">
     <div class="card-head"><h2 class="card-title text-red-700"><span class="card-icon bg-red-50 text-red-600">{% icon "alert" class="h-3.5 w-3.5" %}</span>Already expired, still on the shelf</h2><span class="hint">Take them off sale, then write them off from Stock &rarr; Adjust, ticking damage or expiry.</span></div>
@@ -35,15 +26,18 @@
   </div>
   {% endif %}
 
-  <form method="get" class="flex items-end gap-2">
-    <div>
-      <label class="label" for="days">Expiring within</label>
-      <input type="number" name="days" id="days" value="{{ days }}" min="1" max="3650" class="input w-28">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm text-ink-600" for="days">Going off within</label>
+        <input type="number" name="days" id="days" value="{{ days }}" min="1" max="3650" class="input w-24">
+        <span class="text-sm text-ink-600">days</span>
+        <button type="submit" class="btn btn-secondary btn-sm">Show</button>
+      </form>
+      <a href="{% url 'purchasing:receipt_create' %}" class="btn btn-secondary">{% icon "layers" %} Receive with dates</a>
     </div>
-    <button type="submit" class="btn btn-secondary">Show</button>
-  </form>
 
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th>Batch</th><th>Expires</th><th class="text-right">Days left</th><th class="text-right">On hand</th></tr></thead>
       <tbody>
@@ -67,13 +61,16 @@
             <p class="empty-title">Nothing going off soon</p>
             <p class="empty-text">
               No batch at this branch expires in the next {{ days }} days.
-              Dates are entered when goods are received.
+              Batches carry the date goods go off, entered when they are
+              received; what is close to it is listed here while there is
+              still time to sell it.
             </p>
           </div>
         </td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -35,6 +35,48 @@ def _settings_row(tenant):
 
 
 @login_required
+def settings_home(request):
+    """
+    One door in front of the ten settings pages.
+
+    Each one was a word the sidebar could not explain -- "Taxonomy",
+    "Price lists", "Devices" -- so here each carries the sentence that says
+    what it is for, and somebody who opens settings once a year can find the
+    right page without guessing. No permission of its own: it shows only the
+    pages this person may already open, and is empty for nobody, because
+    anybody who can reach it can reach at least one.
+    """
+    can = request.membership.can
+    everything = [
+        ("user.manage", "accounts:staff", "user", "ink", "Your people",
+         "Who works here, what they may do, and how to invite somebody."),
+        ("role.manage", "accounts:roles", "shield", "ink", "Roles & permissions",
+         "The jobs in your shop, and what each job is allowed to do."),
+        ("register.manage", "org:branches", "building", "ink", "Branches & tills",
+         "Your shops and the tills inside them."),
+        ("register.manage", "org:devices", "cart", "ink", "Tills & phones",
+         "Every till and phone that has sold here. Switch off a lost one."),
+        ("product.set_price", "catalog:price_lists", "tag", "brand", "Special prices",
+         "A second price for bulk buyers, attached to a customer."),
+        ("settings.edit", "catalog:tiles", "layers", "brand", "Till tiles",
+         "What shows on the till for goods with no barcode."),
+        ("settings.edit", "catalog:taxonomy", "tag", "brand", "Categories & VAT",
+         "How products are grouped, the units you sell in, and tax rates."),
+        ("settings.edit", "notifications:message_log", "activity", "amber", "Messages",
+         "What your SMS say, and every message that has been sent."),
+        ("settings.edit", "org:business", "settings", "amber", "Business",
+         "Your name and TIN, what prints on a receipt, and how the system behaves."),
+        ("billing.manage", "tenancy:billing", "credit-card", "amber", "Subscription",
+         "Your plan, what you are using, and your invoices."),
+    ]
+    sections = [
+        {"url": reverse(route), "icon": icon, "tone": tone, "label": label, "text": text}
+        for code, route, icon, tone, label, text in everything if can(code)
+    ]
+    return render(request, "org/settings_home.html", {"sections": sections})
+
+
+@login_required
 @requires("settings.edit")
 def business(request):
     row = _settings_row(request.tenant)
@@ -58,10 +100,18 @@ def business(request):
         messages.success(request, "Settings saved.")
         return redirect("org:business")
 
+    # Two shapes of field: the ones with a box to fill in, and the ones that
+    # are a yes/no. The template lays each group out; the words are the
+    # form's.
+    boxes = ["cost_method", "default_tax_rate", "expiry_warning_days", "fiscal_provider"]
+    switches = ["prices_include_tax", "negative_stock_allowed",
+                "low_stock_alerts", "show_tin_on_receipt"]
     return render(
         request,
         "org/business.html",
-        {"profile": profile, "form": settings_form, "settings_row": row},
+        {"profile": profile, "form": settings_form, "settings_row": row,
+         "plain_fields": [settings_form[name] for name in boxes],
+         "switch_fields": [settings_form[name] for name in switches]},
     )
 
 

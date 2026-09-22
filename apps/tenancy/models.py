@@ -52,7 +52,35 @@ class Plan(TimeStampedModel):
         return self.name
 
     def feature_keys(self) -> set[str]:
-        return set(self.features.values_list("feature_key", flat=True))
+        """
+        What this plan includes, asked once.
+
+        Every permission that depends on a feature asks this, and a page
+        checks a lot of permissions: it was seven identical queries to render
+        a product list. The answer cannot change inside one request, and the
+        plan object is fetched fresh for the next one, so the memo lives
+        exactly as long as it is true. Anything that edits a plan's features
+        and then reads them back calls :meth:`forget_features` first.
+        """
+        if "_feature_keys" not in self.__dict__:
+            self.__dict__["_feature_keys"] = set(
+                self.features.values_list("feature_key", flat=True)
+            )
+        return self.__dict__["_feature_keys"]
+
+    def forget_features(self) -> None:
+        self.__dict__.pop("_feature_keys", None)
+
+    def refresh_from_db(self, *args, **kwargs):
+        """
+        Reloading the row reloads what it includes.
+
+        Without this the memo outlived the thing it was remembering: a test
+        edited a plan's features, called ``refresh_from_db`` as anybody
+        would, and was told the old answer.
+        """
+        self.forget_features()
+        return super().refresh_from_db(*args, **kwargs)
 
     def limit(self, key: str) -> int | None:
         """None means unlimited."""
@@ -272,11 +300,38 @@ class Subscription(TimeStampedModel):
             return None
         return (self.period_end - timezone.now()).days
 
-    def start_trial(self):
-        self.status = SubscriptionStatus.TRIALING
-        self.trial_ends_at = timezone.now() + timedelta(days=self.plan.trial_days)
-        self.period_end = self.trial_ends_at
-        self.save(update_fields=["status", "trial_ends_at", "period_end", "updated_at"])
+    def begin(self):
+        """
+        Start the subscription as the plan intends.
+
+        A plan with no trial days is not a trial of zero length. The Free
+        plan has none, and every shop that signs up lands on it, so this used
+        to create shops already past the end of a trial they never had. The
+        nightly job then read that as a shop which had failed to pay for
+        something free: past due, then grace, then suspended -- a free shop
+        stopped from selling within days of opening.
+        """
+        from apps.tenancy.billing import period_after
+
+        if self.plan.trial_days:
+            self.status = SubscriptionStatus.TRIALING
+            self.trial_ends_at = timezone.now() + timedelta(days=self.plan.trial_days)
+            self.period_end = self.trial_ends_at
+        else:
+            # On the plan, not on trial. Billing already knows how to roll a
+            # free plan's period forward; it simply never got the chance.
+            from datetime import datetime, time
+
+            start, end = period_after(self, timezone.localdate())
+            self.status = SubscriptionStatus.ACTIVE
+            self.trial_ends_at = None
+            self.period_start = timezone.make_aware(datetime.combine(start, time.min))
+            self.period_end = timezone.make_aware(datetime.combine(end, time.max))
+        self.save(update_fields=["status", "trial_ends_at", "period_start",
+                                 "period_end", "updated_at"])
+
+    # The old name, kept because "start the subscription" is what callers mean.
+    start_trial = begin
 
     def enter_grace(self):
         self.status = SubscriptionStatus.GRACE

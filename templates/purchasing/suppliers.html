@@ -3,32 +3,29 @@
 {% block heading %}Suppliers{% endblock %}
 {% block content %}
 <div class="space-y-4">
-  {% comment %}
-  The button used to sit inside the row of figures, as a fourth tile that was
-  not a figure. It belongs with the heading; the figures then have the whole
-  width and read as the three views they are.
-  {% endcomment %}
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="section-lead">
-      Who you buy from, what you owe them, and on what terms. Removing a
-      supplier you have bought from keeps the history and takes them off the
-      list.
-    </p>
-    <a href="{% url 'purchasing:supplier_create' %}" hx-get="{% url 'purchasing:supplier_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} New supplier</a>
-  </div>
-
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
     <a href="?view=active" class="stat transition hover:border-brand-300 {% if view == 'active' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "truck" class="h-3.5 w-3.5" %}</span>Suppliers</p><p class="stat-value">{{ summary.count }}</p></a>
     <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
     <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trash" class="h-3.5 w-3.5" %}</span>Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
   </div>
 
-  <form method="get" class="flex gap-2">
-    <input type="hidden" name="view" value="{{ view }}">
-    <input type="search" name="q" value="{{ q }}" placeholder="Name, contact or phone" aria-label="Find a supplier" class="input w-full sm:w-72">
-  </form>
+  <div class="card">
+    {% comment %}
+    Search, list and pager in one card, with the way in beside the search:
+    the shape the platform side uses, and two gaps fewer down the page.
+    {% endcomment %}
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="view" value="{{ view }}">
+        <div class="relative">
+          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+          <input type="search" name="q" value="{{ q }}" placeholder="Name, contact or phone" aria-label="Find a supplier" class="input w-full pl-9 sm:w-72">
+        </div>
+      </form>
+      <a href="{% url 'purchasing:supplier_create' %}" hx-get="{% url 'purchasing:supplier_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} New supplier</a>
+    </div>
 
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Name</th><th>Contact</th><th>Terms</th><th class="text-right">Owed</th><th></th></tr></thead>
       <tbody>
@@ -56,9 +53,10 @@
             {% endif %}
           </td>
         </tr>
-        {% empty %}<tr><td colspan="6">{% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try part of the name or the phone number." %}{% else %}{% include "partials/empty.html" with icon="building" title="No suppliers here" text="Add the people you buy from to track what you owe them." %}{% endif %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="6">{% if q %}{% include "partials/empty.html" with icon="search" title="Nothing matches that" text="Try part of the name or the phone number." %}{% else %}{% include "partials/empty.html" with icon="building" title="No suppliers here" text="Add the people you buy from, to see what you owe them and on what terms. Removing one you have bought from keeps the history." %}{% endif %}</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 </div>

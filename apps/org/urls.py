@@ -5,6 +5,7 @@ from apps.org import views
 app_name = "org"
 
 urlpatterns = [
+    path("", views.settings_home, name="settings_home"),
     path("business/", views.business, name="business"),
     path("branches/", views.branches, name="branches"),
     path("branches/new/", views.branch_form, name="branch_create"),

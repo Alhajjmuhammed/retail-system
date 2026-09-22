@@ -4,7 +4,19 @@
 
 {% block content %}
 <div class="space-y-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {% if can_see_cost %}
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
+    {% else %}
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
+    {% endif %}
+    <a href="?view=low" class="stat transition hover:border-brand-300 {% if view == 'low' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>Running low</p><p class="stat-value {% if counts.low %}text-amber-600{% endif %}">{{ counts.low }}</p></a>
+    <a href="?view=negative" class="stat transition hover:border-brand-300 {% if view == 'negative' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Below zero</p><p class="stat-value {% if counts.negative %}text-red-600{% endif %}">{{ counts.negative }}</p></a>
+    <a href="?view=dead" class="stat transition hover:border-brand-300 {% if view == 'dead' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Never counted</p><p class="stat-value">{{ counts.dead }}</p></a>
+  </div>
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
     <form hx-get="{% url 'inventory:stock_list' %}" hx-target="#stock-rows"
           hx-trigger="input changed delay:250ms from:input, change from:select"
           hx-push-url="true" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
@@ -18,24 +30,13 @@
     </form>
     <div class="flex flex-wrap gap-2">
       {% can_do "stock.count" as may_count %}
-      {% if may_count %}<a href="{% url 'inventory:count_list' %}" class="btn btn-secondary">Counts</a>{% endif %}
+      {% if may_count %}<a href="{% url 'inventory:count_list' %}" class="btn btn-secondary">Stock check</a>{% endif %}
       {% can_do "stock.transfer" as may_transfer %}
-      {% if may_transfer %}<a href="{% url 'inventory:transfer_list' %}" class="btn btn-secondary">Transfers</a>{% endif %}
-      <a href="{% url 'inventory:movements' %}" class="btn btn-secondary">Ledger</a>
+      {% if may_transfer %}<a href="{% url 'inventory:transfer_list' %}" class="btn btn-secondary">Move stock</a>{% endif %}
+      <a href="{% url 'inventory:movements' %}" class="btn btn-secondary">In and out</a>
     </div>
+    </div>
+    <div id="stock-rows">{% include "inventory/_stock_rows.html" %}</div>
   </div>
-
-  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    {% if can_see_cost %}
-    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
-    {% else %}
-    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
-    {% endif %}
-    <a href="?view=low" class="stat transition hover:border-brand-300 {% if view == 'low' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "alert" class="h-3.5 w-3.5" %}</span>Running low</p><p class="stat-value {% if counts.low %}text-amber-600{% endif %}">{{ counts.low }}</p></a>
-    <a href="?view=negative" class="stat transition hover:border-brand-300 {% if view == 'negative' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Below zero</p><p class="stat-value {% if counts.negative %}text-red-600{% endif %}">{{ counts.negative }}</p></a>
-    <a href="?view=dead" class="stat transition hover:border-brand-300 {% if view == 'dead' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Never counted</p><p class="stat-value">{{ counts.dead }}</p></a>
-  </div>
-
-  <div id="stock-rows">{% include "inventory/_stock_rows.html" %}</div>
 </div>
 {% endblock %}

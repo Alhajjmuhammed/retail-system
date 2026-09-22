@@ -159,3 +159,37 @@ def test_bad_input_is_a_400_not_a_crash(client, owner, shop):
     assert client.post(reverse("sync:cart_push"), data="{nope",
                        content_type="application/json").status_code == 400
     assert client.get(reverse("sync:catalog"), {"since": "yesterday"}).status_code == 200
+
+
+def test_a_till_cannot_sell_another_shops_product(client, shop, stocked, cashier_on_shift,
+                                                  business_plan):
+    """
+    The variant id comes from the device, and a device holds a cached
+    catalogue. One shop's id is another shop's id plus a number, so the
+    server has to check whose product it is rather than trust the number.
+    """
+    from apps.accounts.models import User
+    from apps.catalog.models import Price, PriceList, Product, TaxRate, Unit
+    from apps.tenancy.services import create_tenant
+
+    stranger = User.objects.create_user("other@shop.test", "pw", name="Other")
+    elsewhere, _ = create_tenant(name="Duka Lingine", owner=stranger, plan=business_plan)
+    with tenant_context(elsewhere):
+        product = Product.objects.create(
+            name="Sukari ya mtu mwingine", base_unit=Unit.objects.get(code="pc"),
+            tax_rate=TaxRate.objects.get(is_default=True))
+        theirs = product.default_variant
+        Price.objects.create(price_list=PriceList.objects.get(is_default=True),
+                             variant=theirs, amount=Decimal("3000"))
+
+    person, _shift = cashier_on_shift
+    client.force_login(person)
+    result = _push(client, _sale([{"variant_id": theirs.pk, "qty": 1, "unit_price": 3000}],
+                                 [{"method": "cash", "amount": 3000}]))
+
+    assert not result.get("accepted"), f"another shop's product was sold: {result}"
+    # And nothing was written into either shop.
+    with tenant_context(shop):
+        assert Sale.objects.count() == 0
+    with tenant_context(elsewhere):
+        assert Sale.objects.count() == 0

@@ -13,7 +13,7 @@
       </div>
       {% if shift.variance is not None %}
       <div class="text-right">
-        <p class="text-xs uppercase tracking-wide text-ink-500">Variance</p>
+        <p class="text-xs uppercase tracking-wide text-ink-500">Short by</p>
         <p class="text-2xl font-bold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">
           {{ shift.variance|floatformat:0|intcomma }}
         </p>
@@ -54,7 +54,7 @@
       {% for m in movements %}
       <div class="flex justify-between gap-3 px-5 py-2.5"><span class="min-w-0 text-ink-600">{{ m.get_kind_display }} &mdash; <span class="break-words">{{ m.reason }}</span> <span class="hint">{{ m.created_at|date:"H:i" }}</span></span><span class="shrink-0 font-medium">{{ m.amount|floatformat:0|intcomma }}</span></div>
       {% endfor %}
-      <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Expected</span><span class="font-semibold">{{ expected|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Should be in the drawer</span><span class="font-semibold">{{ expected|floatformat:0|intcomma }}</span></div>
       {% if shift.counted_cash is not None %}
       <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Counted</span><span class="font-medium">{{ shift.counted_cash|floatformat:0|intcomma }}</span></div>
       <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Variance</span><span class="font-semibold {% if shift.variance < 0 %}text-red-600{% elif shift.variance > 0 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ shift.variance|floatformat:0|intcomma }}</span></div>

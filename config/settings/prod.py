@@ -1,5 +1,5 @@
 from .base import *
-from .guards import check_production_config
+from .guards import check_production_config, trusted_origins
 
 DEBUG = False
 
@@ -16,6 +16,12 @@ STORAGES = {
 
 # nginx sits in front and appends the peer it saw.
 TRUSTED_PROXY_HOPS = env.int("TRUSTED_PROXY_HOPS", default=1)
+
+# The domains are already listed in ALLOWED_HOSTS; trust them over https,
+# and let the environment override for anything unusual.
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS", default=trusted_origins(ALLOWED_HOSTS)
+)
 
 SECURE_SSL_REDIRECT = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}Settings{% endblock %}
+
+{% block content %}
+{% comment %}
+Ten settings pages used to sit in the sidebar, each a word with no
+explanation, every day, for a shopkeeper who opens most of them once a year.
+They live behind one door now, and each says what it is for.
+{% endcomment %}
+<div class="space-y-5">
+  <p class="section-lead">
+    Things you set once and rarely change. Nothing here affects a sale that
+    has already happened.
+  </p>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {% for item in sections %}
+    <a href="{{ item.url }}" class="card card-body transition hover:border-brand-300 hover:shadow-raised">
+      <span class="flex items-start gap-3">
+        <span class="feed-icon feed-{{ item.tone }}">{% icon item.icon class="h-4 w-4" %}</span>
+        <span class="min-w-0">
+          <span class="block text-sm font-semibold text-ink-900">{{ item.label }}</span>
+          <span class="mt-0.5 block text-sm text-ink-500">{{ item.text }}</span>
+        </span>
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

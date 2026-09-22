@@ -4,11 +4,6 @@
 
 {% block content %}
 <div class="space-y-5">
-  <p class="section-lead">
-    Every message is recorded before it goes, including the ones that could not
-    be sent &mdash; so you can see a customer had no number rather than
-    assuming they were told.
-  </p>
 
   <div class="card">
     <div class="card-head">
@@ -35,7 +30,8 @@
     </div>
   </div>
 
-  <form method="get" class="flex flex-wrap items-center gap-2">
+  <div class="card">
+    <form method="get" class="card-head flex-wrap items-center gap-2">
     <select name="status" class="input w-48">
       <option value="">All messages</option>
       {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
@@ -44,7 +40,7 @@
     {% if queued %}<span class="badge badge-warn">{{ queued }} waiting to send</span>{% endif %}
   </form>
 
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>When</th><th>To</th><th>Message</th><th>Status</th><th class="text-right">Cost</th></tr></thead>
       <tbody>
@@ -63,10 +59,11 @@
           <td class="tnum text-right text-ink-500">{{ m.cost|floatformat:0 }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6">{% include "partials/empty.html" with icon="activity" title="Nothing sent yet" text="Receipts and alerts appear here once SMS is switched on for your plan." %}</td></tr>
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="activity" title="Nothing sent yet" text="Every message is recorded before it goes, including the ones that could not be sent — so you can see a customer had no number rather than assuming they were told." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 </div>

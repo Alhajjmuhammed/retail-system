@@ -8,19 +8,17 @@ and sat in the middle of the screen with a margin either side that nothing
 else in the system has.
 {% endcomment %}
 <div class="space-y-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="section-lead">
-      Everyone carrying a balance, largest first. A statement is one customer's
-      own history, to print or send when they ask what they owe.
-    </p>
-    <a href="{% url 'customers:customer_list' %}?view=owing" class="btn btn-secondary shrink-0">{% icon "users" %} Open customers</a>
-  </div>
-
   <div class="stat flex items-center justify-between">
     <p class="stat-label"><span class="stat-icon">{% icon "credit-card" class="h-3.5 w-3.5" %}</span>Total out on credit</p>
     <span class="tnum text-2xl font-bold text-ink-900">{{ total|floatformat:0|intcomma }}</span>
   </div>
-  <div class="table-wrap">
+
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <span class="hint">Largest first. A statement is one customer's own history, to print or send.</span>
+      <a href="{% url 'customers:customer_list' %}?view=owing" class="btn btn-secondary btn-sm shrink-0">{% icon "users" %} Open customers</a>
+    </div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Customer</th><th>Phone</th><th>Last paid</th><th class="text-right">Owes</th><th class="text-right">Over limit</th><th></th></tr></thead>
       <tbody>
@@ -41,6 +39,7 @@ else in the system has.
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 {% endblock %}

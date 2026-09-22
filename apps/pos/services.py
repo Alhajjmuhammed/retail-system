@@ -49,9 +49,35 @@ from apps.pos.models import (
 ZERO = Decimal("0")
 MONEY = Decimal("0.01")
 
+# Currencies with no coin smaller than the unit. A shilling is the smallest
+# thing a drawer can hold, so a sale of 312.50 is not a sale anybody can pay
+# or give change for: the receipt said 313, the till expected 312.50, and
+# every cash-up carried the difference as a variance nobody could explain.
+# Selling a quarter kilo of sugar at 1,250 is how a duka trades all day.
+WHOLE_UNIT_CURRENCIES = {
+    "TZS", "UGX", "RWF", "BIF", "KMF", "DJF", "GNF", "MGA", "XAF", "XOF",
+    "XPF", "JPY", "KRW", "VND", "CLP", "ISK", "PYG",
+}
 
-def money(value) -> Decimal:
-    return Decimal(str(value)).quantize(MONEY, rounding=ROUND_HALF_UP)
+
+def quantum(currency=None) -> Decimal:
+    """The smallest amount this shop's money comes in."""
+    if currency is None:
+        from apps.core.context import get_current_tenant
+
+        tenant = get_current_tenant()
+        currency = getattr(tenant, "currency", None)
+    return Decimal("1") if (currency or "").upper() in WHOLE_UNIT_CURRENCIES else MONEY
+
+
+def money(value, currency=None) -> Decimal:
+    """
+    An amount this shop can actually take, to the smallest coin it has.
+
+    Rounded half up, so the shopkeeper is never a coin short on a sale they
+    have already handed over.
+    """
+    return Decimal(str(value)).quantize(quantum(currency), rounding=ROUND_HALF_UP)
 
 
 # --------------------------------------------------------------------------
@@ -263,12 +289,17 @@ def complete_sale(
     tax_total = ZERO
     lines = list(cart.lines.select_related("variant", "variant__product"))
 
-    for line in lines:
-        subtotal += money(line.qty * line.unit_price)
-        discount_total += money(line.discount)
-        tax_total += _tax_for(line)
+    # Taken from the sale's own shop rather than from ambient context, so a
+    # sale completed by a command or a signal rounds the same way as one rung
+    # up at the counter.
+    currency = tenant.currency
 
-    total = money(subtotal - discount_total)
+    for line in lines:
+        subtotal += money(line.qty * line.unit_price, currency)
+        discount_total += money(line.discount, currency)
+        tax_total += _tax_for(line, currency)
+
+    total = money(subtotal - discount_total, currency)
 
     sale = Sale(
         tenant=tenant,
@@ -282,7 +313,8 @@ def complete_sale(
         buyer_phone=(buyer_phone or "").strip()[:30],
         subtotal=money(subtotal),
         discount_total=money(discount_total),
-        tax_total=money(tax_total),
+        # Kept to the cent, like each line's: it is declared, not paid.
+        tax_total=tax_total.quantize(MONEY, rounding=ROUND_HALF_UP),
         total=total,
         sold_at=sold_at or timezone.now(),
         authorised_by=authorised_by,
@@ -310,16 +342,16 @@ def complete_sale(
         return stored
 
     for line in lines:
-        _write_sale_line(sale, line, branch, user)
+        _write_sale_line(sale, line, branch, user, currency)
 
     for payment in payments:
         SalePayment.objects.create(
             tenant=tenant,
             sale=sale,
             method=payment["method"],
-            amount=money(payment["amount"]),
+            amount=money(payment["amount"], currency),
             reference=payment.get("reference", ""),
-            change_given=money(payment.get("change_given", 0)),
+            change_given=money(payment.get("change_given", 0), currency),
         )
 
     _handle_credit(sale)
@@ -332,20 +364,27 @@ def complete_sale(
     return sale
 
 
-def _tax_for(line) -> Decimal:
+def _tax_for(line, currency=None) -> Decimal:
     """
     VAT out of a tax-inclusive price, which is how these shops quote.
 
     18% inclusive on 1,180 is 180, not 212.
     """
-    net = (line.qty * line.unit_price) - line.discount
+    # Out of the amount actually charged, not out of the raw multiplication:
+    # a quarter kilo at 1,250 is charged as 313, so the VAT inside it is the
+    # VAT inside 313. Taking it from 312.50 left the tax disagreeing with the
+    # price it came out of.
+    net = money((line.qty * line.unit_price) - line.discount, currency)
     rate = Decimal(str(line.tax_rate))
     if rate == ZERO:
         return ZERO
-    return money(net * rate / (Decimal("100") + rate))
+    # To the cent, not to the shilling: nobody hands VAT across a counter.
+    # It is worked out of the price and declared, so precision costs nothing
+    # here and rounding it would shift what is reported.
+    return (net * rate / (Decimal("100") + rate)).quantize(MONEY, rounding=ROUND_HALF_UP)
 
 
-def _write_sale_line(sale, cart_line, branch, user):
+def _write_sale_line(sale, cart_line, branch, user, currency=None):
     variant = cart_line.variant
     unit_cost = ZERO
     batch = None
@@ -368,8 +407,8 @@ def _write_sale_line(sale, cart_line, branch, user):
         unit_cost=unit_cost,
         discount=cart_line.discount,
         tax_rate=cart_line.tax_rate,
-        tax_amount=_tax_for(cart_line),
-        line_total=money(cart_line.line_total),
+        tax_amount=_tax_for(cart_line, currency),
+        line_total=money(cart_line.line_total, currency),
         added_via=cart_line.added_via,
     )
 

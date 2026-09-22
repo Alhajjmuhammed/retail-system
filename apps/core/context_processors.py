@@ -8,6 +8,20 @@ def tenant(request):
     }
 
 
+def navigation(request):
+    """
+    The sidebar, as data.
+
+    Built here rather than in the template so that "may I see it", "am I on
+    it" and "what is it called" are one answer each, in one place, testable.
+    """
+    from apps.core.navigation import build
+
+    if getattr(request, "tenant", None) is None:
+        return {}
+    return {"navigation": build(request)}
+
+
 PLATFORM_NAV = [
     ("Overview", "platform:dashboard", "home", "dashboard.view"),
     ("Shops", "platform:tenant_list", "building", "shops.view"),

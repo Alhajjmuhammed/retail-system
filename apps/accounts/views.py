@@ -165,10 +165,14 @@ def signup(request):
         throttle.record_signup(audit.client_ip(request))
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         request.session["tenant_id"] = tenant.pk
+        # A plan with no trial is not "a 0-day trial", which is what this
+        # said to every shop that signed up, all of which land on Free.
+        plan = tenant.subscription.plan
         messages.success(
             request,
-            f"Welcome. {tenant.name} is on a "
-            f"{tenant.subscription.plan.trial_days}-day trial.",
+            f"Welcome. {tenant.name} is on a {plan.trial_days}-day free trial."
+            if plan.trial_days else
+            f"Welcome. {tenant.name} is ready, on the {plan.name} plan.",
         )
         return redirect("core:dashboard")
 
@@ -319,10 +323,11 @@ def role_edit(request, pk):
             return render(request, "accounts/role_form.html", {
                 "role": role, "form": form,
                 "groups": permission_groups(request.tenant, role=role),
+                **_role_jobs(request.tenant, role),
             })
         # The name and description used to be shown here and then ignored.
         form.save()
-        refused = _save_role_permissions(request, role)
+        refused = _save_role_permissions(request, role, wanted=_wanted(request))
         if refused:
             messages.warning(
                 request,
@@ -339,11 +344,81 @@ def role_edit(request, pk):
             "role": role,
             "form": RoleForm(instance=role, tenant=request.tenant),
             "groups": permission_groups(request.tenant, role=role),
+            **_role_jobs(request.tenant, role),
         },
     )
 
 
-def _save_role_permissions(request, role):
+def _wanted(request):
+    """
+    What the form asked for, whichever of the two views sent it.
+
+    The matrix speaks in permissions and is passed straight through. The
+    plain view speaks in jobs, and is translated here -- once, on the way
+    in, so everything after it is the same code.
+    """
+    from apps.accounts import role_jobs
+
+    if request.POST.get("mode") != "simple":
+        return None
+    allowed = {
+        permission.code for permission in Permission.objects.all()
+        if not permission.requires_feature
+        or request.tenant.has_feature(permission.requires_feature)
+    }
+    return role_jobs.expand(request.POST, available=allowed)
+
+
+def _role_jobs(tenant, role=None):
+    """
+    The plain-language view of a role, and whether it can be trusted.
+
+    A role assembled by hand in the full matrix may hold half of a job and
+    two things no job speaks for. Flattening that into nine switches would
+    quietly take permissions away, so such a role says so and opens in the
+    matrix instead.
+    """
+    from apps.accounts import role_jobs
+
+    granted = {}
+    if role is not None:
+        granted = {
+            rp.permission.code: rp.limit_value
+            for rp in role.permissions.select_related("permission")
+        }
+    jobs = role_jobs.read(granted)
+    labels = {p.code: p.label for p in Permission.objects.all()}
+    for row in jobs.values():
+        row["limit"] = _plain(row["limit"]) if row["limit"] is not None else ""
+        # What the switch actually grants, in the catalogue's own words, so
+        # a coarse control is never a hidden one.
+        row["includes"] = [labels.get(code, code) for code in row["job"].grants
+                           if code in labels]
+    by_hand = any(row["state"] == "some" for row in jobs.values())
+    return {
+        "jobs": [jobs[job.key] for job in role_jobs.JOBS],
+        "set_by_hand": by_hand,
+        "spare": role_jobs.unspoken(granted) if by_hand else [],
+    }
+
+
+def _save_role_permissions(request, role, wanted=None):
+    """
+    Write what the form asked for, within what the person asking may give.
+
+    ``wanted`` maps permission code to {"limit", "options"} and is how the
+    plain-language view says the same thing as the full matrix: both end up
+    here, so the rules about what you may grant, what your plan includes and
+    what gets written to the audit trail are written once.
+    """
+    def asked(code):
+        if wanted is None:
+            return (request.POST.get(f"grant:{code}") == "on",
+                    (request.POST.get(f"limit:{code}") or "").strip(),
+                    request.POST.getlist(f"options:{code}"))
+        row = wanted.get(code)
+        return (row is not None, (row or {}).get("limit", ""), (row or {}).get("options", []))
+
     existing = {rp.permission.code: rp for rp in role.permissions.select_related("permission")}
     permissions = {p.code: p for p in Permission.objects.all()}
     before = {code: str(rp.limit_value) for code, rp in existing.items()}
@@ -360,9 +435,7 @@ def _save_role_permissions(request, role):
             if code in existing:
                 keep.add(code)
             continue
-        limit_raw = (request.POST.get(f"limit:{code}") or "").strip()
-        options = request.POST.getlist(f"options:{code}")
-        wants = request.POST.get(f"grant:{code}") == "on"
+        wants, limit_raw, options = asked(code)
         had = code in existing
         # Compared as numbers: the form shows "20.00" for a stored 20, and
         # comparing text flagged every untouched limit as changed.
@@ -404,7 +477,7 @@ def _save_role_permissions(request, role):
         "role.permissions_changed",
         obj=role,
         before=before,
-        after={code: request.POST.get(f"limit:{code}", "") for code in keep},
+        after={code: asked(code)[1] for code in keep},
         ip=audit.client_ip(request),
     )
     return refused

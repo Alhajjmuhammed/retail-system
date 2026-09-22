@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Devices{% endblock %}
+{% block title %}Tills and phones{% endblock %}
 {% block heading %}Tills and phones{% endblock %}
 
 {% block content %}
+{% comment %}
+The shape the platform side uses: figures, then one card holding the search,
+the list and the pager. The page's own name is in the bar above it, and what
+the page is for is in its empty state, where somebody who has never seen it
+is actually looking.
+{% endcomment %}
 <div class="space-y-4">
-  <p class="section-lead">
-    Every till and phone that has been used to sell here. A lost or stolen one
-    can be switched off: it then cannot send sales or take payment.
-  </p>
-
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
     <a href="?" class="stat transition hover:border-brand-300 {% if not view %}ring-2 ring-brand-400{% endif %}">
       <p class="stat-label"><span class="stat-icon">{% icon "cart" class="h-3.5 w-3.5" %}</span>All devices</p>
@@ -24,13 +25,18 @@
     </a>
   </div>
 
-  <form method="get" class="flex gap-2">
-    {% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
-    <input type="search" name="q" value="{{ q }}" placeholder="Device or branch"
-           aria-label="Find a device" class="input w-full sm:w-72">
-  </form>
+  <div class="card">
+    <form method="get" class="card-head flex-wrap gap-3">
+      {% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+      <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Device or branch"
+               aria-label="Find a device" class="input w-full pl-9 sm:w-72">
+      </div>
+      <span class="hint">{{ page.paginator.count }} shown</span>
+    </form>
 
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Device</th><th>Branch</th><th>Last heard from</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
       <tbody>
@@ -84,11 +90,12 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6">{% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone appears here the first time somebody sells on it." %}</td></tr>
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone appears here the first time somebody sells on it. A lost one can be switched off, and then it cannot send sales or take payment." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
+    {% include "partials/pagination.html" %}
   </div>
-  {% include "partials/pagination.html" %}
 </div>
 {% endblock %}

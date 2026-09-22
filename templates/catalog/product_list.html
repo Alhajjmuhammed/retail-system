@@ -4,7 +4,8 @@
 
 {% block content %}
 <div class="space-y-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
     <form hx-get="{% url 'catalog:product_list' %}" hx-target="#product-rows"
           hx-trigger="input changed delay:250ms from:input[name='q'], change from:select"
           hx-push-url="true" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
@@ -31,10 +32,11 @@
       {% endif %}
       <a href="{% url 'catalog:product_export' %}" class="btn btn-secondary flex-1 sm:flex-none">{% icon "download" %} Export</a>
     </div>
-  </div>
+    </div>
 
-  <div id="product-rows">
-    {% include "catalog/_product_rows.html" %}
+    <div id="product-rows">
+      {% include "catalog/_product_rows.html" %}
+    </div>
   </div>
 </div>
 {% endblock %}

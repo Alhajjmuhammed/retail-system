@@ -58,7 +58,7 @@
       <div class="flex justify-between"><span class="text-ink-600">Subtotal</span><span>{{ sale.subtotal|floatformat:0|intcomma }}</span></div>
       {% if sale.discount_total %}<div class="flex justify-between"><span class="text-ink-600">Discount</span><span>&minus;{{ sale.discount_total|floatformat:0|intcomma }}</span></div>{% endif %}
       <div class="flex justify-between"><span class="text-ink-600">VAT included</span><span>{{ sale.tax_total|floatformat:0|intcomma }}</span></div>
-      {% if can_see_cost %}<div class="flex justify-between border-t border-ink-100 pt-1.5"><span class="text-ink-600">Margin</span><span class="font-medium">{{ sale.margin|floatformat:0 }}</span></div>{% endif %}
+      {% if can_see_cost %}<div class="flex justify-between border-t border-ink-100 pt-1.5"><span class="text-ink-600">Profit on this sale</span><span class="font-medium">{{ sale.margin|floatformat:0 }}</span></div>{% endif %}
     </div>
   </div>
 

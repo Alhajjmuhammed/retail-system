@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Margin{% endblock %}
-{% block heading %}Profit and margin{% endblock %}
+{% block title %}Profit{% endblock %}
+{% block heading %}Profit on what you sold{% endblock %}
 {% block content %}
 <div class="space-y-4">
   {% include "reports/_range.html" %}
@@ -10,16 +10,16 @@
   </p>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="stat"><p class="stat-label">Sales before VAT</p><p class="stat-value">{{ revenue|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Gross profit</p><p class="stat-value">{{ gross|floatformat:0|intcomma }}</p><p class="hint">{% if revenue %}{% widthratio gross revenue 100 %}% margin{% endif %}</p></div>
+    <div class="stat"><p class="stat-label">Sales, VAT taken off</p><p class="stat-value">{{ revenue|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Profit on goods</p><p class="stat-value">{{ gross|floatformat:0|intcomma }}</p><p class="hint">{% if revenue %}{% widthratio gross revenue 100 %} kept from every 100{% endif %}</p></div>
     <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value">{{ expenses|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Net profit</p><p class="stat-value {% if net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Left after expenses</p><p class="stat-value {% if net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net|floatformat:0|intcomma }}</p></div>
   </div>
   {% if product_count > 100 %}<p class="hint">The table shows your top 100 of {{ product_count }} products by sales; the totals above cover all of them.</p>{% endif %}
 
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Sold</th><th class="text-right">Revenue</th><th class="text-right">Cost</th><th class="text-right">Profit</th><th class="text-right">%</th></tr></thead>
+      <thead><tr><th class="w-12 text-right">SN</th><th>Item</th><th class="text-right">Sold</th><th class="text-right">Money in</th><th class="text-right">They cost you</th><th class="text-right">Profit</th><th class="text-right">Kept per 100</th></tr></thead>
       <tbody>
         {% for row in rows %}
         <tr>

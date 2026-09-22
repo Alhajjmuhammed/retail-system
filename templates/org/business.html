@@ -34,42 +34,28 @@
       <h2 class="card-title">How the system behaves</h2>
     </div>
     <div class="card-body space-y-4">
+      {% comment %}
+      The wording lives on the form, not here, so the label a shopkeeper
+      reads and the help under it cannot drift apart from each other.
+      {% endcomment %}
       <div class="grid gap-4 sm:grid-cols-2">
+        {% for field in plain_fields %}
         <div>
-          <label class="label" for="{{ form.cost_method.id_for_label }}">{{ form.cost_method.label }}</label>
-          {{ form.cost_method }}
-          <p class="hint">Decides every profit figure. Changing it later re-bases your history, so pick once.</p>
+          <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
         </div>
-        <div>
-          <label class="label" for="{{ form.default_tax_rate.id_for_label }}">{{ form.default_tax_rate.label }}</label>
-          {{ form.default_tax_rate }}
-        </div>
-        <div>
-          <label class="label" for="{{ form.expiry_warning_days.id_for_label }}">Warn about expiry this many days ahead</label>
-          {{ form.expiry_warning_days }}
-        </div>
-        <div>
-          <label class="label" for="{{ form.fiscal_provider.id_for_label }}">Fiscal provider</label>
-          {{ form.fiscal_provider }}
-          <p class="hint">Leave blank until EFD/VFD is connected.</p>
-        </div>
+        {% endfor %}
       </div>
 
       <div class="divider"></div>
 
       <div class="space-y-2.5">
+        {% for field in switch_fields %}
         <label class="flex items-start gap-2.5 text-sm text-ink-700">
-          {{ form.prices_include_tax }}<span>Prices already include VAT<span class="hint block">How shops here normally quote.</span></span>
+          {{ field }}<span>{{ field.label }}{% if field.help_text %}<span class="hint block">{{ field.help_text }}</span>{% endif %}</span>
         </label>
-        <label class="flex items-start gap-2.5 text-sm text-ink-700">
-          {{ form.negative_stock_allowed }}<span>Let the till sell stock you do not have<span class="hint block">Offline tills can oversell. Blocking it loses real sales.</span></span>
-        </label>
-        <label class="flex items-start gap-2.5 text-sm text-ink-700">
-          {{ form.low_stock_alerts }}<span>Warn me when stock runs low</span>
-        </label>
-        <label class="flex items-start gap-2.5 text-sm text-ink-700">
-          {{ form.show_tin_on_receipt }}<span>Print the TIN on receipts</span>
-        </label>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -78,11 +64,11 @@
     <div class="card-head"><h2 class="card-title">Receipt</h2></div>
     <div class="card-body grid gap-4 sm:grid-cols-2">
       <div>
-        <label class="label" for="{{ form.receipt_header.id_for_label }}">Top of the receipt</label>
+        <label class="label" for="{{ form.receipt_header.id_for_label }}">{{ form.receipt_header.label }}</label>
         {{ form.receipt_header }}
       </div>
       <div>
-        <label class="label" for="{{ form.receipt_footer.id_for_label }}">Bottom of the receipt</label>
+        <label class="label" for="{{ form.receipt_footer.id_for_label }}">{{ form.receipt_footer.label }}</label>
         {{ form.receipt_footer }}
       </div>
     </div>

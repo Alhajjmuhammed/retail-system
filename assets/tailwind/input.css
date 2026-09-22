@@ -368,6 +368,10 @@
            tracking-wider text-ink-400;
   }
 
+  .nav-more {
+    @apply opacity-70 hover:opacity-100;
+  }
+
   /* ---- Tables -------------------------------------------------------- */
 
   .table-wrap {
@@ -479,7 +483,8 @@
      says direction and the colour is left to the reader. Green for up is the
      convention on the one thing every card here counts: money coming in. */
   .kpi-delta {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold;
+    @apply inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full
+           px-2 py-0.5 text-xs font-bold;
     font-variant-numeric: tabular-nums;
   }
   .kpi-up {

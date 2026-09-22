@@ -15,7 +15,7 @@
       {% for m in movements %}
       <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ m.get_kind_display }} &mdash; {{ m.reason }}</span><span class="font-medium">{{ m.amount|floatformat:0|intcomma }}</span></div>
       {% endfor %}
-      <div class="flex justify-between bg-ink-50 px-5 py-3"><span class="font-semibold text-ink-900">Expected in drawer</span><span class="text-lg font-bold text-ink-900">{{ expected|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between bg-ink-50 px-5 py-3"><span class="font-semibold text-ink-900">Should be in the drawer</span><span class="text-lg font-bold text-ink-900">{{ expected|floatformat:0|intcomma }}</span></div>
     </div>
   </div>
 
@@ -55,7 +55,7 @@
       <label class="label" for="counted_cash">Count the drawer and type what is there</label>
       <input type="number" step="0.01" min="0" name="counted_cash" id="counted_cash"
              inputmode="numeric" class="input py-3 text-lg" required autofocus>
-      <p class="hint">Count first, then look at the expected figure. That order is the point.</p>
+      <p class="hint">Count the money first, then look at what it should be. That order is the point.</p>
     </div>
     <div>
       <label class="label" for="note">Note</label>

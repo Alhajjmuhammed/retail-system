@@ -77,12 +77,63 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "receipt_footer": forms.Textarea(attrs={"rows": 2}),
         }
 
+    # The labels a shopkeeper reads, over the names the code uses. "Weighted
+    # average cost method" is an accounting term; the shop owner deciding it
+    # has never heard it, and the setting is one they can get permanently
+    # wrong. Said in their own words, it is a question they can answer.
+    PLAIN = {
+        "cost_method": (
+            "What an item costs you",
+            "Used to work out profit. Best chosen once: changing it later "
+            "re-works the profit on everything you have already sold.",
+        ),
+        "prices_include_tax": (
+            "Shelf prices already include VAT",
+            "Normal in Tanzania. The price on the shelf is what the customer pays.",
+        ),
+        "default_tax_rate": (
+            "VAT on a new product",
+            "What a product is given when you add it. You can change it per product.",
+        ),
+        "negative_stock_allowed": (
+            "Let a till sell something the system thinks is finished",
+            "Leave this on. A till that is offline cannot always know what is "
+            "left, and refusing the sale loses real money at the counter.",
+        ),
+        "low_stock_alerts": (
+            "Tell me when something is nearly finished",
+            "Uses the level you set against each product on the Stock page.",
+        ),
+        "expiry_warning_days": (
+            "Warn me this many days before goods go off",
+            "",
+        ),
+        "fiscal_provider": (
+            "Tax machine (EFD/VFD)",
+            "Leave blank until you have one. Receipts queue safely either way.",
+        ),
+        "receipt_header": ("Top of the receipt", ""),
+        "receipt_footer": ("Bottom of the receipt", ""),
+        "show_tin_on_receipt": ("Print your TIN on the receipt", ""),
+    }
+
+    COST_METHOD_WORDS = [
+        ("weighted_average", "The average of what you have paid for it"),
+        ("last_cost", "The last price you paid for it"),
+    ]
+
     def __init__(self, *args, **kwargs):
         from apps.catalog.models import TaxRate
 
         super().__init__(*args, **kwargs)
         self.fields["default_tax_rate"].queryset = TaxRate.objects.filter(is_active=True)
         self.fields["default_tax_rate"].required = False
+
+        self.fields["cost_method"].choices = self.COST_METHOD_WORDS
+        for name, (label, hint) in self.PLAIN.items():
+            if name in self.fields:
+                self.fields[name].label = label
+                self.fields[name].help_text = hint
 
 
 class TenantProfileForm(TailwindMixin, forms.ModelForm):

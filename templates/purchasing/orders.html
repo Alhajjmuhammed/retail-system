@@ -1,23 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Purchase orders{% endblock %}
-{% block heading %}Purchase orders{% endblock %}
+{% block heading %}Supplier orders{% endblock %}
 {% block content %}
 <div class="space-y-4">
-  <p class="section-lead">
-    What you have asked a supplier for, and what is still owing. Stock only
-    moves when the goods arrive and are received against the order.
-  </p>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <form method="get" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" x-data @change="$el.submit()">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" x-data @change="$el.submit()">
       <input type="search" name="q" value="{{ q }}" placeholder="Reference or supplier" aria-label="Find an order" class="input col-span-2 w-full sm:w-64">
       <select name="status" class="input w-full sm:w-44" aria-label="Status">
         <option value="">Any status</option>
         {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
       </select>
-    </form>
-    <a href="{% url 'purchasing:order_create' %}" hx-get="{% url 'purchasing:order_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New order</a>
-  </div>
-  <div class="table-wrap">
+      </form>
+      <a href="{% url 'purchasing:order_create' %}" hx-get="{% url 'purchasing:order_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New order</a>
+    </div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Supplier</th><th>Expected</th><th>Status</th><th class="text-right">Value</th><th></th></tr></thead>
       <tbody>
@@ -41,9 +38,10 @@
             {% endif %}
           </td>
         </tr>
-        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="clipboard" title="No orders here" text="Raise an order, then receive against it when the goods arrive." %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="clipboard" title="No orders here" text="An order records what you asked a supplier for. Stock only moves when the goods arrive and are received against it." %}</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 </div>

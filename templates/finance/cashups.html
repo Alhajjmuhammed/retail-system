@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Cash ups{% endblock %}
-{% block heading %}Cash ups{% endblock %}
+{% block title %}End of day{% endblock %}
+{% block heading %}End of day{% endblock %}
 {% block content %}
 <div class="space-y-4">
   <form method="get" class="flex flex-wrap items-end gap-2" x-data @change="$el.submit()">
@@ -32,7 +32,7 @@
   {# The same three-tile shape the rest of the system uses for its figures. #}
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
     <div class="stat">
-      <p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Expected</p>
+      <p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Should be there</p>
       <p class="stat-value">{{ totals.expected|default:0|floatformat:0|intcomma }}</p>
     </div>
     <div class="stat">
@@ -40,14 +40,14 @@
       <p class="stat-value">{{ totals.counted|default:0|floatformat:0|intcomma }}</p>
     </div>
     <div class="stat col-span-2 sm:col-span-1">
-      <p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Difference</p>
+      <p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Short by</p>
       <p class="stat-value {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:0|intcomma }}</p>
     </div>
   </div>
 
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th class="w-12 text-right">SN</th><th>Closed</th><th>Cashier</th><th>Till</th><th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Difference</th><th>Note</th><th class="text-right">Approved</th></tr></thead>
+      <thead><tr><th class="w-12 text-right">SN</th><th>Closed</th><th>Cashier</th><th>Till</th><th class="text-right">Should be there</th><th class="text-right">Counted</th><th class="text-right">Short by</th><th>Note</th><th class="text-right">Approved</th></tr></thead>
       <tbody>
         {% for s in page %}
         <tr>
@@ -65,7 +65,7 @@
               <span class="text-xs text-emerald-700">{{ s.approved_by.name }}</span>
             {% elif s.user_id != request.user.pk %}
               <form method="post" action="{% url 'finance:cashup_approve' s.pk %}" x-data
-                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s cash-up?', body: 'Difference of {{ s.variance|floatformat:0 }} is accepted as recorded.', label: 'Approve' })">
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s count?', body: 'Difference of {{ s.variance|floatformat:0 }} is accepted as recorded.', label: 'Approve' })">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-secondary btn-sm">Approve</button>
               </form>

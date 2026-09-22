@@ -75,10 +75,34 @@ def test_a_shop_can_be_created_from_the_platform(client, db, staff):
 
     with unscoped():
         tenant = Tenant.objects.get(name="Duka Jipya")
-        assert tenant.subscription.status == "trialing"
+        # No plan was chosen, so it lands on Free -- which has no trial, and
+        # a plan with no trial means the shop is simply on it. It used to be
+        # given a trial of zero days, which the nightly job read as a shop
+        # that had failed to pay for something free.
+        assert tenant.subscription.plan.code == "free"
+        assert tenant.subscription.status == "active"
 
     # And the owner can sign in immediately.
     assert client.login(email="neema@duka.test", password="correct-horse-99")
+
+
+def test_a_shop_created_on_a_paid_plan_gets_its_trial(client, db, staff):
+    from apps.tenancy.models import Plan
+
+    client.force_login(staff)
+    business = Plan.objects.get(code="business")
+    client.post(
+        reverse("platform:tenant_create"),
+        {"business_name": "Duka Kubwa", "branch_name": "Main", "name": "Juma",
+         "email": "juma@kubwa.test", "password": "correct-horse-99",
+         "plan": business.pk},
+        **HX,
+    )
+    with unscoped():
+        subscription = Tenant.objects.get(name="Duka Kubwa").subscription
+        assert subscription.plan.code == "business"
+        assert subscription.status == "trialing"
+        assert subscription.trial_ends_at is not None
 
 
 def test_creating_a_shop_shows_its_errors_in_the_modal(client, db, staff):

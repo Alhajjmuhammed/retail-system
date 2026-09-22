@@ -1,25 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Goods received{% endblock %}
-{% block heading %}Goods received{% endblock %}
+{% block title %}Deliveries{% endblock %}
+{% block heading %}Deliveries{% endblock %}
 {% block content %}
 <div class="space-y-4">
-  <p class="section-lead">
-    Where stock rises and cost price is set. An order is optional &mdash; a
-    delivery that turns up without one is still recorded here.
-  </p>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <form method="get" class="w-full sm:w-auto"><input type="search" name="q" value="{{ q }}" placeholder="Reference, supplier or their note" aria-label="Find a delivery" class="input w-full sm:w-72"></form>
-    <a href="{% url 'purchasing:receipt_create' %}" hx-get="{% url 'purchasing:receipt_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Receive goods</a>
-  </div>
-  <div class="table-wrap">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get"><input type="search" name="q" value="{{ q }}" placeholder="Reference, supplier or their note" aria-label="Find a delivery" class="input w-full sm:w-72"></form>
+      <a href="{% url 'purchasing:receipt_create' %}" hx-get="{% url 'purchasing:receipt_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Receive goods</a>
+    </div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Supplier</th><th>When</th><th>By</th><th class="text-right">Value</th><th></th></tr></thead>
       <tbody>
         {% for r in page %}
         <tr><td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td><td><a href="{% url 'purchasing:receipt_detail' r.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ r.reference }}</a>{% if r.supplier_note %}<p class="hint">{{ r.supplier_note }}</p>{% endif %}</td><td class="text-ink-600">{{ r.supplier.name }}</td><td class="text-ink-600">{{ r.received_at|date:"j M H:i" }}</td><td class="text-ink-600">{{ r.received_by.name|default:"—" }}</td><td class="tnum text-right">{{ r.total|floatformat:0|intcomma }}</td><td class="text-right"><a href="{% url 'purchasing:receipt_detail' r.pk %}" class="btn-icon btn-icon-brand" title="Open {{ r.reference }}" aria-label="Open {{ r.reference }}">{% icon "chevron-right" class="h-4 w-4" %}</a></td></tr>
-        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="layers" title="Nothing received yet" text="This is where stock rises and cost price is set." %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="layers" title="Nothing received yet" text="This is where stock rises and cost price is set. An order is optional: a delivery that turns up without one is still recorded here." %}</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 </div>

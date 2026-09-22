@@ -1,8 +1,8 @@
 {% can_do "stock.adjust" as may_adjust %}
-<div class="table-wrap">
+<div class="table-wrap rounded-none border-0 shadow-none">
   <table class="table">
     <thead>
-      <tr><th class="w-12 text-right">SN</th><th>Product</th><th class="text-right">On hand</th><th class="text-right">Warn at</th>
+      <tr><th class="w-12 text-right">SN</th><th>Product</th><th class="text-right">On hand</th><th class="text-right">Tell me at</th>
       {% if can_see_cost %}<th class="text-right">Cost</th><th class="text-right">Value</th>{% endif %}<th></th></tr>
     </thead>
     <tbody>

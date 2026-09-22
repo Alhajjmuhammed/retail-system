@@ -80,9 +80,12 @@ def dashboard(request):
                                        period["previous_end"])
             buckets = figures.profit_by(branches, start, end, hourly=period["single_day"])
             cards.append({
-                "label": "Gross profit", "value": made["profit"], "money": True,
+                "label": "Profit on goods", "value": made["profit"], "money": True,
                 "change": charts.change(made["profit"], was["profit"]),
-                "hint": f"{made['pct']:,.0f}% margin",
+                # Not "12% margin": the shopkeeper's question is how much of
+                # each hundred she keeps. Rent and wages are not in it, which
+                # the Profit report says in full.
+                "hint": f"{made['pct']:,.0f} in every 100 is profit",
                 "spark": charts.spark([buckets.get(r["key"], 0) for r in rows]),
                 "url": reverse("reports:margin"),
             })

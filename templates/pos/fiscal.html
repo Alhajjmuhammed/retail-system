@@ -1,14 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Fiscal receipts{% endblock %}
-{% block heading %}Fiscal receipts{% endblock %}
+{% block title %}TRA receipts{% endblock %}
+{% block heading %}TRA receipts{% endblock %}
 
 {% block content %}
 <div class="space-y-5">
-  <p class="section-lead">
-    Submitting to the revenue authority needs the internet; selling does not.
-    Receipts queue while you are offline and go as soon as the line is back.
-  </p>
-
   {% if not provider %}
   <div class="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-600/20">
     {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
@@ -63,7 +58,7 @@
           <td class="tnum text-right text-ink-500">{{ row.attempts }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7">{% include "partials/empty.html" with icon="shield" title="Nothing queued" text="Fiscal copies appear here as sales are rung up." %}</td></tr>
+        <tr><td colspan="7">{% include "partials/empty.html" with icon="shield" title="Nothing queued" text="A tax copy of every sale appears here as it is rung up. Submitting needs the internet; selling does not, so receipts queue while you are offline and go as soon as the line is back." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

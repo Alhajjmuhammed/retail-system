@@ -3,8 +3,16 @@
 {% block heading %}{% if role %}{{ role.name }}{% else %}New role{% endif %}{% endblock %}
 
 {% block content %}
-<form method="post" class="mx-auto max-w-4xl space-y-6">
+{% comment %}
+Two ways of saying the same thing. Nine switches in the words a shopkeeper
+uses, and underneath, the forty-six permissions themselves for a shop that
+needs that much control. A role that was built by hand opens in the matrix,
+because flattening it into switches would quietly take permissions away.
+{% endcomment %}
+<form method="post" class="space-y-6"
+      x-data="{ advanced: {{ set_by_hand|yesno:'true,false' }}{% if not groups %} || true{% endif %} }">
   {% csrf_token %}
+  <input type="hidden" name="mode" :value="advanced ? 'advanced' : 'simple'">
 
   <div class="card">
     <div class="card-body space-y-4">
@@ -20,14 +28,78 @@
     </div>
   </div>
 
+  {% if jobs %}
+  <div x-show="!advanced" class="space-y-4">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="text-base font-semibold text-ink-900">What this person does</h2>
+        <p class="mt-1 text-sm text-ink-600">
+          Turn on the jobs they do. Where a figure is asked for, leaving it
+          blank means no limit at all.
+        </p>
+      </div>
+      <button type="button" @click="advanced = true" class="btn btn-secondary btn-sm">
+        {% icon "settings" %} Set each permission by hand
+      </button>
+    </div>
+
+    <div class="grid gap-3 xl:grid-cols-2">
+      {% for row in jobs %}
+      {% comment %}
+      Compared, not filtered: `state` is the word "on", "some" or "off", and
+      every one of those is true to `yesno`, which ticked every box.
+      {% endcomment %}
+      <div class="card card-body" x-data="{ on: {% if row.state == 'on' %}true{% else %}false{% endif %} }">
+        <label class="flex cursor-pointer items-start gap-3">
+          <input type="checkbox" name="job:{{ row.job.key }}" x-model="on"
+                 {% if row.state == "on" %}checked{% endif %} class="checkbox mt-0.5">
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-semibold text-ink-900">{{ row.job.label }}</span>
+            <span class="mt-0.5 block text-sm text-ink-500">{{ row.job.text }}</span>
+          </span>
+        </label>
+        <div x-show="on" x-cloak class="mt-2 pl-8">
+          <p class="hint">Includes: {{ row.includes|join:", "|lower }}.</p>
+        </div>
+        {% if row.job.limit_on %}
+        <div x-show="on" x-cloak class="mt-2 flex items-center gap-2 pl-8">
+          <label class="text-xs text-ink-500" for="joblimit-{{ row.job.key }}">{{ row.job.limit_label }}</label>
+          <input type="number" step="0.01" min="0" id="joblimit-{{ row.job.key }}"
+                 name="joblimit:{{ row.job.key }}" value="{{ row.limit }}"
+                 placeholder="no limit" class="input w-28 py-1.5 text-sm">
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if groups %}
-  <div class="space-y-5">
-    <div>
-      <h2 class="text-base font-semibold text-ink-900">What this role can do</h2>
-      <p class="mt-1 text-sm text-ink-600">
-        Tick what they may do. Where a limit is offered, leaving it blank means no limit.
+  <div x-show="advanced" x-cloak class="space-y-5">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="text-base font-semibold text-ink-900">Every permission, one by one</h2>
+        <p class="mt-1 text-sm text-ink-600">
+          Tick what they may do. Where a limit is offered, leaving it blank means no limit.
+        </p>
+      </div>
+      {% if jobs %}
+      <button type="button" @click="advanced = false" class="btn btn-secondary btn-sm">
+        {% icon "switch" %} Back to the simple view
+      </button>
+      {% endif %}
+    </div>
+
+    {% if set_by_hand %}
+    <div class="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 ring-1 ring-inset ring-amber-600/20">
+      <span class="feed-icon feed-amber">{% icon "alert" class="h-4 w-4" %}</span>
+      <p class="text-sm text-amber-900">
+        This role was put together by hand, so the simple view cannot describe it
+        exactly. Switching to it and saving would replace what is set here.
       </p>
     </div>
+    {% endif %}
 
     {% for module, items in groups.items %}
     <div class="card">

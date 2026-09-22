@@ -104,7 +104,12 @@ def test_device_forget(client, shop, owner, main_branch):
         assert not Device.objects.get(device_id="stolen-1").is_active
 
 
-def test_nav_shows_settings_for_a_tills_only_role(client, shop):
+def test_a_tills_only_role_can_still_reach_tills_and_devices(client, shop):
+    """
+    The ten settings pages sit behind one door now, so the sidebar no longer
+    links to each. What matters is unchanged: somebody who may manage tills
+    can get to them, and is offered nothing they may not open.
+    """
     with tenant_context(shop):
         role = Role.objects.create(tenant=shop, name="Branch admin")
         role.grant("register.manage")
@@ -112,8 +117,16 @@ def test_nav_shows_settings_for_a_tills_only_role(client, shop):
         Membership.objects.create(tenant=shop, user=u, role=role)
         Branch.objects.first()
     client.force_login(u)
-    body = client.get(reverse("org:branches")).content.decode()
-    assert reverse("org:devices") in body
+
+    sidebar = client.get(reverse("org:branches"))
+    assert sidebar.context["navigation"]["settings"] is not None
+
+    door = client.get(reverse("org:settings_home"))
+    offered = {item["url"] for item in door.context["sections"]}
+    assert reverse("org:devices") in offered and reverse("org:branches") in offered
+    # ...and nothing this role may not open.
+    assert reverse("tenancy:billing") not in offered
+    assert reverse("accounts:staff") not in offered
 
 
 def test_starter_owner_can_manage_tills_and_devices(client, db):
@@ -144,3 +157,27 @@ def test_branch_confined_manager_cannot_touch_another_branch(client, shop, main_
     with tenant_context(shop):
         other.refresh_from_db()
         assert other.name == "Kiosk" and Register.objects.filter(pk=till.pk).exists()
+
+
+def test_every_business_setting_reaches_the_page(client, shop, owner):
+    """
+    The page lays the settings out in two groups and the receipt text on its
+    own. A field left out of all three would still exist on the form, still
+    save, and simply never be seen -- which is how a setting goes missing
+    without anybody noticing.
+    """
+    client.force_login(owner)
+    page = client.get(reverse("org:business"))
+    laid_out = {field.name for field in page.context["plain_fields"]}
+    laid_out |= {field.name for field in page.context["switch_fields"]}
+    laid_out |= {"receipt_header", "receipt_footer"}
+    assert set(page.context["form"].fields) == laid_out
+
+
+def test_the_settings_are_said_in_plain_words(client, shop, owner):
+    """"Weighted average cost method" is correct and unusable."""
+    client.force_login(owner)
+    body = client.get(reverse("org:business")).content.decode()
+    assert "What an item costs you" in body
+    assert "average of what you have paid" in body
+    assert "Weighted average" not in body

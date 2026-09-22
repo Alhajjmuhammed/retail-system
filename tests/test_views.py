@@ -32,9 +32,16 @@ def test_signup_creates_a_working_shop(client):
 
     tenant = Tenant.objects.get(name="Duka la Salma")
     with tenant_context(tenant):
-        # A shop is usable the moment it is created: a trial, an owner, a
-        # branch, a till, roles, units, tax rates and a price list.
-        assert tenant.subscription.status == "trialing"
+        # A shop is usable the moment it is created: an owner, a branch, a
+        # till, roles, units, tax rates and a price list.
+        #
+        # Signing up lands on Free, which has no trial days -- so the shop is
+        # simply on the plan. It used to be given a trial of zero days, which
+        # the nightly job then read as a shop that had failed to pay for
+        # something free: past due, grace, and finally suspended.
+        assert tenant.subscription.plan.code == "free"
+        assert tenant.subscription.status == "active"
+        assert not tenant.subscription.is_read_only
         assert Role.objects.count() == 4
         assert tenant.org_branch_set.count() == 1
         assert tenant.catalog_taxrate_set.count() == 3

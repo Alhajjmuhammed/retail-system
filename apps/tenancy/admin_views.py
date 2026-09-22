@@ -1311,6 +1311,9 @@ def plan_edit(request, pk=None):
         PlanLimit.objects.bulk_create([PlanLimit(plan=plan, key=k, value=v) for k, v in limits.items()])
         PlanFeature.objects.filter(plan=plan).delete()
         PlanFeature.objects.bulk_create([PlanFeature(plan=plan, feature_key=k) for k in chosen])
+        # The plan object remembers what it includes for the life of a
+        # request; it has just stopped being true.
+        plan.forget_features()
 
         # Feature changes alter what every member of every shop on this plan
         # may do, so their cached permissions have to go.

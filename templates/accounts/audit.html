@@ -1,14 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Activity{% endblock %}
-{% block heading %}Who did what{% endblock %}
+{% block heading %}Activity{% endblock %}
 
 {% block content %}
 <div class="space-y-5">
-  <p class="section-lead">
-    Every discount, void, refund, stock adjustment and permission change, with
-    the name of who did it and &mdash; when it needed approval &mdash; who
-    approved it. Nothing here can be edited or removed.
-  </p>
 
   <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
     {% for item in highlights %}
@@ -20,9 +15,10 @@
     {% endfor %}
   </div>
 
+  <div class="card">
   <form hx-get="{% url 'accounts:audit_log' %}" hx-target="#audit-rows"
         hx-trigger="input changed delay:250ms from:input, change from:select"
-        class="flex flex-wrap gap-2">
+        class="card-head flex-wrap gap-2">
     <input type="search" name="q" value="{{ q }}" placeholder="Action, person or record" class="input w-56" autocomplete="off">
     <select name="action" class="input w-56">
       <option value="">Anything</option>
@@ -44,6 +40,7 @@
     </select>
   </form>
 
-  <div id="audit-rows">{% include "accounts/_audit_rows.html" %}</div>
+    <div id="audit-rows">{% include "accounts/_audit_rows.html" %}</div>
+  </div>
 </div>
 {% endblock %}

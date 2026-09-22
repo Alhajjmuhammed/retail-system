@@ -1,33 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Stock counts{% endblock %}
-{% block heading %}Stock counts{% endblock %}
+{% block heading %}Stock checks{% endblock %}
 
 {% block content %}
 <div class="space-y-4">
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <p class="text-sm text-ink-600">
-      Starting a count freezes what the system believes right now, so the counter is
-      measured against that rather than against an hour of later trading.
-    </p>
-    {% if open_count %}
-    <a href="{% url 'inventory:count_detail' open_count.pk %}" class="btn btn-primary shrink-0">Continue {{ open_count.reference }}</a>
-    {% else %}
-    <form method="post" action="{% url 'inventory:count_create' %}" class="shrink-0" x-data
-          @submit.prevent="$store.confirm.ask($el, { title: 'Start a count now?', body: 'What the system holds for every product here is frozen as of this moment.', label: 'Start', danger: false })">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-primary">{% icon "plus" %} Start a count</button>
-    </form>
-    {% endif %}
-  </div>
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="flex gap-2" x-data @change="$el.submit()">
+        <select name="status" class="input w-full sm:w-44" aria-label="Status">
+          <option value="">Any status</option>
+          {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </form>
+      {% if open_count %}
+      <a href="{% url 'inventory:count_detail' open_count.pk %}" class="btn btn-primary shrink-0">Continue {{ open_count.reference }}</a>
+      {% else %}
+      <form method="post" action="{% url 'inventory:count_create' %}" class="shrink-0" x-data
+            @submit.prevent="$store.confirm.ask($el, { title: 'Start a count now?', body: 'What the system holds for every product here is frozen as of this moment.', label: 'Start', danger: false })">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{% icon "plus" %} Start a count</button>
+      </form>
+      {% endif %}
+    </div>
 
-  <form method="get" class="flex gap-2" x-data @change="$el.submit()">
-    <select name="status" class="input w-full sm:w-44" aria-label="Status">
-      <option value="">Any status</option>
-      {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select>
-  </form>
-
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Reference</th><th>Started</th><th>Status</th><th class="text-right">Value difference</th><th></th></tr></thead>
       <tbody>
@@ -53,10 +49,11 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6">{% include "partials/empty.html" with icon="clipboard" title="No counts yet" text="A count freezes what the system believes, then records every difference." %}</td></tr>
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="clipboard" title="No counts yet" text="A count freezes what the system believes right now, so the person counting is measured against that rather than against an hour of later trading. Every difference is recorded." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 </div>

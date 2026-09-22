@@ -41,3 +41,23 @@ def check_production_config(secret_key, allowed_hosts, email_host=None):
         raise ImproperlyConfigured(
             "EMAIL_HOST must be set in production, or nobody can reset a password."
         )
+
+
+def trusted_origins(allowed_hosts):
+    """
+    The origins a POST may come from, taken from the domains this serves.
+
+    Django checks the Origin of every POST against the host it believes it
+    is serving. Behind a proxy, on a non-standard port, or across subdomains
+    that check fails, and it fails for every form in the system at once --
+    signing in, selling, syncing a till -- with nothing in the log to say
+    why. A leading dot means "and its subdomains", which is a host pattern,
+    not an origin, so it is dropped.
+    """
+    origins = []
+    for host in allowed_hosts or []:
+        host = host.strip().lstrip(".")
+        if not host or host in DEV_HOSTS:
+            continue
+        origins.append(f"https://{host}")
+    return origins

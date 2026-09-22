@@ -5,11 +5,6 @@
 {% can_do "expense.approve" as may_approve %}
 <div class="space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="section-lead">
-      Rent, transport, wages, airtime &mdash; the money that leaves the shop
-      without being stock. Against takings, this is what turns a margin into
-      a profit.
-    </p>
     <a href="{% url 'finance:expense_create' %}" hx-get="{% url 'finance:expense_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Record an expense</a>
   </div>
 
@@ -24,7 +19,8 @@
   dropdowns were cut off, and a filter you cannot read is a filter nobody
   touches.
   {% endcomment %}
-  <form method="get" class="card card-body grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" x-data @change="$el.submit()">
+  <div class="card">
+  <form method="get" class="card-head grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4" x-data @change="$el.submit()">
     <input type="search" name="q" value="{{ f.q }}" placeholder="What for, reference" aria-label="Search" class="input col-span-2 sm:col-span-1">
     <select name="category" class="input" aria-label="Category"><option value="">Any category</option>{% for c in categories %}<option value="{{ c.pk }}" {% if f.category == c.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
     <select name="method" class="input" aria-label="Paid by"><option value="">Any method</option>{% for value, label in methods %}<option value="{{ value }}" {% if f.method == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
@@ -34,7 +30,7 @@
     {% if branches|length > 1 %}<select name="branch" class="input col-span-2 sm:col-span-1" aria-label="Branch"><option value="">All branches</option>{% for b in branches %}<option value="{{ b.pk }}" {% if f.branch == b.pk %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select>{% endif %}
   </form>
 
-  <div class="table-wrap">
+    <div class="table-wrap rounded-none border-0 shadow-none">
     <table class="table">
       <thead><tr><th class="w-12 text-right">SN</th><th>Date</th><th>Category</th><th>What for</th><th>By</th><th class="text-right">Amount</th><th></th></tr></thead>
       <tbody>
@@ -68,9 +64,10 @@
             {% endif %}
           </td>
         </tr>
-        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="wallet" title="No expenses here" text="Rent, transport, wages — anything that is not stock." %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7">{% include "partials/empty.html" with icon="wallet" title="No expenses here" text="Rent, transport, wages, airtime — the money that leaves the shop without being stock. Against takings, this is what turns a margin into a profit." %}</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
     {% include "partials/pagination.html" %}
   </div>
 

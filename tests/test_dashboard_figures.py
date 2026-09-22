@@ -163,7 +163,7 @@ def test_profit_is_only_for_those_who_may_see_margins(
         Membership.objects.create(tenant=shop, user=cashier,
                                   role=Role.objects.get(name="Manager"))
     client.force_login(owner)
-    assert any(c["label"] == "Gross profit"
+    assert any(c["label"] == "Profit on goods"
                for c in client.get(reverse("core:dashboard")).context["cards"])
 
 
