@@ -637,6 +637,30 @@
   .tab-off .tab-count {
     @apply bg-ink-100 text-ink-500;
   }
+  /* What is inside the open shelf: Drinks, then Soda and Water. A strip of
+     the panel's own white, so the second row reads as part of the shelf the
+     tab opened rather than a second row of folders standing on the first. */
+  .deck-tabs-sub {
+    @apply items-center gap-1.5 rounded-t-2xl bg-white px-4 pb-0 pt-3;
+  }
+  .tab-sm {
+    @apply rounded-full px-3.5 pb-1.5 pt-1.5 text-xs;
+  }
+  .tab-sm.tab-on {
+    @apply bg-brand-600 text-white;
+  }
+  /* The curves belong to a folder tab joining the panel. A pill inside the
+     panel has nothing to join, and they showed as two white blobs. */
+  .tab-sm.tab-on::before,
+  .tab-sm.tab-on::after {
+    content: none;
+  }
+  .tab-sm.tab-on .tab-count {
+    @apply bg-white/25 text-white;
+  }
+  .tab-sm.tab-off {
+    @apply bg-ink-50 text-ink-600 hover:bg-ink-100 hover:text-ink-900;
+  }
   /* The shelf itself. No ring: a hairline across the top would cut the
      raised tab off from the panel it is supposed to be part of. */
   .deck-panel {

@@ -196,6 +196,10 @@
       basketOpen: false,
       // Which category tab is showing. Empty means all of them.
       tileGroup: "",
+      // And which shelf inside it: Drinks, then Soda. Cleared whenever the
+      // top tab changes, or the grid would open on a sub-shelf that belongs
+      // to the category the cashier just left and look empty.
+      tileSub: "",
       // A name and a phone for somebody who is not on the books. Neither is
       // required, and neither adds anybody to the customer list.
       buyerName: "",
@@ -258,6 +262,13 @@
         const byId = {};
         for (const v of await getAll("variants")) byId[v.id] = v;
         this.byId = byId;
+      },
+
+      openGroup(label) {
+        // Opening a shelf starts at all of it. Keeping the old sub-shelf
+        // showed "Soda" still pressed under Food, and an empty grid with it.
+        this.tileGroup = label;
+        this.tileSub = "";
       },
 
       tilePrice(id, usual) {

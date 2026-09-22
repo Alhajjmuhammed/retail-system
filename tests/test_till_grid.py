@@ -38,7 +38,7 @@ def test_the_tabs_come_from_what_is_actually_tappable(shop, main_branch, grid):
     """A category with nothing in it is a tab that leads to an empty screen."""
     with tenant_context(shop, branch=main_branch):
         Category.objects.create(name="Hardware")      # nothing tiled in it
-        found = dict(tile_categories(tiles(branch=main_branch)))
+        found = {g.label: g.count for g in tile_categories(tiles(branch=main_branch))}
     assert found == {"Food": 2, "Drinks": 1}
 
 
@@ -72,7 +72,8 @@ def test_the_till_page_offers_the_tabs(client, shop, main_branch, register, owne
     client.force_login(owner)
     page = client.get(reverse("pos:till"))
     assert page.status_code == 200
-    assert dict(page.context["tile_categories"]) == {"Food": 2, "Drinks": 1}
+    tabs = {g.label: g.count for g in page.context["tile_categories"]}
+    assert tabs == {"Food": 2, "Drinks": 1}
     body = page.content.decode()
     assert "All items" in body and "tileGroup" in body
 
@@ -82,3 +83,25 @@ def test_the_grid_does_not_cost_a_query_per_tile(
     """Sixty tiles must not be sixty trips to the database."""
     with tenant_context(shop, branch=main_branch), django_assert_max_num_queries(8):
         [(str(k.variant), k.stock_left) for k in tiles(branch=main_branch)]
+
+
+def test_nested_shelves_do_not_cost_a_query_per_tile(
+        django_assert_max_num_queries, shop, main_branch, grid):
+    """
+    The tabs read each tile's way back to the top shelf. With one level of
+    select_related that was a query per tile as soon as a shop filed
+    anything two deep -- on the page a cashier uses all day.
+    """
+    with tenant_context(shop, branch=main_branch):
+        drinks = Category.objects.get(name="Drinks")
+        soda = Category.objects.create(name="Soda", parent=drinks)
+        bottles = Category.objects.create(name="Bottles", parent=soda)
+        product = grid["Soda 500ml"].product
+        product.category = bottles
+        product.save(update_fields=["category"])
+
+    with tenant_context(shop, branch=main_branch), django_assert_max_num_queries(8):
+        groups = tile_categories(tiles(branch=main_branch))
+        [(g.label, [s.label for s in g.subs]) for g in groups]
+
+    assert [s.label for g in groups if g.label == "Drinks" for s in g.subs] == ["Soda"]

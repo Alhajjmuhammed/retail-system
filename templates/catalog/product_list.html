@@ -14,7 +14,7 @@
       <select name="category" class="input w-full sm:w-44">
         <option value="">All categories</option>
         {% for c in categories %}
-          <option value="{{ c.pk }}" {% if category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+          <option value="{{ c.pk }}" {% if category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.path_label }}</option>
         {% endfor %}
       </select>
       <select name="status" class="input w-full sm:w-36">

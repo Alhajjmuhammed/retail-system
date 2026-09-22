@@ -44,14 +44,42 @@
     </form>
   </div>
 
-  <div class="card">
-    <div class="card-head"><h2 class="card-title">Categories</h2></div>
-    <div class="flex flex-wrap gap-1.5 p-5">
-      {% for category in categories %}<a href="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-target="#modal" class="badge badge-muted hover:bg-ink-200">{{ category.name }}</a>{% empty %}<p class="text-sm text-ink-500">None yet.</p>{% endfor %}
+  <div class="card" x-data="{ inside: '', insideName: '' }">
+    <div class="card-head">
+      <h2 class="card-title">Categories</h2>
+      <span class="hint">Drinks, then Soda, then Bottles &mdash; three deep at most.</span>
     </div>
-    <form method="post" class="flex items-end gap-2 border-t border-ink-100 p-4">
+    {% comment %}
+    A shelf per row with what is inside it stepped in under it. Badges in one
+    wrapped block could not show what sat inside what, which is the only
+    reason this list is worth having.
+    {% endcomment %}
+    <div class="divide-y divide-ink-100">
+      {% for category in categories %}
+      <div class="flex items-center justify-between gap-2 px-5 py-2 text-sm hover:bg-ink-50">
+        <a href="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-get="{% url 'catalog:taxonomy_edit' 'category' category.pk %}" hx-target="#modal"
+           class="flex flex-1 items-center gap-2 py-0.5 {% if category.level == 1 %}font-semibold text-ink-800{% elif category.level == 2 %}pl-5 text-ink-700{% else %}pl-10 text-ink-600{% endif %}">
+          {% if category.level > 1 %}<span class="text-ink-300" aria-hidden="true">&#8735;</span>{% endif %}
+          {{ category.name }}
+        </a>
+        {% if category.level < category_depth %}
+        <button type="button" @click="inside = '{{ category.pk }}'; insideName = '{{ category.name|escapejs }}'; $nextTick(() => $refs.catName.focus())"
+                class="btn btn-secondary btn-sm">{% icon "plus" class="h-4 w-4" %} Add inside</button>
+        {% endif %}
+      </div>
+      {% empty %}<p class="px-5 py-3 text-sm text-ink-500">None yet. Start with a shelf like Drinks.</p>{% endfor %}
+    </div>
+    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
       {% csrf_token %}<input type="hidden" name="kind" value="category">
-      <div class="flex-1"><label class="label" for="cat_name">Name</label><input name="name" id="cat_name" class="input" placeholder="Drinks" maxlength="80" required></div>
+      <input type="hidden" name="parent" :value="inside">
+      <div class="flex-1">
+        <label class="label" for="cat_name">
+          <span x-show="!inside">New category</span>
+          <span x-show="inside" x-cloak>Inside <span x-text="insideName" class="font-semibold"></span></span>
+        </label>
+        <input name="name" id="cat_name" x-ref="catName" class="input" placeholder="Drinks" maxlength="80" required>
+      </div>
+      <button type="button" x-show="inside" x-cloak @click="inside = ''; insideName = ''" class="btn btn-secondary">Cancel</button>
       <button type="submit" class="btn btn-secondary">Add</button>
     </form>
   </div>

@@ -16,8 +16,24 @@ from django.db import models
 from apps.core.features import LIMIT_PRODUCTS, WHOLESALE_PRICING
 from apps.core.models import TenantModel
 
+# Drinks > Soda > Bottles. Three is as deep as it goes: a shopkeeper filing
+# stock does not think in a fourth level, and the till has room for two rows
+# of tabs, not three.
+CATEGORY_DEPTH = 3
+
 
 class Category(TenantModel):
+    """
+    A shelf, and the shelves inside it.
+
+    ``parent`` has been on this table from the start but nothing ever set it,
+    so every shop had one flat list. Three levels is what a duka actually
+    uses: Drinks, then Soda, then Bottles and Cans.
+    """
+
+    # Not ">" or "/": both turn up inside names a shop types.
+    SEPARATOR = " \u203a "
+
     name = models.CharField(max_length=80)
     parent = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="children"
@@ -31,6 +47,37 @@ class Category(TenantModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def ancestry(self):
+        """
+        This category and the ones it sits inside, outermost first.
+
+        The loop counts what it has seen: a category that somehow ends up
+        inside itself would otherwise hang the page rather than show it.
+        """
+        chain, node, seen = [], self, set()
+        while node is not None and node.pk not in seen:
+            seen.add(node.pk)
+            chain.append(node)
+            node = node.parent
+        chain.reverse()
+        return chain
+
+    @property
+    def level(self):
+        """1 for a top shelf, 3 for the deepest."""
+        return len(self.ancestry)
+
+    @property
+    def path_label(self):
+        """``Drinks > Soda > Bottles``, for a picker with room for it."""
+        return self.SEPARATOR.join(node.name for node in self.ancestry)
+
+    @property
+    def top(self):
+        """The shelf this sits under, which is the tab on the till."""
+        return self.ancestry[0]
 
 
 class Brand(TenantModel):

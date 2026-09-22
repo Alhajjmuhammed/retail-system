@@ -129,19 +129,19 @@ def till(request):
         },
     }
 
+    from apps.catalog.services import tile_categories
+
+    # One call, not two: the grid and its tabs came from separate queries for
+    # the same sixty rows, and the tabs are read off the tiles anyway.
+    keys = _tiles(request)
+
     return render(
         request,
         "pos/till.html",
-        {"shift": shift, "config": json.dumps(config), "tiles": _tiles(request),
-         "tile_categories": _tile_categories(request),
+        {"shift": shift, "config": json.dumps(config), "tiles": keys,
+         "tile_categories": tile_categories(keys),
          "offline": config["offline"]},
     )
-
-
-def _tile_categories(request):
-    from apps.catalog.services import tile_categories
-
-    return tile_categories(_tiles(request))
 
 
 def _tiles(request):

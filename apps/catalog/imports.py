@@ -11,12 +11,20 @@ is the behaviour that makes people give up and retype.
 
 import csv
 import io
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 
-from apps.catalog.models import Barcode, Category, Product, TaxRate, Unit
+from apps.catalog.models import (
+    CATEGORY_DEPTH,
+    Barcode,
+    Category,
+    Product,
+    TaxRate,
+    Unit,
+)
 from apps.catalog.services import attach_barcode, set_price
 from apps.core.context import get_current_branch, get_current_tenant
 from apps.core.features import LimitExceeded
@@ -138,9 +146,7 @@ def _import_row(row, name, tenant, branch, default_unit, default_tax,
 
     category = None
     if row.get("category"):
-        category, _ = Category.objects.get_or_create(
-            name=row["category"], parent=None, defaults={"tenant": tenant}
-        )
+        category = _category_from_path(row["category"], tenant)
 
     unit = default_unit
     if row.get("unit"):
@@ -196,6 +202,23 @@ def _import_row(row, name, tenant, branch, default_unit, default_tax,
             _set_opening_stock(variant, qty, cost, branch, created=created)
 
 
+def _category_from_path(text, tenant):
+    """
+    ``Drinks > Soda > Bottles`` from one cell of a spreadsheet.
+
+    A shop exporting its products, adding a column in Excel and importing
+    the file back is how most of them file things in bulk, so the path has
+    to survive the round trip. A plain name is still a plain name.
+    """
+    names = [part.strip() for part in re.split(r"[>\u203a/]", text) if part.strip()]
+    parent = None
+    for name in names[:CATEGORY_DEPTH]:
+        parent, _ = Category.objects.get_or_create(
+            name=name[:80], parent=parent, defaults={"tenant": tenant}
+        )
+    return parent
+
+
 def _set_opening_stock(variant, qty, cost, branch, *, created=False):
     """
     Opening stock, once.
@@ -235,11 +258,18 @@ def safe_cell(text):
 
 def export_products(branch=None) -> str:
     """The same shape the importer reads, so a round trip is lossless."""
+    from apps.catalog.services import category_tree
     from apps.inventory.services import quantity_of
 
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=COLUMNS)
     writer.writeheader()
+
+    # "Drinks > Soda > Bottles" in the cell, so what comes back in is filed
+    # where it was. Built once: reading it off each product would walk back
+    # up to the top shelf for every row.
+    paths = {row.pk: row.path_label.replace(Category.SEPARATOR, " > ")
+             for row in category_tree(include_inactive=True)}
 
     products = (
         Product.objects.select_related("category", "base_unit")
@@ -257,7 +287,7 @@ def export_products(branch=None) -> str:
             "name": safe_cell(product.name),
             "sku": safe_cell(product.sku),
             "barcode": safe_cell(barcode.code if barcode else ""),
-            "category": safe_cell(product.category.name if product.category else ""),
+            "category": safe_cell(paths.get(product.category_id, "")),
             "unit": product.base_unit.code,
             "price": price or "",
             "cost": "",

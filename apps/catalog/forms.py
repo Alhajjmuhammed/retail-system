@@ -43,8 +43,23 @@ class ProductForm(TailwindMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Switched-off ones stay choosable for the product that already has
         # them; otherwise the field rendered blank and saving cleared it.
+        # Nested, and shown by its whole path: two shops file "Bottles"
+        # under Drinks and under Gas, and a bare name cannot tell them apart.
+        from apps.catalog.services import category_tree
+
         self.fields["category"].queryset = Category.objects.filter(
             models.Q(is_active=True) | models.Q(pk=self.instance.category_id))
+        chosen = self.instance.category_id
+        options = [("", "\u2014")]
+        listed = set()
+        for row in category_tree():
+            options.append((row.pk, row.path_label))
+            listed.add(row.pk)
+        if chosen and chosen not in listed:
+            # Switched off, but still this product's: dropping it from the
+            # list made the field render blank and saving cleared it.
+            options.append((chosen, self.instance.category.path_label))
+        self.fields["category"].choices = options
         self.fields["brand"].queryset = Brand.objects.filter(
             models.Q(is_active=True) | models.Q(pk=self.instance.brand_id))
         # Piece first, then the rest by name: nearly everything a shop adds is
@@ -152,7 +167,8 @@ class ImportForm(TailwindMixin, forms.Form):
 
     file = forms.FileField(
         label="CSV file",
-        help_text="Columns: name, sku, barcode, category, unit, price, cost, qty",
+        help_text="Columns: name, sku, barcode, category, unit, price, cost, qty. "
+                  "A category can be a path: Drinks > Soda > Bottles.",
     )
     update_existing = forms.BooleanField(
         label="Update products that already exist", required=False, initial=True

@@ -17,8 +17,21 @@ from django.views.decorators.http import require_POST
 
 from apps.catalog.forms import ImportForm, ProductForm
 from apps.catalog.imports import export_products, import_products
-from apps.catalog.models import Barcode, Category, Price, Product, Variant
-from apps.catalog.services import attach_barcode, set_price
+from apps.catalog.models import (
+    CATEGORY_DEPTH,
+    Barcode,
+    Category,
+    Price,
+    Product,
+    Variant,
+)
+from apps.catalog.services import (
+    attach_barcode,
+    category_family,
+    category_parents,
+    category_tree,
+    set_price,
+)
 from apps.core import audit
 from apps.core.decorators import requires
 from apps.core.deletion import remove_or_archive
@@ -57,7 +70,9 @@ def product_list(request):
         products = products.filter(is_active=False)
 
     if category:
-        products = products.filter(category_id=int_or(category))
+        # Everything under the chosen shelf, not only what is filed directly
+        # on it: picking Drinks has to find the soda and the bottles too.
+        products = products.filter(category_id__in=category_family(int_or(category)))
 
     if term:
         products = products.filter(
@@ -84,7 +99,7 @@ def product_list(request):
     context = {
         **paginate(request, products.order_by("name")),
         "q": term,
-        "categories": Category.objects.filter(is_active=True),
+        "categories": category_tree(),
         "category": category,
         "status": status,
         "can_see_cost": request.membership.can("product.view_cost"),
@@ -483,16 +498,34 @@ def taxonomy(request):
         # Already there? Say so -- or switch it back on if it was retired.
         # "Added" used to show for a name that already existed, and a retired
         # one stayed hidden with no way back.
+        parent = None
+        if kind == "category" and request.POST.get("parent"):
+            parent = Category.objects.filter(
+                pk=int_or(request.POST.get("parent")), is_active=True).first()
+            if parent is None:
+                messages.error(request, "That category is no longer there.")
+                return redirect("catalog:taxonomy")
+            if parent.level >= CATEGORY_DEPTH:
+                messages.error(
+                    request,
+                    f"A category goes three deep at most, like "
+                    f"{parent.path_label}. Put this one further up.",
+                )
+                return redirect("catalog:taxonomy")
+
         if kind == "unit":
             code = code or name[:10].lower()
             clash = Unit.objects.filter(code__iexact=code).first()
         elif kind == "category":
-            clash = Category.objects.filter(name__iexact=name, parent=None).first()
+            clash = Category.objects.filter(name__iexact=name, parent=parent).first()
         else:
             clash = model.objects.filter(name__iexact=name).first()
         if clash is not None:
             if clash.is_active:
-                messages.error(request, f"{label} {clash.name} is already on the list.")
+                where = (f" inside {clash.parent.path_label}"
+                         if kind == "category" and clash.parent_id else "")
+                messages.error(
+                    request, f"{label} {clash.name} is already on the list{where}.")
             else:
                 clash.is_active = True
                 clash.save(update_fields=["is_active", "updated_at"])
@@ -501,7 +534,7 @@ def taxonomy(request):
             return redirect("catalog:taxonomy")
 
         if kind == "category":
-            obj = Category.objects.create(name=name, parent=None)
+            obj = Category.objects.create(name=name, parent=parent)
         elif kind == "brand":
             obj = Brand.objects.create(name=name)
         elif kind == "unit":
@@ -521,14 +554,18 @@ def taxonomy(request):
             )
         audit.record(f"{kind}.created", obj=obj, after={"name": name},
                      ip=audit.client_ip(request))
-        messages.success(request, f"{name} added.")
+        messages.success(
+            request,
+            f"{name} added inside {parent.path_label}." if parent else f"{name} added.",
+        )
         return redirect("catalog:taxonomy")
 
     return render(
         request,
         "catalog/taxonomy.html",
         {
-            "categories": Category.objects.filter(is_active=True).order_by("name"),
+            "categories": category_tree(),
+            "category_depth": CATEGORY_DEPTH,
             "brands": Brand.objects.filter(is_active=True).order_by("name"),
             "units": Unit.objects.filter(is_active=True).order_by("name"),
             "taxes": TaxRate.objects.filter(is_active=True).order_by("name"),
@@ -572,7 +609,9 @@ def taxonomy_edit(request, kind, pk):
         return render(
             request, "catalog/taxonomy_edit.html" if not request.htmx else "catalog/_taxonomy_form.html",
             {"object": obj, "kind": kind, "label": label, "error": error,
-             "modal": bool(request.htmx)},
+             "modal": bool(request.htmx),
+             "parents": (category_parents(exclude=obj, height=_category_height(obj))
+                         if kind == "category" else [])},
         )
 
     if request.method == "POST":
@@ -581,13 +620,33 @@ def taxonomy_edit(request, kind, pk):
         if len(name) > model._meta.get_field("name").max_length or \
                 len(request.POST.get("code", "").strip()) > 10:
             return form("That is too long.")
+        # Only categories have one, and a post that leaves the field out
+        # entirely means "unchanged", not "move it to the top shelf".
+        parent = obj.parent if kind == "category" else None
+        if kind == "category" and "parent" in request.POST:
+            chosen = request.POST.get("parent", "")
+            parent = None
+            if chosen:
+                parent = Category.objects.filter(pk=int_or(chosen)).first()
+                if parent is None or parent.pk in category_family(obj.pk):
+                    # Into itself or into one of its own: the move that turns
+                    # the list into a ring nothing can draw.
+                    return form("A category cannot go inside itself.")
+                if parent.level + _category_height(obj) > CATEGORY_DEPTH:
+                    return form(
+                        "That would go more than three deep. Move what is "
+                        "inside this one first."
+                    )
+
         clash = model.objects.filter(name__iexact=name).exclude(pk=obj.pk)
         if kind == "category":
-            clash = clash.filter(parent=obj.parent)
+            clash = clash.filter(parent=parent)
         if kind != "unit" and clash.exists():
             # A rename onto an existing name hit the unique index as a 500.
             return form(f"There is already a {label.lower()} called {name}.")
         obj.name = name
+        if kind == "category":
+            obj.parent = parent
 
         if kind == "unit":
             code = request.POST.get("code", "").strip() or obj.code
@@ -615,6 +674,16 @@ def taxonomy_edit(request, kind, pk):
     return form()
 
 
+def _category_height(category):
+    """How many levels this category is itself, counting what is inside it."""
+    depth, level = 1, {category.pk: 1}
+    for row in category_tree(include_inactive=True):
+        if row.parent_id in level:
+            level[row.pk] = level[row.parent_id] + 1
+            depth = max(depth, level[row.pk])
+    return depth
+
+
 @login_required
 @requires("settings.edit")
 @require_POST
@@ -633,6 +702,13 @@ def taxonomy_delete(request, kind, pk):
     blockers = ()
     if kind == "tax" and getattr(obj, "is_default", False):
         blockers = ((lambda: True, "Choose another default VAT rate first."),)
+    if kind == "category":
+        # parent is SET_NULL, so removing Drinks would quietly tip Soda and
+        # Water out onto the top level and nobody would be told.
+        blockers = (
+            (lambda: obj.children.exists(),
+             f"Remove what is inside {obj.name} first, or move it elsewhere."),
+        )
 
     outcome = remove_or_archive(obj, label=f"{label} {obj}", blockers=blockers)
     if not outcome.blocked:

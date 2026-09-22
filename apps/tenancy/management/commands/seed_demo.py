@@ -52,17 +52,28 @@ EXTRA_ROLES = [
 ]
 
 # name, unit, price, cost, opening stock, barcode, crate barcode (sells 24)
+# The shelves, up to three deep. The demo shop is the only place most people
+# see the second row of tabs on the till, so it has one.
+SHELVES = {
+    "Chakula": {"Nafaka": [], "Mkate": []},
+    "Vinywaji": {"Soda": ["Chupa", "Kopo"], "Maji": []},
+    "Nyumbani": {},
+}
+
 SHELF = [
-    ("Sukari 1kg", "kg", 3000, 2400, 60, "6001234567890", None),
-    ("Mkate Mkubwa", "pc", 1500, 1100, 40, "6001111111111", None),
-    ("Soda 500ml", "pc", 1000, 700, 120, "6002222222222", "6002222222229"),
-    ("Mchele 5kg", "kg", 14000, 11500, 25, "6003333333333", None),
-    ("Sabuni", "pc", 2500, 1900, 80, "6004444444444", None),
-    ("Mafuta 1L", "l", 6500, 5400, 30, "6005555555555", None),
+    # name, unit, price, cost, qty, barcode, crate barcode, shelf
+    ("Sukari 1kg", "kg", 3000, 2400, 60, "6001234567890", None, "Chakula"),
+    ("Mkate Mkubwa", "pc", 1500, 1100, 40, "6001111111111", None, "Chakula > Mkate"),
+    ("Soda 500ml", "pc", 1000, 700, 120, "6002222222222", "6002222222229",
+     "Vinywaji > Soda > Chupa"),
+    ("Mchele 5kg", "kg", 14000, 11500, 25, "6003333333333", None,
+     "Chakula > Nafaka"),
+    ("Sabuni", "pc", 2500, 1900, 80, "6004444444444", None, "Nyumbani"),
+    ("Mafuta 1L", "l", 6500, 5400, 30, "6005555555555", None, "Chakula"),
     # No barcode at all: these reach the basket by tile or by name, which is
     # most of what a small shop actually sells.
-    ("Nyanya (kg)", "kg", 2000, 1400, 0, None, None),
-    ("Mkaa (debe)", "pc", 12000, 9000, 0, None, None),
+    ("Nyanya (kg)", "kg", 2000, 1400, 0, None, None, "Chakula"),
+    ("Mkaa (debe)", "pc", 12000, 9000, 0, None, None, "Nyumbani"),
 ]
 
 
@@ -171,6 +182,7 @@ class Command(BaseCommand):
         """Products, prices, barcodes, tiles, stock, a customer and a supplier."""
         from apps.catalog.models import (
             Barcode,
+            Category,
             Price,
             PriceList,
             PriceListKind,
@@ -189,10 +201,22 @@ class Command(BaseCommand):
         units = {u.code: u for u in Unit.objects.all()}
         wholesale = PriceList.objects.create(name="Wholesale", kind=PriceListKind.WHOLESALE)
 
+        shelves = {}
+        for top, inside in SHELVES.items():
+            shelves[top] = Category.objects.create(name=top)
+            for middle, leaves in inside.items():
+                path = f"{top} > {middle}"
+                shelves[path] = Category.objects.create(
+                    name=middle, parent=shelves[top])
+                for leaf in leaves:
+                    shelves[f"{path} > {leaf}"] = Category.objects.create(
+                        name=leaf, parent=shelves[path])
+
         tiles = 0
-        for name, unit_code, price, cost, qty, code, crate in SHELF:
+        for name, unit_code, price, cost, qty, code, crate, shelf in SHELF:
             product = Product.objects.create(
-                name=name, base_unit=units[unit_code], tax_rate=vat
+                name=name, base_unit=units[unit_code], tax_rate=vat,
+                category=shelves[shelf],
             )
             variant = product.default_variant
             Price.objects.create(price_list=retail, variant=variant, amount=price)

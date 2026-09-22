@@ -87,23 +87,43 @@ largest possible targets and nothing to mis-tap while a queue forms.
       <div class="deck mt-3">
         {% if tile_categories|length > 1 %}
         <div class="deck-tabs">
-          <button type="button" @click="tileGroup = ''"
+          <button type="button" @click="openGroup('')"
                   :class="tileGroup === '' ? 'tab-on' : 'tab-off'" class="tab">
             All items<span class="tab-count">{{ tiles|length }}</span>
           </button>
-          {% for label, count in tile_categories %}
-          <button type="button" @click="tileGroup = '{{ label|escapejs }}'"
-                  :class="tileGroup === '{{ label|escapejs }}' ? 'tab-on' : 'tab-off'" class="tab">
-            {{ label }}<span class="tab-count">{{ count }}</span>
+          {% for group in tile_categories %}
+          <button type="button" @click="openGroup('{{ group.label|escapejs }}')"
+                  :class="tileGroup === '{{ group.label|escapejs }}' ? 'tab-on' : 'tab-off'" class="tab">
+            {{ group.label }}<span class="tab-count">{{ group.count }}</span>
           </button>
           {% endfor %}
         </div>
+        {% comment %}
+        The second row: what is inside the shelf that is open. Only the open
+        one is in the page at a time, so the row does not jump about as tabs
+        appear and disappear, and a shop with no sub-shelves never sees it.
+        {% endcomment %}
+        {% for group in tile_categories %}{% if group.subs %}
+        <div x-show="tileGroup === '{{ group.label|escapejs }}'" x-cloak class="deck-tabs deck-tabs-sub">
+          <button type="button" @click="tileSub = ''"
+                  :class="tileSub === '' ? 'tab-on' : 'tab-off'" class="tab tab-sm">
+            All {{ group.label|lower }}<span class="tab-count">{{ group.count }}</span>
+          </button>
+          {% for sub in group.subs %}
+          <button type="button" @click="tileSub = '{{ sub.label|escapejs }}'"
+                  :class="tileSub === '{{ sub.label|escapejs }}' ? 'tab-on' : 'tab-off'" class="tab tab-sm">
+            {{ sub.label }}<span class="tab-count">{{ sub.count }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}{% endfor %}
         {% endif %}
 
         <div class="deck-panel grid auto-rows-min grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {% for key in tiles %}
         {% with product=key.variant.product %}
-        <div x-show="tileGroup === '' || tileGroup === '{{ product.category.name|default:"Other"|escapejs }}'"
+        <div x-show="(tileGroup === '' || tileGroup === '{{ key.tile_group|escapejs }}')
+                  && (tileSub === '' || tileSub === '{{ key.tile_sub|escapejs }}')"
              class="tile group">
           <button type="button" class="tile-main"
                   @click="addTile({{ key.variant_id }}, '{{ key.variant|escapejs }}', {% with p=key.variant.price_for %}{% if p is None %}null{% else %}{{ p }}{% endif %}{% endwith %}, {{ product.tax_rate.rate }}, '{% if product.image %}{{ product.image.url }}{% endif %}')">

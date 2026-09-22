@@ -13,6 +13,19 @@
     <input name="name" id="name" value="{{ request.POST.name|default:object.name }}" maxlength="{% if kind == 'unit' or kind == 'tax' %}40{% else %}80{% endif %}" class="input" required autofocus>
   </div>
 
+  {% if kind == "category" %}
+  <div>
+    <label class="label" for="parent">Inside</label>
+    <select name="parent" id="parent" class="input">
+      <option value="">Nothing &mdash; it is a top shelf</option>
+      {% for row in parents %}
+      <option value="{{ row.pk }}" {% if row.pk == object.parent_id %}selected{% endif %}>{{ row.path_label }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">Drinks &rsaquo; Soda &rsaquo; Bottles. Only the places this one still fits are listed.</p>
+  </div>
+  {% endif %}
+
   {% if kind == "unit" %}
   <div>
     <label class="label" for="code">Short code</label>

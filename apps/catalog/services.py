@@ -11,9 +11,27 @@ from decimal import Decimal
 
 from django.db.models import Q
 
-from apps.catalog.models import Barcode, Price, PriceList, Product, QuickKey, Variant
+from apps.catalog.models import (
+    CATEGORY_DEPTH,
+    Barcode,
+    Category,
+    Price,
+    PriceList,
+    Product,
+    QuickKey,
+    Variant,
+)
 from apps.core.context import get_current_tenant
 from apps.pos.models import AddedVia
+
+
+@dataclass
+class TileGroup:
+    """One tab over the touch grid, and the tabs inside it."""
+
+    label: str
+    count: int
+    subs: list
 
 
 @dataclass
@@ -147,6 +165,87 @@ def create_product(*, name, price=None, cost=None, **fields) -> Product:
     return product
 
 
+# --------------------------------------------------------------------------
+# Shelves inside shelves
+# --------------------------------------------------------------------------
+
+def category_tree(include_inactive=False):
+    """
+    Every category, a parent always before the things inside it.
+
+    One query for the lot, then the nesting is worked out in memory: a shop
+    has tens of categories, not thousands, and a picker that costs a query
+    per level is a picker nobody opens twice.
+
+    Each row comes back with its parent already attached, so ``level`` and
+    ``path_label`` answer from memory instead of walking back up to the top
+    shelf one query at a time.
+    """
+    rows = list(Category.objects.all() if include_inactive
+                else Category.objects.filter(is_active=True))
+    children = {}
+    for row in rows:
+        children.setdefault(row.parent_id, []).append(row)
+    for group in children.values():
+        group.sort(key=lambda row: row.name.lower())
+
+    ordered = []
+
+    def walk(parent, level):
+        # Anything below the third level is left out rather than shown: the
+        # forms refuse to make one, so a row down there is old or imported.
+        if level > CATEGORY_DEPTH:
+            return
+        for row in children.get(parent.pk if parent else None, ()):
+            # Assigning the instance fills Django's own cache for the field,
+            # which is what stops `level` and `path_label` querying.
+            row.parent = parent
+            ordered.append(row)
+            walk(row, level + 1)
+
+    walk(None, 1)
+    return ordered
+
+
+def category_family(category_id, include_inactive=True):
+    """
+    A category and everything filed inside it, as ids.
+
+    Picking "Drinks" in a filter has to find the soda and the bottles under
+    it too, or a shop that files things properly sees an empty list.
+    """
+    category_id = int(category_id)
+    rows = list(
+        (Category.objects.all() if include_inactive
+         else Category.objects.filter(is_active=True)).values_list("pk", "parent_id")
+    )
+    children = {}
+    for pk, parent_id in rows:
+        children.setdefault(parent_id, []).append(pk)
+
+    family, queue = {category_id}, [category_id]
+    while queue:
+        for pk in children.get(queue.pop(), ()):
+            if pk not in family:
+                family.add(pk)
+                queue.append(pk)
+    return family
+
+
+def category_parents(exclude=None, height=1):
+    """
+    The categories something may be put inside.
+
+    ``height`` is how many levels the thing being moved is itself: moving a
+    category that already has one inside it needs two levels of room, not
+    one. A category may not be moved into itself or into one of its own --
+    the move that turns a list into a ring nothing can draw.
+    """
+    family = category_family(exclude.pk) if exclude is not None else set()
+    return [row for row in category_tree(include_inactive=True)
+            if row.level + height <= CATEGORY_DEPTH and row.pk not in family]
+
+
 def tiles(branch=None, limit=60):
     """
     The touch grid.
@@ -155,7 +254,11 @@ def tiles(branch=None, limit=60):
     with no barcodes at all can still use the till.
     """
     query = QuickKey.objects.select_related(
-        "variant__product__category", "variant__product__base_unit",
+        # Up the shelves as well, not just the shelf: the tabs read each
+        # tile's ancestry, and one level of select_related made that a query
+        # per tile the moment a shop filed anything two deep.
+        "variant__product__category__parent__parent",
+        "variant__product__base_unit",
         "variant__product__tax_rate",
     )
     if branch is not None:
@@ -182,15 +285,35 @@ def tiles(branch=None, limit=60):
 
 def tile_categories(tiles):
     """
-    The categories the tiles actually fall into, in the order they appear.
+    The tabs above the touch grid: top shelves, and what is inside each.
 
     Taken from the tiles themselves rather than the category list: a category
     with nothing tappable in it is a tab that leads to an empty screen.
+
+    Two rows, not three. Each tile is also marked with the shelf and the
+    sub-shelf it belongs to, so the grid can hide what the tabs exclude
+    without a query per tile. A product filed three deep shows under its
+    second-level shelf: the till has no room for a third row of tabs, and a
+    cashier reaching for a Coke has made two taps by then already.
     """
-    seen = {}
+    tops, inside = {}, {}
     for key in tiles:
         category = key.variant.product.category
-        label = category.name if category else "Other"
-        seen.setdefault(label, 0)
-        seen[label] += 1
-    return sorted(seen.items())
+        chain = category.ancestry if category else []
+        top = chain[0].name if chain else "Other"
+        sub = chain[1].name if len(chain) > 1 else ""
+        key.tile_group, key.tile_sub = top, sub
+        tops[top] = tops.get(top, 0) + 1
+        if sub:
+            inside.setdefault(top, {})
+            inside[top][sub] = inside[top].get(sub, 0) + 1
+
+    return [
+        TileGroup(
+            label=top,
+            count=count,
+            subs=[TileGroup(label=name, count=n, subs=[])
+                  for name, n in sorted(inside.get(top, {}).items())],
+        )
+        for top, count in sorted(tops.items())
+    ]
