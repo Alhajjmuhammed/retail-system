@@ -236,6 +236,14 @@ def category_forest():
         parent = by_pk.get(row.parent_id)
         (parent.kids if parent else top).append(row)
 
+    # A colour per top shelf, steady across page loads because it comes from
+    # the row's own id. Six of them: enough that neighbours differ, few
+    # enough that the page still looks like one thing.
+    for index, row in enumerate(top):
+        row.tone = (row.pk % 6) + 1
+        if index and row.tone == top[index - 1].tone:
+            row.tone = (row.tone % 6) + 1
+
     # Deepest first, so a shelf's total is complete before its parent adds it.
     for row in reversed(rows):
         parent = by_pk.get(row.parent_id)

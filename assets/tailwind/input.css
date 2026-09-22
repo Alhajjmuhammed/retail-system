@@ -608,42 +608,88 @@
     @apply bg-white/10 text-white ring-1 ring-inset ring-white/25 hover:bg-white/20;
   }
 
-  /* The shelves page. A top shelf is a card and what is inside it sits
-     inside it, so the shape is read rather than worked out. */
+  /* The shelves page.
+
+     A top shelf is a card with a tinted head, what is inside it is a row on
+     the card, and the third level is a chip on the row. Depth is read from
+     the drawing rather than counted from an indent. */
   .shelf {
     @apply flex flex-col overflow-hidden rounded-2xl bg-white shadow-card
-           ring-1 ring-inset ring-ink-100 transition;
+           ring-1 ring-inset ring-ink-900/5 transition duration-200;
   }
   .shelf:hover {
-    @apply ring-ink-200;
+    @apply -translate-y-0.5 shadow-float;
   }
   .shelf-head {
-    @apply flex items-start gap-3 border-l-4 border-brand-500 px-5 py-4;
+    @apply flex items-center gap-3.5 px-5 py-4;
+  }
+  .shelf-mark {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl;
+  }
+  .shelf-count {
+    @apply shrink-0 text-right;
+    font-variant-numeric: tabular-nums;
+  }
+  .shelf-count b {
+    @apply block text-xl font-bold leading-none text-ink-900;
+  }
+  .shelf-count span {
+    @apply mt-1 block text-[11px] uppercase tracking-wide text-ink-400;
   }
   .shelf-body {
-    @apply space-y-2.5 border-t border-ink-100 bg-ink-50/50 px-5 py-4;
+    @apply space-y-2 px-4 pb-4;
   }
   .shelf-row {
-    @apply rounded-xl bg-white px-3.5 py-2.5 ring-1 ring-inset ring-ink-100;
+    @apply rounded-xl bg-ink-50/70 px-3.5 py-2.5 transition;
   }
-  /* The third level: small, because a cashier never taps it and an owner
-     only glances at it. */
+  .shelf-row:hover {
+    @apply bg-ink-100/70;
+  }
   .shelf-chip {
-    @apply inline-flex items-center gap-1.5 rounded-lg bg-ink-100/70 px-2 py-1
-           text-xs font-medium text-ink-600 hover:bg-ink-200 hover:text-ink-900;
+    @apply inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1
+           text-xs font-medium text-ink-600 shadow-sm ring-1 ring-inset
+           ring-ink-900/5 transition hover:text-brand-700 hover:ring-brand-200;
   }
   .shelf-add {
-    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
-           bg-ink-50 text-ink-500 transition hover:bg-brand-50 hover:text-brand-700;
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
+           text-ink-400 opacity-0 transition
+           hover:bg-white hover:text-brand-700 hover:shadow-sm
+           focus-visible:opacity-100 group-hover:opacity-100;
   }
-  .shelf-add-sm {
-    @apply h-6 w-6 bg-transparent;
+  /* Touch has no hover, so the button is simply always there. */
+  @media (hover: none) {
+    .shelf-add { @apply opacity-100; }
   }
-  /* The last tile in the grid, so a shelf is added where the shelves are. */
+  .shelf-foot {
+    @apply flex w-full items-center justify-center gap-1.5 border-t
+           border-ink-100 px-5 py-2.5 text-xs font-medium text-ink-500
+           transition hover:bg-brand-50 hover:text-brand-700;
+  }
+  .shelf-empty {
+    @apply mx-4 mb-4 rounded-xl border border-dashed border-ink-200 px-4 py-5
+           text-center text-sm text-ink-400;
+  }
+  /* The last tile: adding a shelf happens among the shelves. */
   .shelf-new {
-    @apply flex flex-col justify-center rounded-2xl border-2 border-dashed
-           border-ink-200 bg-white/60 p-5 transition hover:border-brand-300;
+    @apply flex min-h-36 flex-col justify-center rounded-2xl border-2
+           border-dashed border-ink-200 bg-white/50 p-5 transition
+           hover:border-brand-300 hover:bg-white;
   }
+
+  /* Six tints. Soft heads, saturated marks -- the card stays white so a
+     wall of them still reads as one page. */
+  .tone-1 { @apply bg-emerald-50; }
+  .tone-1 .shelf-mark { @apply bg-emerald-100 text-emerald-700; }
+  .tone-2 { @apply bg-sky-50; }
+  .tone-2 .shelf-mark { @apply bg-sky-100 text-sky-700; }
+  .tone-3 { @apply bg-amber-50; }
+  .tone-3 .shelf-mark { @apply bg-amber-100 text-amber-700; }
+  .tone-4 { @apply bg-violet-50; }
+  .tone-4 .shelf-mark { @apply bg-violet-100 text-violet-700; }
+  .tone-5 { @apply bg-rose-50; }
+  .tone-5 .shelf-mark { @apply bg-rose-100 text-rose-700; }
+  .tone-6 { @apply bg-teal-50; }
+  .tone-6 .shelf-mark { @apply bg-teal-100 text-teal-700; }
 
   /* The packages on the signup page. A radio wearing a card: the whole
      thing is a label, so a tap anywhere on it picks that package, and it
