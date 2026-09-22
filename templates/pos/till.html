@@ -319,6 +319,43 @@ largest possible targets and nothing to mis-tap while a queue forms.
     </aside>
   </div>
 
+  {% comment %}
+  The sale went through. Said on the screen the cashier is looking at, not
+  in twelve grey pixels in the corner of the header -- and with the change
+  on it, because that number was on the payment dialog and disappeared with
+  it just as the cashier reached into the drawer.
+
+  It closes on any tap and after a few seconds on its own, so the next
+  customer is never waiting for the screen.
+  {% endcomment %}
+  <div x-show="dialog === 'done'" x-cloak @click="dialog = null"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0"
+       class="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-float">
+      <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+        {% icon "check" class="h-8 w-8" %}
+      </span>
+      <p class="mt-4 text-lg font-semibold text-ink-900"
+         x-text="done && done.onAccount ? 'Put on account' : 'Paid'"></p>
+      <p class="mt-1 text-sm text-ink-500">
+        <span x-text="done ? money(done.total) : ''"></span>
+        <span x-show="done && done.customer" x-cloak> &middot; <span x-text="done ? done.customer : ''"></span></span>
+      </p>
+
+      <template x-if="done && done.change > 0">
+        <div class="mt-5 rounded-xl bg-amber-50 px-4 py-3.5 ring-1 ring-inset ring-amber-600/20">
+          <p class="text-xs font-semibold uppercase tracking-wide text-amber-800">Give change</p>
+          <p class="tnum mt-0.5 text-3xl font-bold text-amber-900" x-text="money(done.change)"></p>
+        </div>
+      </template>
+
+      <button type="button" @click="dialog = null" class="btn btn-primary btn-lg mt-5 w-full">
+        Next customer
+      </button>
+    </div>
+  </div>
+
   <!-- Sales the server refused -->
   <div x-show="dialog === 'refused'" x-cloak @click.self="dialog = null"
        class="fixed inset-0 z-40 flex items-end justify-center bg-ink-950/50 p-3 backdrop-blur-sm sm:items-center sm:p-4">

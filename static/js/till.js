@@ -194,6 +194,8 @@
       // so the tiles keep the screen. Wider: it sits beside them.
       wide: true,
       basketOpen: false,
+      // What the last sale came to, while the screen is still saying so.
+      done: null,
       // Which category tab is showing. Empty means all of them.
       tileGroup: "",
       // And which shelf inside it: Drinks, then Soda. Cleared whenever the
@@ -421,7 +423,14 @@
       // ---- input ------------------------------------------------------
 
       onKey(event) {
-        if (this.showPayment || this.dialog) {
+        // The sale confirmation is a message, not a question. The next
+        // keystroke is very often the first character of the next barcode,
+        // and a dialog that swallowed it would cost the cashier a rescan:
+        // it steps aside and the key still counts.
+        if (this.dialog === "done") {
+          this.dialog = null;
+          if (event.key === "Escape" || event.key === "Enter") return;
+        } else if (this.showPayment || this.dialog) {
           if (event.key === "Escape") {
             this.showPayment = false;
             this.dialog = null;
@@ -736,6 +745,7 @@
         }
         // Only now, with the sale safely stored, clear the screen.
         const onAccount = method === "credit" && this.customer;
+        const buyer = this.customer ? this.customer.name : this.buyerName.trim();
         if (onAccount) {
           // Keep the offline figure honest until the next refresh.
           this.customer.credit_left = String(Math.max(0, this.creditLeft - total));
@@ -744,6 +754,25 @@
         this.paying = false;
         await this.countQueue();
         this.flash(onAccount ? "Sale recorded on account" : "Sale recorded");
+
+        // Say so on the screen, not only in the corner of the header. The
+        // change is the part that matters: it was on the payment dialog and
+        // vanished with it, and a cashier counting notes out of the drawer
+        // should not have to remember a number.
+        this.done = {
+          total: total,
+          change: method === "cash" ? change : 0,
+          method: method,
+          onAccount: onAccount,
+          customer: buyer,
+        };
+        this.dialog = "done";
+        // Long enough to read and count against, short enough that the next
+        // customer is never waiting for the screen. Any tap closes it.
+        const shown = this.done;
+        setTimeout(() => {
+          if (this.dialog === "done" && this.done === shown) this.dialog = null;
+        }, 6000);
 
         if (this.online) this.flush();
       },
