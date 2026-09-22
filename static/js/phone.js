@@ -81,8 +81,14 @@
         return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value || 0));
       },
 
+      // Rounded line by line, the way the server records it.
+      coin(value) {
+        const step = (this.config && this.config.money_step) || 0.01;
+        return Math.round((value || 0) / step) * step;
+      },
+
       get total() {
-        return this.lines.reduce((sum, l) => sum + l.qty * l.price, 0);
+        return this.lines.reduce((sum, l) => sum + this.coin(l.qty * l.price), 0);
       },
 
       get count() {

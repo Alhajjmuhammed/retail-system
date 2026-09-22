@@ -137,3 +137,54 @@ def test_a_receipt_shows_what_was_actually_charged(client, shop, main_branch,
     # receipt used to say 313 for a sale the system recorded as 312.50.
     assert f"{sale.total:.0f}" in body.replace(",", ""), body[:400]
     assert sale.total == sale.total.to_integral_value()
+
+
+def test_the_till_the_check_and_the_sale_agree_to_the_shilling(client, shop, main_branch,
+                                                               register, odd_priced, owner):
+    """
+    Three places compute the same basket: the till on the screen, the check
+    on the way in, and the sale that is written. Each used to round at a
+    different moment, so a basket the cashier read as 2,909 was checked
+    against 2,908.20 and the 80 cents were recorded as change the customer
+    never received.
+    """
+    import json
+    import uuid
+
+    from apps.pos.models import Sale
+    from apps.pos.services import open_shift
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        shift = open_shift(register=register, opening_float=0)
+
+    unga = odd_priced["Unga (kg)"]          # 3,333.33
+    mafuta = odd_priced["Mafuta (l)"]       # 7,777.77
+    lines = [
+        {"variant_id": unga.pk, "qty": "0.333", "unit_price": "3333.33"},
+        {"variant_id": mafuta.pk, "qty": "0.777", "unit_price": "7777.77"},
+    ]
+    # What the till shows: each line to the nearest shilling, then added up.
+    expected = sum(
+        (Decimal(line["qty"]) * Decimal(line["unit_price"])).quantize(Decimal("1"))
+        for line in lines
+    )
+
+    client.force_login(owner)
+    result = client.post(
+        "/api/v1/sync/sales/",
+        data=json.dumps({"device_id": "till-1", "shift_id": shift.pk, "sales": [{
+            "client_uuid": str(uuid.uuid4()), "lines": lines,
+            "payments": [{"method": "cash", "amount": str(expected)}],
+        }]}),
+        content_type="application/json",
+    ).json()
+    assert len(result["accepted"]) == 1, result
+
+    with tenant_context(shop, branch=main_branch):
+        sale = Sale.objects.get()
+        paid = sum((p.amount for p in sale.payments.all()), Decimal("0"))
+        change = sum((p.change_given for p in sale.payments.all()), Decimal("0"))
+
+    assert sale.total == expected, f"the sale disagrees with the till: {sale.total} vs {expected}"
+    assert paid == expected, f"the drawer was told {paid}, the customer paid {expected}"
+    assert change == 0, f"{change} was recorded as change nobody was given"

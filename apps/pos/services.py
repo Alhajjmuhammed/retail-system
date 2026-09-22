@@ -70,6 +70,18 @@ def quantum(currency=None) -> Decimal:
     return Decimal("1") if (currency or "").upper() in WHOLE_UNIT_CURRENCIES else MONEY
 
 
+def price(value) -> Decimal:
+    """
+    A price per unit, kept to the cent.
+
+    Rounding this to the smallest coin would change the price itself: a
+    shop that sells at 7,777.77 a kilo means it, and a quarter of that is
+    still a price, not an amount anybody hands over. Only what is charged
+    rounds -- see :func:`money`.
+    """
+    return Decimal(str(value)).quantize(MONEY, rounding=ROUND_HALF_UP)
+
+
 def money(value, currency=None) -> Decimal:
     """
     An amount this shop can actually take, to the smallest coin it has.
@@ -188,7 +200,7 @@ def add_to_cart(cart, variant, *, qty=1, added_via=AddedVia.SEARCH, unit_price=N
         # the caller because it is the biggest theft vector at any till.
         return CartLine.objects.create(
             tenant=cart.tenant, cart=cart, description=description or "Item",
-            qty=qty, unit_price=money(unit_price or 0), tax_rate=ZERO,
+            qty=qty, unit_price=price(unit_price or 0), tax_rate=ZERO,
             added_via=AddedVia.MANUAL, note=note,
         )
 
@@ -202,7 +214,7 @@ def add_to_cart(cart, variant, *, qty=1, added_via=AddedVia.SEARCH, unit_price=N
             raise ValueError(f"{variant} has no price yet. Ask a manager to set one.")
 
     existing = cart.lines.filter(
-        variant=variant, unit_price=money(unit_price), discount=Decimal(str(discount))
+        variant=variant, unit_price=price(unit_price), discount=Decimal(str(discount))
     ).first()
     if existing is not None:
         existing.qty += qty
@@ -215,7 +227,7 @@ def add_to_cart(cart, variant, *, qty=1, added_via=AddedVia.SEARCH, unit_price=N
         variant=variant,
         description=str(variant)[:160],
         qty=qty,
-        unit_price=money(unit_price),
+        unit_price=price(unit_price),
         discount=Decimal(str(discount)),
         tax_rate=variant.product.tax_rate.rate,
         added_via=added_via,
@@ -596,7 +608,7 @@ def create_return(sale, quantities: dict, *, reason, method=PaymentMethod.CASH,
         if already + qty >= line.qty:
             amount = money(line.line_total - already_paid_back)
         else:
-            unit = money(line.line_total / line.qty) if line.qty else ZERO
+            unit = price(line.line_total / line.qty) if line.qty else ZERO
             amount = min(money(unit * qty), money(line.line_total - already_paid_back))
         total += amount
 

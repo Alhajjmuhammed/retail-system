@@ -29,7 +29,7 @@ from apps.core import audit
 from apps.core.decorators import requires
 from apps.core.parsing import decimal_or_none, int_or
 from apps.pos.models import PaymentMethod, Sale, Shift, ShiftStatus
-from apps.pos.services import add_to_cart, complete_sale, new_cart
+from apps.pos.services import add_to_cart, complete_sale, new_cart, quantum
 from apps.pos.validation import SaleRejected, check_sale
 
 
@@ -89,6 +89,9 @@ def phone(request):
         # On account needs a customer and the right to give credit.
         "may_credit": bool(payment) and membership.can("credit.grant"),
         "currency": request.tenant.currency,
+        # The smallest coin this shop has, so the basket on the phone adds
+        # up the way the server will record it.
+        "money_step": float(quantum(request.tenant.currency)),
         "user_id": request.user.pk,
         "tenant_id": request.tenant.pk,
         "endpoints": {

@@ -37,6 +37,7 @@ from apps.pos.services import (
     close_shift,
     create_return,
     open_shift,
+    quantum,
     record_cash_movement,
     void_sale,
 )
@@ -93,6 +94,10 @@ def till(request):
         "offline": request.tenant.has_feature(OFFLINE_POS),
         "user_id": request.user.pk,
         "currency": request.tenant.currency,
+        # The smallest amount this shop's money comes in. The till has to
+        # round each line the way the server does, or the cashier asks for
+        # one figure and the system records another.
+        "money_step": float(quantum(request.tenant.currency)),
         "cashier": request.user.name,
         "permissions": {
             "discount": bool(discount),

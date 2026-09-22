@@ -56,6 +56,7 @@ class CheckedSale:
 def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
     from apps.catalog.models import Variant
     from apps.customers.models import Customer
+    from apps.pos.services import money
 
     if not isinstance(entry, dict):
         raise SaleRejected("Not a sale.")
@@ -65,6 +66,9 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
         raise SaleRejected("client_uuid is missing or malformed.") from None
 
     checked = CheckedSale(client_uuid=client_uuid)
+    # What this shop's money comes in, so every figure below rounds the way
+    # the sale will be written.
+    currency = getattr(membership.tenant, "currency", None)
     raw_lines = entry.get("lines") or []
     if not isinstance(raw_lines, list) or not raw_lines:
         raise SaleRejected("A sale needs at least one line.")
@@ -177,7 +181,12 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
             "description": str(raw.get("description", ""))[:160],
             "added_via": str(raw.get("added_via", "scan"))[:12],
         })
-        checked.total += gross - line_discount
+        # Rounded to the smallest coin the shop has, exactly as the sale
+        # itself will be written. Adding the raw multiplications here made
+        # the check disagree with the sale it was checking: a basket the
+        # till showed as 2,909 was validated against 2,908.20, and the
+        # difference was quietly recorded as change the customer never got.
+        checked.total += money(gross - line_discount, currency)
 
     paid = Decimal("0")
     methods = set(PaymentMethod.values)

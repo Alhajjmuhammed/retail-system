@@ -638,16 +638,25 @@
         return this.lines.reduce((sum, line) => sum + (parseFloat(line.qty) || 0), 0);
       },
 
+      // Each line to the smallest coin this shop has, exactly as the server
+      // does it. Summing the raw multiplications and rounding once at the
+      // end put the cashier a shilling out from what was recorded.
+      coin(value) {
+        const step = this.config.money_step || 0.01;
+        return Math.round((value || 0) / step) * step;
+      },
+
+      lineTotal(line) {
+        return this.coin(line.qty * line.unit_price - line.discount);
+      },
+
       get subtotal() {
-        return this.lines.reduce(
-          (sum, line) => sum + line.qty * line.unit_price - line.discount,
-          0
-        );
+        return this.lines.reduce((sum, line) => sum + this.lineTotal(line), 0);
       },
 
       get tax() {
         return this.lines.reduce((sum, line) => {
-          const net = line.qty * line.unit_price - line.discount;
+          const net = this.lineTotal(line);
           const rate = line.tax_rate;
           return sum + (rate ? (net * rate) / (100 + rate) : 0);
         }, 0);
