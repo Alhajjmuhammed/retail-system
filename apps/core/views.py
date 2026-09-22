@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -241,12 +242,17 @@ def dashboard(request):
     return render(request, "core/dashboard.html", context)
 
 
+@transaction.non_atomic_requests
 def healthz(request):
     """
     Liveness for a load balancer.
 
     Returning "ok" without touching anything meant a server with a dead
     database stayed in rotation happily answering nothing.
+
+    Not atomic: ATOMIC_REQUESTS opens a transaction before the view runs, so
+    with the database down the request died at the door with a 500 and the
+    checks below -- the ones that say which part is broken -- never ran.
     """
     from django.core.cache import cache
     from django.db import connection

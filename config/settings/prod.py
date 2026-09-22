@@ -1,9 +1,15 @@
 from .base import *
-from .guards import check_production_config, trusted_origins
+from .guards import check_database, check_production_config, trusted_origins
 
 DEBUG = False
 
-check_production_config(SECRET_KEY, ALLOWED_HOSTS, EMAIL_HOST)
+# Running without email is a decision, not an oversight -- see guards.py.
+# Nothing is sent: a forgotten password has to be reset by an admin, and an
+# invitation link has to be handed over by hand.
+EMAIL_OFF = env.bool("EMAIL_OFF", default=False)
+
+check_production_config(SECRET_KEY, ALLOWED_HOSTS, EMAIL_HOST, email_off=EMAIL_OFF)
+check_database(DATABASES["default"])
 
 # Hashed filenames and long cache headers. Needs `collectstatic` to have run,
 # which is why it is not in base.

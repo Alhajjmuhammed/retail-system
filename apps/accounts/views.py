@@ -8,6 +8,7 @@ inline, never raw permission codes.
 
 import uuid
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, password_validation, update_session_auth_hash
 from django.contrib.auth import views as auth_views
@@ -1395,6 +1396,14 @@ class PasswordResetView(auth_views.PasswordResetView):
     email_template_name = "accounts/password_reset_email.txt"
     subject_template_name = "accounts/password_reset_subject.txt"
     success_url = "/accounts/password/reset/sent/"
+
+    def get_context_data(self, **kwargs):
+        # A system deliberately run without email must say so here. Taking
+        # the address and answering "check your inbox" when nothing was sent
+        # is the one thing this page must never do.
+        context = super().get_context_data(**kwargs)
+        context["email_off"] = not getattr(settings, "EMAIL_HOST", "")
+        return context
 
     def form_valid(self, form):
         form.cleaned_data["email"] = form.cleaned_data["email"].strip().lower()

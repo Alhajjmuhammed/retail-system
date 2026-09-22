@@ -47,12 +47,20 @@ USER retail
 
 EXPOSE 8000
 
+# The two headers are not decoration. Production answers only to the domains
+# in ALLOWED_HOSTS, so a request to 127.0.0.1 is a 400, and it redirects
+# anything that did not arrive over https, so a plain request is a 301 that
+# curl reports as success -- a check that passes while the app is dead.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8000/healthz || exit 1
+    CMD curl -fsS -H "Host: ${ALLOWED_HOSTS%%,*}" \
+        -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/healthz || exit 1
 
 # Two workers per core is the usual starting point; threads keep the offline
-# sync endpoint responsive while a report is running.
-CMD ["gunicorn", "config.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "3", "--threads", "2", \
-     "--timeout", "60", "--access-logfile", "-"]
+# sync endpoint responsive while a report is running. Both come from the
+# environment because the right number is a property of the machine: a VPS
+# that also runs somebody's mail server has less room than a spare box, and
+# on one without swap, guessing high is how the kernel picks a victim.
+CMD ["sh", "-c", "exec gunicorn config.wsgi:application \
+     --bind 0.0.0.0:8000 \
+     --workers ${WEB_WORKERS:-3} --threads ${WEB_THREADS:-2} \
+     --timeout 60 --access-logfile -"]

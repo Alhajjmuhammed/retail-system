@@ -10,10 +10,12 @@ from django.core.exceptions import ImproperlyConfigured
 
 DEV_KEYS = {"", "change-me", "dev-only-insecure-key-change-me"}
 DEV_HOSTS = {"", "localhost", "127.0.0.1", "0.0.0.0", "*"}
+DEV_DB_PASSWORDS = {"", "retail_app", "postgres", "change-me"}
 MIN_KEY_LENGTH = 50
 
 
-def check_production_config(secret_key, allowed_hosts, email_host=None):
+def check_production_config(secret_key, allowed_hosts, email_host=None,
+                            email_off=False):
     """
     Refuse to start rather than run on development defaults.
 
@@ -35,11 +37,32 @@ def check_production_config(secret_key, allowed_hosts, email_host=None):
             "ALLOWED_HOSTS must list the real domains this serves."
         )
 
-    if email_host is not None and not email_host:
+    if email_host is not None and not email_host and not email_off:
         # Password resets and invitations go by email: with no host they
-        # were written to the log and nobody ever received them.
+        # were written to the log and nobody ever received them. Forgetting
+        # to set it must fail; deciding to run without it is allowed, but
+        # it has to be said out loud in the environment.
         raise ImproperlyConfigured(
-            "EMAIL_HOST must be set in production, or nobody can reset a password."
+            "EMAIL_HOST must be set in production, or nobody can reset a "
+            "password. To run without email for now, set EMAIL_OFF=true -- "
+            "then nothing is sent and a forgotten password needs an admin."
+        )
+
+
+def check_database(database):
+    """
+    Refuse to start on the development database password.
+
+    `retail_app:retail_app` is in this repository, in the README and in
+    .env.example. An operator filling in .env by hand fills in the keys the
+    guide names and leaves the rest -- and the database holding every sale a
+    shop has ever made ends up behind a password anyone can read here.
+    """
+    if (database or {}).get("PASSWORD", "") in DEV_DB_PASSWORDS:
+        raise ImproperlyConfigured(
+            "DATABASE_URL still carries the development password. Set "
+            "APP_DB_PASSWORD in .env to something random; compose builds the "
+            "database role and the application's DATABASE_URL from it."
         )
 
 

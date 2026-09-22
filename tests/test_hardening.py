@@ -43,6 +43,20 @@ def test_the_health_check_fails_when_the_database_is_gone(client, monkeypatch):
     assert b"database" in response.content
 
 
+def test_the_health_check_runs_outside_a_transaction():
+    """
+    ATOMIC_REQUESTS opens a transaction before the view runs. With the
+    database actually down that failed at the door with a 500, and the checks
+    that name the broken part never ran -- so the one page whose job is to
+    say what is wrong said only "Server Error".
+    """
+    from django.db import DEFAULT_DB_ALIAS
+
+    from apps.core.views import healthz
+
+    assert DEFAULT_DB_ALIAS in getattr(healthz, "_non_atomic_requests", set())
+
+
 # --------------------------------------------------------------------------
 # Password guessing
 # --------------------------------------------------------------------------
