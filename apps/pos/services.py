@@ -276,6 +276,7 @@ def complete_sale(
     review_notes=None,
     buyer_name="",
     buyer_phone="",
+    invoice=None,
 ):
     """
     Turn a basket into a sale: stock out, payments recorded, receipt ready.
@@ -320,6 +321,10 @@ def complete_sale(
         shift=shift,
         user=user,
         customer=cart.customer,
+        # Goods leaving against an invoice. Set before anything is posted,
+        # because the charge to the customer's account reads it: the invoice
+        # made the debt, and this delivery must not make it a second time.
+        invoice=invoice,
         # Somebody not on the books: a name on the receipt, nothing more.
         buyer_name=(buyer_name or "").strip()[:80],
         buyer_phone=(buyer_phone or "").strip()[:30],
@@ -447,6 +452,11 @@ def _handle_credit(sale):
         ZERO,
     )
     if credit <= ZERO or sale.customer is None:
+        return
+    if sale.invoice_id:
+        # Goods going out against an invoice. The debt was created the day
+        # the invoice was issued; charging again here would bill the customer
+        # twice for one delivery.
         return
 
     balance = sale.customer.balance + credit

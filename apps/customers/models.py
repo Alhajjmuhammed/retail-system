@@ -91,6 +91,13 @@ class CreditTransaction(TenantModel):
         "pos.Sale", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="credit_transactions",
     )
+    # An invoice charges this account when it is issued, and its payments
+    # come back here. One ledger, so the statement and the invoice can never
+    # disagree about what is owed.
+    invoice = models.ForeignKey(
+        "selling.Invoice", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="credit_entries",
+    )
     reference = models.CharField(max_length=60, blank=True)
     note = models.CharField(max_length=200, blank=True)
     # How a payment came in: cash, mobile money, bank. Blank for charges.

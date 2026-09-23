@@ -284,6 +284,13 @@ class Sale(BranchModel, SyncableModel):
         "customers.Customer", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="sales",
     )
+    # Set when this sale is goods leaving against an invoice. The customer
+    # was charged when the invoice was issued, so this one must not charge
+    # them again -- see `_handle_credit`.
+    invoice = models.ForeignKey(
+        "selling.Invoice", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="sales",
+    )
     # Somebody who is not on the books. Most sales over a counter are to a
     # person the shop will never see again, but a few need a name on them: a
     # delivery, something put aside, a thing that may come back. Neither is
