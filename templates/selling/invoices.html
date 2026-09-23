@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Invoices{% endblock %}
+{% block heading %}Invoices{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="card">
+    <div class="card-head flex-wrap gap-3">
+      <form method="get" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" x-data @change="$el.submit()">
+        <input type="search" name="q" value="{{ q }}" placeholder="Number or customer" aria-label="Find an invoice" class="input col-span-2 w-full sm:w-64">
+        <select name="status" class="input w-full sm:w-44" aria-label="Show">
+          <option value="">Any state</option>
+          <option value="overdue" {% if status == "overdue" %}selected{% endif %}>Past due</option>
+          {% for value, label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </form>
+      {% can_do "invoice.manage" as may_invoice %}
+      {% if may_invoice %}
+      <a href="{% url 'selling:invoice_create' %}" hx-get="{% url 'selling:invoice_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New invoice</a>
+      {% endif %}
+    </div>
+    <table class="table">
+      <thead><tr>
+        <th class="w-12 text-right">SN</th><th>Number</th><th>Customer</th><th>Due</th>
+        <th class="text-right">Total</th><th class="text-right">Still owed</th>
+        <th>State</th><th>Delivered</th>
+      </tr></thead>
+      <tbody>
+        {% for inv in page %}
+        <tr class="hover:bg-ink-50">
+          <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+          <td><a href="{% url 'selling:invoice_detail' inv.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ inv.reference }}</a></td>
+          <td>{{ inv.customer.name }}</td>
+          <td class="text-ink-600">
+            {{ inv.due_on|date:"j M Y" }}
+            {% if inv.is_owed and inv.due_on < today %}<span class="badge badge-danger ml-1">past due</span>{% endif %}
+          </td>
+          <td class="text-right font-semibold">{{ inv.total|floatformat:0|intcomma }}</td>
+          <td class="text-right {% if inv.balance > 0 %}text-ink-900{% else %}text-ink-400{% endif %}">{{ inv.balance|floatformat:0|intcomma }}</td>
+          <td>
+            {% if inv.status == "paid" %}<span class="badge badge-ok">Paid</span>
+            {% elif inv.status == "part_paid" %}<span class="badge badge-warn">Part paid</span>
+            {% elif inv.status == "void" %}<span class="badge badge-muted">Cancelled</span>
+            {% elif inv.status == "open" %}<span class="badge badge-brand">Owed</span>
+            {% else %}<span class="badge badge-muted">Draft</span>{% endif %}
+          </td>
+          <td class="text-ink-600">
+            {% if inv.status == "draft" or inv.status == "void" %}&mdash;
+            {% elif inv.delivered_everything %}<span class="badge badge-ok">all sent</span>
+            {% elif inv.has_deliveries %}<span class="badge badge-warn">part sent</span>
+            {% else %}<span class="hint">nothing sent</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">{% include "partials/empty.html" with icon="receipt" title="No invoices yet" text="An invoice is what a business customer pays against. Issuing one puts the amount on their account; the goods leave on a delivery note." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

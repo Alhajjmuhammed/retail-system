@@ -75,6 +75,20 @@ JOBS = [
         limit_on="credit.grant", limit_label="Most a customer may owe",
     ),
     Job(
+        "quote", "Quotes business customers",
+        "Price a job before it is a sale, and send the offer.",
+        core=("quote.manage",),
+        also=("quote.view", "product.view", "customer.manage"),
+    ),
+    Job(
+        "invoice", "Invoices business customers",
+        "Bill a customer, take the money, and send the goods out against it.",
+        core=("invoice.manage", "delivery.manage"),
+        also=("invoice.view", "invoice.payment", "quote.view", "product.view",
+              "customer.manage", "stock.view"),
+        limit_on="invoice.manage", limit_label="Biggest invoice they may issue",
+    ),
+    Job(
         "stock", "Looks after stock",
         "Receive deliveries, count the shelves, move stock between branches.",
         core=("stock.receive", "stock.count"),

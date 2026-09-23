@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Quotations{% endblock %}
+{% block heading %}Quotations{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <form method="get" class="flex flex-wrap items-end gap-2" x-data @change="$el.submit()">
+      <div>
+        <label class="label" for="q">Search</label>
+        <input type="search" name="q" id="q" value="{{ q }}" placeholder="Number or customer" class="input w-full sm:w-64" autocomplete="off">
+      </div>
+      <div>
+        <label class="label" for="status">Show</label>
+        <select name="status" id="status" class="input w-44">
+          <option value="">Every quotation</option>
+          {% for value, label in statuses %}
+          <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+    {% can_do "quote.manage" as may_quote %}
+    {% if may_quote %}
+    <a href="{% url 'selling:quotation_create' %}" hx-get="{% url 'selling:quotation_create' %}" hx-target="#modal"
+       class="btn btn-primary">{% icon "plus" %} New quotation</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <table class="table">
+      <thead><tr>
+        <th class="w-12 text-right">SN</th><th>Number</th><th>Customer</th>
+        <th>Sent</th><th>Valid until</th><th class="text-right">Total</th><th>State</th>
+      </tr></thead>
+      <tbody>
+        {% for q in page %}
+        <tr class="hover:bg-ink-50">
+          <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+          <td><a href="{% url 'selling:quotation_detail' q.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ q.reference }}</a></td>
+          <td>{{ q.customer.name }}</td>
+          <td class="text-ink-600">{{ q.issued_on|date:"j M Y" }}</td>
+          <td class="text-ink-600">
+            {{ q.valid_until|date:"j M Y" }}
+            {% if q.is_open and q.valid_until < today %}<span class="badge badge-warn ml-1">lapsed</span>{% endif %}
+          </td>
+          <td class="text-right font-semibold">{{ q.total|floatformat:0|intcomma }}</td>
+          <td>
+            {% if q.status == "accepted" %}<span class="badge badge-ok">Accepted</span>
+            {% elif q.status == "declined" %}<span class="badge badge-danger">Declined</span>
+            {% elif q.status == "expired" %}<span class="badge badge-muted">Expired</span>
+            {% elif q.status == "sent" %}<span class="badge badge-brand">Sent</span>
+            {% else %}<span class="badge badge-muted">Draft</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">{% include "partials/empty.html" with icon="clipboard" title="No quotations yet" text="A quotation is what a business customer asks for before they buy: what it would cost, held until a date. Nothing on it touches stock or money until it is accepted." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% include "partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

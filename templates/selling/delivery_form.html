@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Send goods &middot; {{ invoice.reference }}{% endblock %}
+{% block heading %}Send goods{% endblock %}
+
+{% comment %}
+Opens with everything still outstanding filled in, because most trips take
+the lot. A part load is typed over it, and what is left stays on the invoice
+for the next trip.
+{% endcomment %}
+
+{% block content %}
+<form method="post" class="max-w-3xl space-y-4">
+  {% csrf_token %}
+
+  <div class="card card-body">
+    <p class="text-xs uppercase tracking-wide text-ink-500">Against</p>
+    <p class="mt-1 text-lg font-semibold text-ink-900">{{ invoice.reference }} &middot; {{ invoice.customer.name }}</p>
+    <p class="hint">Stock comes down when you send this, and the sale is recorded today &mdash; not when the invoice was written.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">What is going out</h2><span class="hint">Leave a line at zero to keep it for another trip</span></div>
+    <table class="table">
+      <thead><tr><th>Item</th><th class="text-right">On the invoice</th><th class="text-right">Already sent</th><th class="w-36 text-right">Going now</th></tr></thead>
+      <tbody>
+        {% for line in lines %}
+        <tr>
+          <td class="font-medium text-ink-900">{{ line.description }}</td>
+          <td class="text-right text-ink-600">{{ line.qty|floatformat:"-3" }}</td>
+          <td class="text-right text-ink-600">{{ line.qty_delivered|floatformat:"-3" }}</td>
+          <td class="text-right">
+            <input type="number" step="0.001" min="0" max="{{ line.qty_outstanding|floatformat:3 }}"
+                   name="qty:{{ line.pk }}" value="{{ line.qty_outstanding|floatformat:'-3' }}"
+                   class="input text-right" aria-label="Quantity of {{ line.description }} going now">
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">{% include "partials/empty.html" with icon="truck" title="Everything has been sent" text="Every line on this invoice has gone out already." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if lines %}
+  <div class="card card-body grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="label" for="delivered_on">Date</label>
+      <input type="date" name="delivered_on" id="delivered_on" value="{{ today|date:'Y-m-d' }}" class="input">
+    </div>
+    <div>
+      <label class="label" for="received_by">Received by</label>
+      <input name="received_by" id="received_by" maxlength="120" class="input" placeholder="Who takes it, if you know now">
+      <p class="hint">The printed note has a line for a signature either way.</p>
+    </div>
+    <div class="sm:col-span-2">
+      <label class="label" for="note">Note</label>
+      <input name="note" id="note" maxlength="500" class="input" placeholder="Anything the driver should know">
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <a href="{% url 'selling:invoice_detail' invoice.pk %}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary">{% icon "truck" %} Send it</button>
+  </div>
+  {% else %}
+  <a href="{% url 'selling:invoice_detail' invoice.pk %}" class="btn btn-secondary">Back to the invoice</a>
+  {% endif %}
+</form>
+{% endblock %}

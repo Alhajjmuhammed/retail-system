@@ -18,6 +18,7 @@ JOBS = {
     "advance-subscriptions": ("Renewal invoices and overdue shops", timedelta(hours=26)),
     "snapshot-usage": ("Daily usage for billing", timedelta(hours=26)),
     "send-fiscal-receipts": ("Receipts to the tax authority", timedelta(minutes=30)),
+    "expire-quotations": ("Lapsing offers whose date has passed", timedelta(hours=26)),
     "clear-abandoned-carts": ("Clearing abandoned baskets", timedelta(hours=26)),
     "send-queued-messages": ("SMS receipts and alerts", timedelta(minutes=20)),
     "expiry-and-low-stock-alerts": ("Expiry and low-stock alerts", timedelta(hours=26)),

@@ -26,8 +26,9 @@ def _checks():
     from apps.inventory.models import Batch, StockCount, Transfer
     from apps.notifications.models import Message
     from apps.org.models import Branch
-    from apps.pos.models import FiscalReceipt, Shift
+    from apps.pos.models import Shift
     from apps.purchasing.models import GoodsReceipt, PurchaseOrder, Supplier
+    from apps.selling.models import Invoice, Quotation
 
     return {
         "transfers": lambda: Transfer.objects.exists(),
@@ -37,8 +38,9 @@ def _checks():
         "orders": lambda: PurchaseOrder.objects.exists(),
         "suppliers": lambda: Supplier.objects.exists(),
         "customers": lambda: Customer.objects.exists(),
+        "quotations": lambda: Quotation.objects.exists(),
+        "invoices": lambda: Invoice.objects.exists(),
         "expenses": lambda: Expense.objects.exists(),
-        "fiscal": lambda: FiscalReceipt.objects.exists(),
         "cashups": lambda: Shift.objects.filter(closed_at__isnull=False).exists(),
         "prices": lambda: PriceList.objects.filter(is_default=False).exists(),
         "messages": lambda: Message.objects.exists(),
@@ -52,7 +54,7 @@ def in_use(tenant) -> set:
     """
     The keys this shop has used at least once.
 
-    A miss costs fourteen EXISTS queries, once every five minutes per shop.
+    A miss costs fifteen EXISTS queries, once every five minutes per shop.
     A shop that starts using something sees it move up within that.
     """
     key = f"nav-in-use:{tenant.pk}"

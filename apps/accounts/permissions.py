@@ -26,6 +26,7 @@ PRODUCTS = "Products"
 STOCK = "Stock"
 BUYING = "Purchasing"
 PEOPLE = "Customers"
+SELLING = "Quotes & invoices"
 MONEY = "Money"
 REPORTS = "Reports"
 ADMIN = "Administration"
@@ -48,6 +49,21 @@ registry.register_many([
     P("pos.mobile_methods", SALES, "Payment methods allowed on a phone", V.SET,
       requires_feature=MOBILE_SELLING,
       options=("cash", "mpesa", "tigopesa", "airtelmoney", "card")),
+
+    # -- Selling to a business ----------------------------------------------
+    # A quotation is an offer, not a sale: no stock moves and no money
+    # changes hands, so holding it is a lighter thing than completing a sale.
+    P("quote.view", SELLING, "See quotations"),
+    P("quote.manage", SELLING, "Write and send quotations"),
+    P("invoice.view", SELLING, "See invoices"),
+    # Issuing an invoice puts a debt on a customer's account, so it is
+    # capped like any other way of extending credit.
+    P("invoice.manage", SELLING, "Write and issue invoices", V.AMOUNT,
+      is_dangerous=True, requires_feature=CUSTOMER_CREDIT),
+    P("invoice.payment", SELLING, "Record a payment against an invoice",
+      requires_feature=CUSTOMER_CREDIT),
+    P("delivery.manage", SELLING, "Send goods out against an invoice",
+      is_dangerous=True),
 
     # -- Products ----------------------------------------------------------
     P("product.view", PRODUCTS, "See the product list"),
@@ -142,6 +158,9 @@ STARTER_ROLES = {
             "po.manage": None, "po.approve": 2000000,
             "supplier.manage": None, "supplier.pay": 1000000,
             "customer.manage": None, "credit.grant": 500000, "credit.collect": None,
+            "quote.view": None, "quote.manage": None,
+            "invoice.view": None, "invoice.manage": 2000000,
+            "invoice.payment": None, "delivery.manage": None,
             "expense.create": 200000, "expense.approve": None,
             "cashup.perform": None, "cashup.approve": None, "cash.movement": 500000,
             "report.sales": None, "report.margin": None,

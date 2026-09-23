@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ quotation.reference }}{% endblock %}
+{% block heading %}{{ quotation.reference }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  {% comment %}
+  What it is, who it is for, and what state it is in -- above everything,
+  because the state decides which of the buttons below do anything.
+  {% endcomment %}
+  <div class="card card-body flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0">
+      <p class="text-xs uppercase tracking-wide text-ink-500">Quotation for</p>
+      <p class="mt-1 text-lg font-semibold text-ink-900">{{ quotation.customer.name }}</p>
+      <p class="hint">
+        {{ quotation.issued_on|date:"j M Y" }} &middot; valid until {{ quotation.valid_until|date:"j M Y" }}
+        {% if quotation.is_open and quotation.valid_until < today %}<span class="badge badge-warn ml-1">lapsed</span>{% endif %}
+        {% if quotation.customer.tin %} &middot; TIN {{ quotation.customer.tin }}{% endif %}
+      </p>
+    </div>
+    <div class="text-right">
+      <p class="text-xs uppercase tracking-wide text-ink-500">Total</p>
+      <p class="tnum text-2xl font-bold text-ink-900">{{ quotation.total|floatformat:0|intcomma }}</p>
+      <p class="hint">VAT included {{ quotation.tax|floatformat:0|intcomma }}</p>
+    </div>
+    <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+      <a href="{% url 'selling:quotation_print' quotation.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print</a>
+      {% if may_edit %}
+        {% if quotation.status == "draft" %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="send">
+          <button type="submit" class="btn btn-primary">Mark as sent</button>
+        </form>
+        {% elif quotation.status == "sent" %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="accept">
+          <button type="submit" class="btn btn-primary">They accepted</button>
+        </form>
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="decline">
+          <button type="submit" class="btn btn-secondary">They declined</button>
+        </form>
+        {% endif %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="copy">
+          <button type="submit" class="btn btn-secondary">{% icon "layers" %} Copy</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if quotation.status == "accepted" %}
+  <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-5 py-3.5 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-600/15">
+    <p>
+      Accepted{% if quotation.decided_at %} on {{ quotation.decided_at|date:"j M Y" }}{% endif %}{% if quotation.decided_by %}, recorded by {{ quotation.decided_by.name }}{% endif %}.
+      {% if quotation.invoices.all %}
+        Invoiced as
+        {% for inv in quotation.invoices.all %}<a href="{% url 'selling:invoice_detail' inv.pk %}" class="font-medium underline">{{ inv.reference }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+      {% else %}
+        The next step is an invoice: the lines are copied, and the customer owes it from the day you issue it.
+      {% endif %}
+    </p>
+    {% can_do "invoice.manage" as may_invoice %}
+    {% if may_invoice and not quotation.invoices.all %}
+    <a href="{% url 'selling:invoice_create' %}?quotation={{ quotation.pk }}"
+       hx-get="{% url 'selling:invoice_create' %}?quotation={{ quotation.pk }}" hx-target="#modal"
+       class="btn btn-primary shrink-0">{% icon "receipt" %} Make an invoice</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">What is being quoted</h2>
+      <span class="hint">Prices include VAT</span>
+    </div>
+    <table class="table">
+      <thead><tr>
+        <th class="w-12 text-right">SN</th><th>Item</th>
+        <th class="text-right">Qty</th><th class="text-right">Price</th>
+        <th class="text-right">Line</th>{% if editable %}<th class="w-10"></th>{% endif %}
+      </tr></thead>
+      <tbody>
+        {% for line in quotation.lines.all %}
+        <tr>
+          <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+          <td>
+            <span class="font-medium text-ink-900">{{ line.description }}</span>
+            {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
+          </td>
+          <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
+          <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
+          <td class="text-right font-semibold">{{ line.line_total|floatformat:0|intcomma }}</td>
+          {% if editable %}
+          <td class="text-right">
+            <form method="post" x-data
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Remove this line?', body: '{{ line.description|escapejs }}', label: 'Remove' })">
+              {% csrf_token %}<input type="hidden" name="action" value="remove_line">
+              <input type="hidden" name="line" value="{{ line.pk }}">
+              <button type="submit" class="btn-icon btn-icon-danger" aria-label="Remove {{ line.description }}">{% icon "trash" class="h-4 w-4" %}</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="{% if editable %}6{% else %}5{% endif %}">{% include "partials/empty.html" with icon="clipboard" title="Nothing on it yet" text="Add what you are quoting for: a product from your list, or a line you type yourself for delivery, fitting or labour." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if editable %}
+    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+      {% csrf_token %}<input type="hidden" name="action" value="add_line">
+      {% comment %}
+      Not the shared product picker: that one is marked required, which made
+      "or type a line" impossible to submit -- the browser refused the form
+      before it ever reached the server. Either one will do here.
+      {% endcomment %}
+      <div class="min-w-48 flex-1">
+        <label class="label" for="variant">Product</label>
+        <select name="variant" id="variant" class="input">
+          <option value="">&mdash;</option>
+          {% for v in variants %}
+          <option value="{{ v.pk }}">{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="min-w-40 flex-1">
+        <label class="label" for="description">or type a line</label>
+        <input name="description" id="description" maxlength="200" class="input" placeholder="Delivery to Nungwi">
+      </div>
+      <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" class="input" required></div>
+      <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="0.01" min="0" name="unit_price" id="unit_price" class="input" required></div>
+      <div class="w-36">
+        <label class="label" for="tax_rate">VAT</label>
+        <select name="tax_rate" id="tax_rate" class="input">
+          {% for t in taxes %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-secondary">Add</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if editable %}
+  <form method="post" class="card card-body space-y-4">
+    {% csrf_token %}<input type="hidden" name="action" value="header">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="valid_until">Hold the price until</label>
+        <input type="date" name="valid_until" id="valid_until" value="{{ quotation.valid_until|date:'Y-m-d' }}" class="input">
+      </div>
+      <div>
+        <label class="label" for="note">Note on the quotation</label>
+        <input name="note" id="note" maxlength="500" value="{{ quotation.note }}" class="input" placeholder="Prints under the lines">
+      </div>
+    </div>
+    <div class="flex justify-end"><button type="submit" class="btn btn-secondary">Save</button></div>
+  </form>
+  {% elif quotation.note %}
+  <div class="card card-body"><p class="text-sm text-ink-700">{{ quotation.note }}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

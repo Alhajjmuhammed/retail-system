@@ -35,6 +35,12 @@ app.conf.beat_schedule = {
         "task": "apps.pos.tasks.send_pending_fiscal_receipts",
         "schedule": crontab(minute="*/10"),
     },
+    # A quotation says "valid until", and nothing enforced it: a lapsed
+    # offer looked open for ever on the shop's own list.
+    "expire-quotations": {
+        "task": "apps.selling.tasks.expire_quotations",
+        "schedule": crontab(hour=1, minute=30),
+    },
     # Baskets abandoned mid-sale pile up otherwise.
     "clear-abandoned-carts": {
         "task": "apps.pos.tasks.clear_abandoned_carts",

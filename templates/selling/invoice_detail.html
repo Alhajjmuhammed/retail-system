@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.reference }}{% endblock %}
+{% block heading %}{{ invoice.reference }}{% endblock %}
+
+{% comment %}
+An invoice has two lives running at once: how much of it has been paid, and
+how much of it has gone out of the door. They are independent -- a customer
+can pay in full for goods still in the store, or take everything and pay next
+month -- so the page shows both rather than folding them into one state.
+{% endcomment %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <div class="card card-body flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0">
+      <p class="text-xs uppercase tracking-wide text-ink-500">Invoice to</p>
+      <p class="mt-1 text-lg font-semibold text-ink-900">{{ invoice.customer.name }}</p>
+      <p class="hint">
+        {{ invoice.issued_on|date:"j M Y" }} &middot; due {{ invoice.due_on|date:"j M Y" }}
+        {% if invoice.is_owed and invoice.due_on < today %}<span class="badge badge-danger ml-1">past due</span>{% endif %}
+        {% if invoice.quotation %} &middot; from <a href="{% url 'selling:quotation_detail' invoice.quotation.pk %}" class="text-brand-700 hover:underline">{{ invoice.quotation.reference }}</a>{% endif %}
+      </p>
+    </div>
+
+    <div class="flex gap-6 text-right">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-500">Total</p>
+        <p class="tnum text-xl font-bold text-ink-900">{{ invoice.total|floatformat:0|intcomma }}</p>
+      </div>
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-500">Still owed</p>
+        <p class="tnum text-xl font-bold {% if invoice.balance > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ invoice.balance|floatformat:0|intcomma }}</p>
+      </div>
+    </div>
+
+    <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+      <a href="{% url 'selling:invoice_print' invoice.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print</a>
+      {% if invoice.status == "draft" and may_manage %}
+      <form method="post" x-data
+            @submit.prevent="$store.confirm.ask($el, { title: 'Issue {{ invoice.reference|escapejs }}?', body: '{{ invoice.customer.name|escapejs }} will owe {{ invoice.total|floatformat:0|intcomma }} from today. Nothing leaves the store until you send a delivery note.', label: 'Issue it', danger: false })">
+        {% csrf_token %}<input type="hidden" name="action" value="issue">
+        <button type="submit" class="btn btn-primary">Issue it</button>
+      </form>
+      {% endif %}
+      {% if invoice.is_owed and may_deliver %}
+      <a href="{% url 'selling:delivery_create' invoice.pk %}" class="btn btn-primary">{% icon "truck" %} Send goods</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if invoice.status == "void" %}
+  <div class="rounded-2xl bg-ink-100 px-5 py-3.5 text-sm text-ink-700">
+    Cancelled{% if invoice.voided_at %} on {{ invoice.voided_at|date:"j M Y" }}{% endif %}{% if invoice.voided_by %} by {{ invoice.voided_by.name }}{% endif %}. The amount has been taken back off {{ invoice.customer.name }}'s account.
+  </div>
+  {% elif invoice.status == "draft" %}
+  <div class="rounded-2xl bg-amber-50 px-5 py-3.5 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/15">
+    This is still a draft. Nobody owes anything yet, and nothing can be sent against it until you issue it.
+  </div>
+  {% endif %}
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="space-y-4 lg:col-span-2">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">What is being charged for</h2>
+          <span class="hint">Prices include VAT</span>
+        </div>
+        <table class="table">
+          <thead><tr>
+            <th class="w-12 text-right">SN</th><th>Item</th>
+            <th class="text-right">Qty</th><th class="text-right">Sent</th>
+            <th class="text-right">Price</th><th class="text-right">Line</th>
+            {% if editable %}<th class="w-10"></th>{% endif %}
+          </tr></thead>
+          <tbody>
+            {% for line in invoice.lines.all %}
+            <tr>
+              <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+              <td>
+                <span class="font-medium text-ink-900">{{ line.description }}</span>
+                {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
+              </td>
+              <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
+              <td class="text-right {% if line.qty_outstanding > 0 %}text-amber-700{% else %}text-ink-400{% endif %}">{{ line.qty_delivered|floatformat:"-3" }}</td>
+              <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
+              <td class="text-right font-semibold">{{ line.line_total|floatformat:0|intcomma }}</td>
+              {% if editable %}
+              <td class="text-right">
+                <form method="post" x-data
+                      @submit.prevent="$store.confirm.ask($el, { title: 'Remove this line?', body: '{{ line.description|escapejs }}', label: 'Remove' })">
+                  {% csrf_token %}<input type="hidden" name="action" value="remove_line">
+                  <input type="hidden" name="line" value="{{ line.pk }}">
+                  <button type="submit" class="btn-icon btn-icon-danger" aria-label="Remove {{ line.description }}">{% icon "trash" class="h-4 w-4" %}</button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            <tr><td colspan="{% if editable %}7{% else %}6{% endif %}">{% include "partials/empty.html" with icon="receipt" title="Nothing on it yet" text="Add what you are charging for: a product, or a line you type for delivery, fitting or labour." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if editable and may_manage %}
+        <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+          {% csrf_token %}<input type="hidden" name="action" value="add_line">
+          <div class="min-w-48 flex-1">
+            <label class="label" for="variant">Product</label>
+            <select name="variant" id="variant" class="input">
+              <option value="">&mdash;</option>
+              {% for v in variants %}<option value="{{ v.pk }}">{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="min-w-40 flex-1">
+            <label class="label" for="description">or type a line</label>
+            <input name="description" id="description" maxlength="200" class="input" placeholder="Delivery to Nungwi">
+          </div>
+          <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" class="input" required></div>
+          <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="0.01" min="0" name="unit_price" id="unit_price" class="input" required></div>
+          <div class="w-36">
+            <label class="label" for="tax_rate">VAT</label>
+            <select name="tax_rate" id="tax_rate" class="input">
+              {% for t in taxes %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-secondary">Add</button>
+        </form>
+        {% endif %}
+      </div>
+
+      {% if invoice.deliveries.all %}
+      <div class="card">
+        <div class="card-head"><h2 class="card-title"><span class="card-icon">{% icon "truck" class="h-3.5 w-3.5" %}</span>What has gone out</h2></div>
+        <div class="divide-y divide-ink-100">
+          {% for note in invoice.deliveries.all %}
+          <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+            <div>
+              <a href="{% url 'selling:delivery_print' note.pk %}" target="_blank" class="font-medium text-ink-900 hover:text-brand-700">{{ note.reference }}</a>
+              <span class="hint">{{ note.delivered_on|date:"j M Y" }}{% if note.received_by %} &middot; received by {{ note.received_by }}{% endif %}</span>
+            </div>
+            <span class="tnum font-semibold">{{ note.total|floatformat:0|intcomma }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-4">
+      {% if invoice.is_owed and may_take_payment %}
+      <form method="post" class="card card-body space-y-3">
+        {% csrf_token %}<input type="hidden" name="action" value="payment">
+        <h2 class="card-title">Payment received</h2>
+        <p class="hint">It comes off {{ invoice.customer.name }}'s account as well, so the statement stays right.</p>
+        <div>
+          <label class="label" for="amount">Amount</label>
+          <input type="number" step="0.01" min="0.01" max="{{ invoice.balance|floatformat:2 }}" name="amount" id="amount" class="input" placeholder="{{ invoice.balance|floatformat:0 }}" required>
+        </div>
+        <div>
+          <label class="label" for="method">How</label>
+          <select name="method" id="method" class="input">
+            {% for value, label in methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="label" for="reference">Reference</label>
+          <input name="reference" id="reference" maxlength="60" class="input" placeholder="M-Pesa code, or the bank slip">
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Record it</button>
+      </form>
+      {% endif %}
+
+      <div class="card">
+        <div class="card-head"><h2 class="card-title">Money</h2></div>
+        <div class="divide-y divide-ink-100 text-sm">
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Invoiced</span><span class="tnum font-medium">{{ invoice.total|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">VAT inside it</span><span class="tnum">{{ invoice.tax|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Paid</span><span class="tnum font-medium text-emerald-700">{{ invoice.paid|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Still owed</span><span class="tnum font-semibold">{{ invoice.balance|floatformat:0|intcomma }}</span></div>
+        </div>
+        {% for row in invoice.credit_entries.all %}
+        {% if row.kind == "payment" %}
+        <div class="flex justify-between border-t border-ink-100 px-5 py-2 text-xs text-ink-500">
+          <span>{{ row.created_at|date:"j M Y" }} &middot; {{ row.method|default:"payment" }}{% if row.note %} &middot; {{ row.note }}{% endif %}</span>
+          <span class="tnum">{{ row.amount|floatformat:0|intcomma }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if editable and may_manage %}
+      <form method="post" class="card card-body space-y-3">
+        {% csrf_token %}<input type="hidden" name="action" value="header">
+        <div>
+          <label class="label" for="due_on">Due date</label>
+          <input type="date" name="due_on" id="due_on" value="{{ invoice.due_on|date:'Y-m-d' }}" class="input">
+        </div>
+        <div>
+          <label class="label" for="note">Note on the invoice</label>
+          <input name="note" id="note" maxlength="500" value="{{ invoice.note }}" class="input" placeholder="Bank details, their order number">
+        </div>
+        <button type="submit" class="btn btn-secondary w-full">Save</button>
+      </form>
+      {% endif %}
+
+      {% if may_manage and invoice.status != "void" and not invoice.has_deliveries and invoice.paid == 0 %}
+      <form method="post" x-data
+            @submit.prevent="$store.confirm.ask($el, { title: 'Cancel {{ invoice.reference|escapejs }}?', body: 'The amount comes back off {{ invoice.customer.name|escapejs }}\'s account. Once anything has been delivered or paid, an invoice can no longer be cancelled.', label: 'Cancel it' })">
+        {% csrf_token %}<input type="hidden" name="action" value="void">
+        <button type="submit" class="btn btn-danger btn-sm w-full">Cancel this invoice</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
