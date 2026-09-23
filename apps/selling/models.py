@@ -230,6 +230,19 @@ class Invoice(BranchModel):
         return self.is_owed and self.due_on < today
 
     @property
+    def can_deliver(self) -> bool:
+        """
+        Whether goods may still go out against this invoice.
+
+        Deliberately says nothing about payment. A hotel that pays the whole
+        thing up front still has to be sent its order, and hiding the button
+        the moment the money landed left the goods stuck in the store with no
+        way to record them leaving.
+        """
+        return (self.status not in {InvoiceStatus.DRAFT, InvoiceStatus.VOID}
+                and not self.delivered_everything)
+
+    @property
     def delivered_everything(self) -> bool:
         return all(line.qty_outstanding <= 0 for line in self.lines.all())
 

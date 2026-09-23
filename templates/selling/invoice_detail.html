@@ -43,7 +43,7 @@ month -- so the page shows both rather than folding them into one state.
         <button type="submit" class="btn btn-primary">Issue it</button>
       </form>
       {% endif %}
-      {% if invoice.is_owed and may_deliver %}
+      {% if invoice.can_deliver and may_deliver %}
       <a href="{% url 'selling:delivery_create' invoice.pk %}" class="btn btn-primary">{% icon "truck" %} Send goods</a>
       {% endif %}
     </div>

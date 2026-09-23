@@ -285,3 +285,40 @@ def test_the_delivery_note_is_about_goods_not_money(
     assert "Received by" in body
     assert "not a demand for payment" in body
     assert "85,000" not in body          # no money on it
+
+
+def test_paying_up_front_does_not_strand_the_goods(
+        client, shop, main_branch, owner, buyer, invoice):
+    """
+    A hotel that settles the whole invoice before the lorry leaves still has
+    to be sent its order. The button to send goods was tied to "is this still
+    owed", so the last shilling paid took it away and the goods sat in the
+    store with no way to record them going out.
+    """
+    client.force_login(owner)
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(invoice)
+        services.take_payment(invoice, amount=invoice.total, method="mpesa", user=owner)
+        invoice.refresh_from_db()
+        assert invoice.status == InvoiceStatus.PAID
+        assert invoice.balance == Decimal("0")
+        assert invoice.can_deliver          # nothing has gone out yet
+
+    page = client.get(reverse("selling:invoice_detail", args=[invoice.pk]))
+    assert reverse("selling:delivery_create", args=[invoice.pk]) in page.content.decode()
+
+
+def test_once_everything_is_out_there_is_nothing_left_to_send(
+        shop, main_branch, owner, buyer, invoice):
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(invoice)
+        note = DeliveryNote.objects.create(
+            reference="DN260001", invoice=invoice, branch=main_branch,
+            delivered_on=timezone.localdate())
+        for line in invoice.lines.all():
+            note.lines.create(invoice_line=line, qty=line.qty)
+        services.deliver(note, user=owner)
+
+        invoice.refresh_from_db()
+        assert invoice.delivered_everything
+        assert not invoice.can_deliver
