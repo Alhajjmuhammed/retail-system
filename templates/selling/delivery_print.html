@@ -17,6 +17,7 @@ statement, because a shop's paperwork should look like one shop's paperwork.
 
     <div class="flex flex-wrap items-start justify-between gap-6">
       <div>
+        {% include "partials/letterhead_mark.html" with shop=tenant %}
         <p class="text-xl font-bold">{{ tenant.name }}</p>
         {% if tenant.tin %}<p class="text-sm text-ink-600">TIN {{ tenant.tin }}</p>{% endif %}
         {% if note.branch.address %}<p class="text-sm text-ink-600">{{ note.branch.address|linebreaksbr }}</p>{% endif %}

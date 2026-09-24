@@ -1,0 +1,10 @@
+{% comment %}
+The shop's own mark, at the top of a document it hands to somebody else.
+
+Most dukas have no logo, and a placeholder box where one should be looks
+worse than no logo at all -- so with nothing uploaded this renders nothing
+and the name stands on its own, exactly as it did before.
+
+Takes `shop`: the tenant whose paperwork this is.
+{% endcomment %}
+{% if shop.logo %}<img src="{{ shop.logo.url }}" alt="{{ shop.name }}" class="mb-2 h-12 w-auto object-contain">{% endif %}

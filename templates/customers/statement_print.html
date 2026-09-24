@@ -12,6 +12,7 @@
   <div class="mx-auto my-6 max-w-3xl bg-white p-8 shadow-sm print:my-0 print:p-0 print:shadow-none">
     <div class="flex flex-wrap items-start justify-between gap-6">
       <div>
+        {% include "partials/letterhead_mark.html" with shop=customer.tenant %}
         <p class="text-xl font-bold">{{ customer.tenant.name }}</p>
         {% if customer.tenant.tin %}<p class="text-sm text-ink-600">TIN {{ customer.tenant.tin }}</p>{% endif %}
       </div>
