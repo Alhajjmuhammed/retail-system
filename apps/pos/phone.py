@@ -218,7 +218,7 @@ def checkout(request):
         return JsonResponse({"error": "This phone is not registered with the shop. "
                                       "Reload the page and try again."}, status=409)
     if Device.objects.filter(device_id=device_id, is_active=False).exists():
-        return JsonResponse({"error": "This phone has been switched off by the shop. Use a till."},
+        return JsonResponse({"error": "This phone has been switched off by the shop. Use a POS."},
                             status=409)
 
     membership = request.membership
@@ -251,14 +251,14 @@ def checkout(request):
     if on_account and customer is None:
         return JsonResponse({"error": "Choose the customer to put it on account."}, status=400)
     if on_account and not membership.can("credit.grant"):
-        return JsonResponse({"error": "You cannot sell on account. Send it to a till."}, status=403)
+        return JsonResponse({"error": "You cannot sell on account. Send it to a POS."}, status=403)
     if on_account and not customer.can_take_credit(total):
         # Online, with the goods still in hand: refused, not merely flagged.
         return JsonResponse({"error": f"{customer.name} has only "
                                       f"{customer.credit_available:,.0f} of credit left. "
                                       "Take payment another way."}, status=400)
     if not on_account and method not in allowed_methods(membership):
-        return JsonResponse({"error": "That payment method is not allowed on a phone. Send it to a till."},
+        return JsonResponse({"error": "That payment method is not allowed on a phone. Send it to a POS."},
                             status=403)
     decision = membership.check_permission("pos.mobile_payment", value=total)
     if not decision:

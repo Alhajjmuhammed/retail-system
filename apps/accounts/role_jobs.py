@@ -41,14 +41,14 @@ class Job:
 
 JOBS = [
     Job(
-        "sell", "Sells at the till",
-        "Open a till, ring up sales, print a receipt again.",
+        "sell", "Sells at the POS",
+        "Open a POS, ring up sales, print a receipt again.",
         core=("pos.operate", "pos.sell"),
         also=("pos.reprint", "product.view", "cashup.perform", "pos.open_item"),
     ),
     Job(
         "discount", "Can take money off a price",
-        "Give a discount at the till.",
+        "Give a discount at the POS.",
         core=("pos.discount",),
         also=("pos.price_override",),
         limit_on="pos.discount", limit_label="Most they may take off (%)",
@@ -113,7 +113,7 @@ JOBS = [
     ),
     Job(
         "admin", "Runs the shop's settings",
-        "Staff, roles, branches, tills and business settings.",
+        "Staff, roles, branches, POS and business settings.",
         core=("user.manage", "settings.edit"),
         also=("role.manage", "branch.manage", "register.manage", "product.manage",
               "product.set_price", "billing.manage"),

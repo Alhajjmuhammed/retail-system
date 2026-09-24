@@ -166,7 +166,7 @@ def expense_create(request):
 
         drawer = _open_shift_for(request)
         if drawer is None:
-            errors.append("No till of yours is open, so it cannot come out of a drawer.")
+            errors.append("No POS of yours is open, so it cannot come out of a drawer.")
         elif data["amount"] > drawer.compute_expected_cash():
             errors.append(f"Your drawer should only hold {drawer.compute_expected_cash():,.0f}.")
     if errors:
@@ -187,7 +187,7 @@ def expense_create(request):
             expense.save(update_fields=["cash_movement", "updated_at"])
     audit.record("expense.recorded", obj=expense, ip=audit.client_ip(request))
     messages.success(request, f"{expense.amount:,.0f} for {expense.category} recorded"
-                     + (" and taken from your till." if drawer else "."))
+                     + (" and taken from your POS." if drawer else "."))
     return close_modal(request, reverse("finance:expense_list"))
 
 
@@ -294,8 +294,8 @@ def expense_delete(request, pk):
     if stored:
         Expense._meta.get_field("attachment").storage.delete(stored)
     messages.success(request, "Expense removed."
-                     + (" Its cash is back in the till's expected figure." if reversed_in_till
-                        else " It came out of a till that is already counted; check that cash-up."
+                     + (" Its cash is back in the POS's expected figure." if reversed_in_till
+                        else " It came out of a POS that is already counted; check that cash-up."
                         if movement is not None else ""))
     return redirect("finance:expense_list")
 

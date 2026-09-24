@@ -4,7 +4,7 @@
       class="grid gap-4 p-5 sm:grid-cols-2" x-data="{ newCat: {% if v.category_name %}true{% else %}false{% endif %}, method: '{% if v %}{{ v.method|default:"cash"|escapejs }}{% else %}{{ expense.method|default:"cash"|escapejs }}{% endif %}' }">
   {% csrf_token %}
   {% if errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" %}</div>{% endif %}
-  {% if expense.cash_movement_id %}<p class="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600 sm:col-span-2">Paid out of a till: the amount and payment method are fixed.</p>{% endif %}
+  {% if expense.cash_movement_id %}<p class="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600 sm:col-span-2">Paid out of a POS: the amount and payment method are fixed.</p>{% endif %}
   <div class="sm:col-span-2">
     <div class="flex items-center justify-between"><label class="label" for="category">Category</label>
       <button type="button" class="text-xs font-medium text-brand-700 hover:underline" @click="newCat = !newCat" x-text="newCat ? 'Pick from the list' : 'New category'"></button></div>
@@ -27,7 +27,7 @@
   {% if drawer %}
   <label class="flex items-start gap-2.5 text-sm text-ink-700 sm:col-span-2" x-show="method === 'cash'">
     <input type="checkbox" name="from_drawer" class="checkbox mt-0.5" {% if not v or v.from_drawer %}checked{% endif %}>
-    <span>Taken from my till drawer ({{ drawer.register.name }}) <span class="hint block">So your cash-up expects less cash, instead of you looking short.</span></span>
+    <span>Taken from my POS drawer ({{ drawer.register.name }}) <span class="hint block">So your cash-up expects less cash, instead of you looking short.</span></span>
   </label>
   {% endif %}
   <div class="flex justify-end gap-2 sm:col-span-2">

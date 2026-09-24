@@ -64,7 +64,7 @@
       <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ row.label }}{% if row.on_account %} <span class="badge badge-warn">not money in yet</span>{% endif %}</span><span class="font-medium">{{ row.total|default:0|floatformat:0|intcomma }}</span></div>
       {% empty %}<p class="px-5 py-4 text-sm text-ink-500">No payments in this period.</p>
       {% endfor %}
-      {% if by_method %}<p class="px-5 py-2.5 text-xs text-ink-500">As paid at the till, before refunds.</p>{% endif %}
+      {% if by_method %}<p class="px-5 py-2.5 text-xs text-ink-500">As paid at the POS, before refunds.</p>{% endif %}
     </div>
   </div>
 </div>

@@ -158,7 +158,7 @@ def test_shift_open_without_tills_says_so(client, shop, main_branch, register, o
         register.save()
     client.force_login(owner)
     r = client.get(reverse("pos:shift_open"))
-    assert r.status_code == 200 and "No till at" in r.content.decode()
+    assert r.status_code == 200 and "No POS at" in r.content.decode()
 
 
 def test_opening_a_till_shows_what_each_till_is_doing(
@@ -185,7 +185,7 @@ def test_opening_a_till_shows_what_each_till_is_doing(
     assert r.context["tills"][0]["running"] is not None
     # Nothing is free, so there is no form to fill in that could not work.
     assert r.context["free"] == []
-    assert "Every till here is in use" in body and "Start selling" not in body
+    assert "Every POS here is in use" in body and "Start selling" not in body
     assert "Juma" in body
 
 

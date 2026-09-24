@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load assets %}
 {% load static %}
-{% block title %}Till{% endblock %}
+{% block title %}POS{% endblock %}
 
 {% comment %}
-The till replaces the whole shell: no sidebar, no topbar. A cashier needs the
+The POS replaces the whole shell: no sidebar, no topbar. A cashier needs the
 largest possible targets and nothing to mis-tap while a queue forms.
 {% endcomment %}
 
@@ -13,7 +13,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
 
   <header class="relative z-10 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-ink-200/80 bg-white px-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
     <div class="flex min-w-0 items-center gap-3">
-      <a href="{% url 'core:dashboard' %}" class="btn btn-ghost -ml-1.5 p-2" aria-label="Leave the till">
+      <a href="{% url 'core:dashboard' %}" class="btn btn-ghost -ml-1.5 p-2" aria-label="Leave the POS">
         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18 9 12l6-6"/></svg>
       </a>
       <div class="min-w-0">
@@ -361,7 +361,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
        class="fixed inset-0 z-40 flex items-end justify-center bg-ink-950/50 p-3 backdrop-blur-sm sm:items-center sm:p-4">
     <div class="w-full max-w-md space-y-3 rounded-2xl bg-white p-5 shadow-float">
       <h2 class="text-base font-semibold text-ink-900">Sales the server refused</h2>
-      <p class="text-sm text-ink-600">They are kept on this till. Show a manager: fix the reason, then try again, or remove one entered by mistake.</p>
+      <p class="text-sm text-ink-600">They are kept on this POS. Show a manager: fix the reason, then try again, or remove one entered by mistake.</p>
       <template x-for="sale in refused" :key="sale.client_uuid">
         <div class="rounded-xl bg-red-50 px-3.5 py-3 ring-1 ring-inset ring-red-600/15">
           <p class="text-sm font-medium text-ink-900" x-text="money(sale.payments.reduce((t, p) => t + parseFloat(p.amount || 0), 0)) + ' · ' + new Date(sale.sold_at).toLocaleString()"></p>

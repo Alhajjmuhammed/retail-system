@@ -1,6 +1,6 @@
 {% extends "platform/base.html" %}
 {% block title %}Devices{% endblock %}
-{% block heading %}Tills and phones{% endblock %}
+{% block heading %}POS and phones{% endblock %}
 
 {% block content %}
 <div class="space-y-5">
@@ -32,7 +32,7 @@
         <button type="submit" class="btn btn-secondary">Search</button>
         {% if q or view %}<a href="{% url 'platform:devices' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
       </form>
-      <p class="hint max-w-sm">Tills and phones list themselves the first time they are used. Switching one off stops it sending sales.</p>
+      <p class="hint max-w-sm">POS and phones list themselves the first time they are used. Switching one off stops it sending sales.</p>
     </div>
 
     <div class="overflow-x-auto">
@@ -101,7 +101,7 @@
             {% if q or view %}
               {% include "partials/empty.html" with icon="search" title="No device matches" text="Try a shop, a branch or part of the name." %}
             {% else %}
-              {% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone lists itself the first time somebody sells on it." %}
+              {% include "partials/empty.html" with icon="cart" title="No devices yet" text="A POS or phone lists itself the first time somebody sells on it." %}
             {% endif %}
           </td></tr>
           {% endfor %}

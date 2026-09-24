@@ -79,7 +79,7 @@
       {% if sms_failed %}<p class="hint text-red-600">{{ sms_failed }} failed this week</p>{% endif %}
     </div>
     <a {% if "devices.view" in pp %}href="{% url 'platform:devices' %}?view=holding"{% endif %} class="stat transition hover:border-brand-300">
-      <p class="stat-label">Tills holding unsent sales</p>
+      <p class="stat-label">POS holding unsent sales</p>
       <p class="stat-value {% if devices_holding %}text-red-600{% endif %}">{{ devices_holding }}</p>
       <p class="hint">{{ devices_silent }} silent over a day</p>
     </a>
@@ -94,7 +94,7 @@
     <div class="stat">
       <p class="stat-label">Sales refused by the server</p>
       <p class="stat-value {% if sync_refused %}text-amber-600{% endif %}">{{ sync_refused }}</p>
-      <p class="hint">In the last 7 days. They wait on the till for a manager.</p>
+      <p class="hint">In the last 7 days. They wait on the POS for a manager.</p>
     </div>
     <div class="stat">
       <p class="stat-label">Items with negative stock</p>

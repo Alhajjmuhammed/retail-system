@@ -330,7 +330,7 @@ def _movement_value(request, **kwargs):
 def cash_movement(request):
     shift = _open_shift_for(request)
     if shift is None:
-        messages.error(request, "Open your till first: money in or out goes through a drawer.")
+        messages.error(request, "Open your POS first: money in or out goes through a drawer.")
         return redirect("pos:shift_open")
 
     kind = request.POST.get("kind", CashMovementKind.PAY_OUT)
@@ -542,7 +542,7 @@ def sale_return(request, pk):
         if method == PaymentMethod.CASH and drawer is None:
             # Otherwise the refund came out of no drawer's expected cash, and
             # the money simply vanished from the cash-up.
-            messages.error(request, "A cash refund comes out of a drawer. Open your till first.")
+            messages.error(request, "A cash refund comes out of a drawer. Open your POS first.")
             return redirect("pos:sale_return", pk=pk)
         try:
             doc = create_return(

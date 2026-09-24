@@ -26,7 +26,7 @@
 
   {% if may_collect and customer.balance > 0 %}
   <form method="post" action="{% url 'customers:customer_payment' customer.pk %}" class="card card-body grid gap-3 sm:grid-cols-6"
-        x-data @submit.prevent="$store.confirm.ask($el, { title: 'Record ' + (Number($el.amount.value)||0).toLocaleString() + ' from {{ customer.name|escapejs }}?', body: 'Cash goes into your open till drawer.', label: 'Record payment', danger: false })">
+        x-data @submit.prevent="$store.confirm.ask($el, { title: 'Record ' + (Number($el.amount.value)||0).toLocaleString() + ' from {{ customer.name|escapejs }}?', body: 'Cash goes into your open POS drawer.', label: 'Record payment', danger: false })">
     {% csrf_token %}
     <div class="sm:col-span-2"><label class="label" for="amount">Payment received</label><input type="number" step="0.01" min="0.01" max="{{ customer.balance|floatformat:'-2' }}" name="amount" id="amount" class="input" required></div>
     <div class="sm:col-span-2"><label class="label" for="method">How</label><select name="method" id="method" class="input">{% for value, label in methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>

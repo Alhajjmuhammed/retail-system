@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Tills and phones{% endblock %}
-{% block heading %}Tills and phones{% endblock %}
+{% block title %}POS and phones{% endblock %}
+{% block heading %}POS and phones{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -90,7 +90,7 @@ is actually looking.
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6">{% include "partials/empty.html" with icon="cart" title="No devices yet" text="A till or phone appears here the first time somebody sells on it. A lost one can be switched off, and then it cannot send sales or take payment." %}</td></tr>
+        <tr><td colspan="6">{% include "partials/empty.html" with icon="cart" title="No devices yet" text="A POS or phone appears here the first time somebody sells on it. A lost one can be switched off, and then it cannot send sales or take payment." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

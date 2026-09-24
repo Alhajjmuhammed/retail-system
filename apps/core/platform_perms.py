@@ -44,7 +44,7 @@ CATALOGUE = [
         ("catalogue.view", "See the shop permission catalogue", "What a shop's roles can be built from."),
     ]),
     ("Devices", [
-        ("devices.view", "See devices", "Every till and scanner registered to a shop."),
+        ("devices.view", "See devices", "Every POS and scanner registered to a shop."),
         ("devices.manage", "Manage devices", "Rename, retire and remove devices."),
     ]),
     ("Health", [

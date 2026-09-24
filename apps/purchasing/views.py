@@ -806,7 +806,7 @@ def supplier_payment_reverse(request, pk):
         movement = next((p.cash_movement for p in group if p.cash_movement_id), None)
         if movement is not None and not request.membership.covers_branch(movement.shift.branch):
             # It came out of a drawer at a branch this person does not run.
-            messages.error(request, f"This payment came out of a till at "
+            messages.error(request, f"This payment came out of a POS at "
                                     f"{movement.shift.branch.name}. Somebody there takes it back.")
             return redirect("purchasing:supplier_detail", pk=supplier.pk)
         till_note = ""
@@ -817,9 +817,9 @@ def supplier_payment_reverse(request, pk):
             record_cash_movement(movement.shift, kind=CashMovementKind.PAY_IN,
                                  amount=-movement.amount,
                                  reason=f"Supplier payment taken back: {supplier.name}"[:200])
-            till_note = " Its cash is back in the till's expected figure."
+            till_note = " Its cash is back in the POS's expected figure."
         elif movement is not None:
-            till_note = " It came out of a till that is already counted; check that cash-up."
+            till_note = " It came out of a POS that is already counted; check that cash-up."
         SupplierPayment.objects.filter(pk__in=[p.pk for p in group]).delete()
     messages.success(request, f"Payment of {total:,.0f} taken back.{till_note}")
     return redirect("purchasing:supplier_detail", pk=supplier.pk)

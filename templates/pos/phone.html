@@ -115,13 +115,13 @@ screen shows a tool rather than a page that failed to load.
       <p class="mt-1 text-sm text-ink-500">Scan a barcode or search to start.</p>
     </div>
 
-    <!-- Finished: a code for the till, or a paid sale -->
+    <!-- Finished: a code for the POS, or a paid sale -->
     <div x-show="done" x-cloak class="rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-ink-100">
       <template x-if="done && done.code">
         <div>
-          <p class="text-sm text-ink-600">At the till, collect basket</p>
+          <p class="text-sm text-ink-600">At the POS, collect basket</p>
           <p class="mt-2 font-mono text-5xl font-bold tracking-[0.3em] text-ink-900" x-text="done.code"></p>
-          <p class="mt-2 text-sm text-ink-600" x-text="money(done.total) + ' to pay at the till'"></p>
+          <p class="mt-2 text-sm text-ink-600" x-text="money(done.total) + ' to pay at the POS'"></p>
         </div>
       </template>
       <template x-if="done && done.number">
@@ -142,7 +142,7 @@ screen shows a tool rather than a page that failed to load.
       <span class="tnum text-2xl font-bold text-ink-900" x-text="money(total)"></span>
     </div>
     <div class="grid gap-2" :class="canPay ? 'grid-cols-2' : 'grid-cols-1'">
-      <button type="button" @click="handoff()" :disabled="busy" class="btn btn-secondary btn-lg">Send to till</button>
+      <button type="button" @click="handoff()" :disabled="busy" class="btn btn-secondary btn-lg">Send to POS</button>
       <button type="button" x-show="canPay" @click="paying = true" :disabled="busy" class="btn btn-primary btn-lg">Take payment</button>
     </div>
     {% comment %}
@@ -152,11 +152,11 @@ screen shows a tool rather than a page that failed to load.
     help.
     {% endcomment %}
     <p x-show="config.may_pay && !methods.length" class="text-center text-xs text-ink-500">
-      No way of taking payment on a phone has been set for your role &mdash; send it to a till.
+      No way of taking payment on a phone has been set for your role &mdash; send it to a POS.
     </p>
     <p x-show="config.may_pay && methods.length && !canPay && config.pay_limit"
        class="text-center text-xs text-ink-500"
-       x-text="'Over your phone limit of ' + money(config.pay_limit) + ' — send it to a till.'"></p>
+       x-text="'Over your phone limit of ' + money(config.pay_limit) + ' — send it to a POS.'"></p>
   </footer>
 
   <!-- Payment -->
@@ -175,7 +175,7 @@ screen shows a tool rather than a page that failed to load.
                   class="rounded-xl px-3 py-3 text-sm font-medium text-ink-800 disabled:opacity-40" x-text="m.label"></button>
         </template>
       </div>
-      <p x-show="!config.has_drawer" class="text-xs text-ink-500">Cash needs an open till shift, so it is not offered here.</p>
+      <p x-show="!config.has_drawer" class="text-xs text-ink-500">Cash needs an open POS shift, so it is not offered here.</p>
       <p x-show="method === 'credit'" class="rounded-lg px-3 py-2 text-sm"
          :class="customer && total > parseFloat(customer.credit_left) ? 'bg-amber-50 text-amber-900' : 'bg-ink-50 text-ink-700'"
          x-text="customer ? ('Goes on ' + customer.name + '\'s account.' + (total > parseFloat(customer.credit_left) ? ' Over their credit left: the owner is told.' : '')) : ''"></p>

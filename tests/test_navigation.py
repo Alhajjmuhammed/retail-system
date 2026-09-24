@@ -119,7 +119,7 @@ def test_a_new_shop_is_not_shown_what_it_has_never_done(client, ready, owner):
     for waiting in ("Move stock", "Deliveries", "Supplier orders", "Expenses", "End of day"):
         assert waiting in folded and waiting not in shown, waiting
     # The things it does every day are there.
-    for daily in ("Dashboard", "Till", "Sales", "Products", "Stock"):
+    for daily in ("Dashboard", "POS", "Sales", "Products", "Stock"):
         assert daily in shown, daily
     assert page.context["navigation"]["settings"]["label"] == "Settings"
 
@@ -174,7 +174,7 @@ def test_a_cashier_sees_a_cashier_sized_sidebar(client, shop, main_branch, cashi
 
     client.force_login(cashier)
     page = client.get(reverse("core:dashboard"))
-    assert "Till" in _shown(page)
+    assert "POS" in _shown(page)
     everything = _shown(page) + _folded(page)
     for owners_only in ("Profit", "Who sold what", "Suppliers"):
         assert owners_only not in everything, owners_only

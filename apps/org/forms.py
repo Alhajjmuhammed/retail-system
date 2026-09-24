@@ -92,7 +92,7 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "What a product is given when you add it. You can change it per product.",
         ),
         "negative_stock_allowed": (
-            "Let a till sell something the system thinks is finished",
+            "Let a POS sell something the system thinks is finished",
             "Leave this on. A till that is offline cannot always know what is "
             "left, and refusing the sale loses real money at the counter.",
         ),

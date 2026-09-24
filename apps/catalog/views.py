@@ -950,7 +950,7 @@ def tiles(request):
             audit.record("tile.removed", obj=tile, after={"variant": str(tile.variant)},
                          ip=audit.client_ip(request))
             tile.delete()
-            messages.success(request, "Removed from the till.")
+            messages.success(request, "Removed from the POS.")
         return redirect("catalog:tiles")
 
     existing = mine.select_related("variant__product", "branch").order_by("position")

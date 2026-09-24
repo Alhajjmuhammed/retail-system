@@ -39,7 +39,7 @@
       <div class="sm:col-span-{% if open_invoices %}3{% else %}2{% endif %}"><label class="label" for="amount">Amount</label><input type="number" step="0.01" min="0.01" name="amount" id="amount" class="input" required></div>
       <div class="sm:col-span-2"><label class="label" for="paid_at">Date</label><input type="date" name="paid_at" id="paid_at" class="input"></div>
       <div class="sm:col-span-2" x-data="{ m: 'cash' }"><label class="label" for="method">Method</label><select name="method" id="method" class="input" x-model="m"><option value="cash">Cash</option><option value="mpesa">Mobile money</option><option value="bank">Bank</option></select>
-        <label class="mt-1.5 flex items-center gap-2 text-xs text-ink-600" x-show="m === 'cash'"><input type="checkbox" name="from_drawer" class="checkbox"> From my till drawer</label></div>
+        <label class="mt-1.5 flex items-center gap-2 text-xs text-ink-600" x-show="m === 'cash'"><input type="checkbox" name="from_drawer" class="checkbox"> From my POS drawer</label></div>
       <div class="sm:col-span-{% if open_invoices %}2{% else %}4{% endif %}"><label class="label" for="reference">Reference</label><input name="reference" id="reference" maxlength="60" class="input" placeholder="Receipt or transaction no."></div>
       <div class="flex items-end sm:col-span-{% if open_invoices %}2{% else %}2{% endif %}"><button type="submit" class="btn btn-primary w-full">Record payment</button></div>
     </form>

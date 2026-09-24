@@ -122,7 +122,7 @@ class StaffForm(TailwindMixin, forms.Form):
         max_length=8,
         required=False,
         widget=forms.PasswordInput(attrs={"inputmode": "numeric"}),
-        help_text="Only for staff who approve other people's actions at the till.",
+        help_text="Only for staff who approve other people's actions at the POS.",
     )
 
     def __init__(self, *args, tenant=None, instance=None, actor=None, **kwargs):

@@ -165,7 +165,7 @@ class Command(BaseCommand):
         self.stdout.write("  owner@demo.test    Owner       full access")
         self.stdout.write("  manager@demo.test  Manager     PIN 1234, both branches")
         self.stdout.write("  cashier@demo.test  Cashier     5% discount cap")
-        self.stdout.write("  stock@demo.test    Stock clerk no till access")
+        self.stdout.write("  stock@demo.test    Stock clerk no POS access")
         self.stdout.write("  phone@demo.test    Phone seller sells from a phone")
         self.stdout.write("  buyer@demo.test    Buyer       orders and pays suppliers")
         self.stdout.write("  books@demo.test    Bookkeeper  expenses and reports")

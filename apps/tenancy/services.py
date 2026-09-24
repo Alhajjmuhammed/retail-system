@@ -104,7 +104,7 @@ def _create_first_branch(tenant, branch_name):
     from apps.org.models import Branch, Register
 
     branch = Branch.objects.create(name=branch_name, is_default=True)
-    Register.objects.create(branch=branch, name="Till 1")
+    Register.objects.create(branch=branch, name="POS 1")
     return branch
 
 

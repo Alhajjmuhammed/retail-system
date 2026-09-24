@@ -44,7 +44,7 @@ SECTIONS: list[tuple[str, tuple[Entry, ...]]] = [
     ("", (
         Entry("dashboard", "Dashboard", "Dashboard", "home", "core:dashboard",
               here=("dashboard",)),
-        Entry("till", "Till", "Till", "cart", "pos:till",
+        Entry("till", "POS", "POS", "cart", "pos:till",
               needs="pos.operate", here=("till",)),
         Entry("phone", "Sell on phone", "Sell on phone", "tag", "pos:phone",
               needs="pos.mobile_cart", here=("phone",)),

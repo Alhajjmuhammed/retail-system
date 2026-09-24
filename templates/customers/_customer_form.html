@@ -1,4 +1,4 @@
-{% include "partials/modal_open.html" with title=customer.name|default:"New customer" subtitle="A phone number lets the till find them fast." width="max-w-lg" %}
+{% include "partials/modal_open.html" with title=customer.name|default:"New customer" subtitle="A phone number lets the POS find them fast." width="max-w-lg" %}
 <form {% if modal %}hx-post="{% if customer %}{% url 'customers:customer_edit' customer.pk %}{% else %}{% url 'customers:customer_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %} class="grid gap-4 p-5 sm:grid-cols-2">
   {% csrf_token %}
   {% if errors %}<div class="sm:col-span-2">{% include "platform/_form_errors.html" %}</div>{% endif %}
@@ -13,7 +13,7 @@
       <option value="">The usual prices</option>
       {% for pl in price_lists %}{% if not pl.is_default %}<option value="{{ pl.pk }}" {% if values %}{% if values.price_list == pl.pk|stringformat:"s" %}selected{% endif %}{% elif customer.price_list_id == pl.pk %}selected{% endif %}>{{ pl.name }}</option>{% endif %}{% endfor %}
     </select>
-    <p class="hint">Picked at the till, the basket is priced from this list.</p>
+    <p class="hint">Picked at the POS, the basket is priced from this list.</p>
   </div>
   {% endif %}
   <div class="sm:col-span-2"><label class="label" for="address">Address</label><textarea name="address" id="address" rows="2" maxlength="500" class="input">{% if values %}{{ values.address }}{% else %}{{ customer.address|default:'' }}{% endif %}</textarea></div>

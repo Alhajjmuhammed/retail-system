@@ -52,14 +52,14 @@ def settings_home(request):
          "Who works here, what they may do, and how to invite somebody."),
         ("role.manage", "accounts:roles", "shield", "ink", "Roles & permissions",
          "The jobs in your shop, and what each job is allowed to do."),
-        ("register.manage", "org:branches", "building", "ink", "Branches & tills",
-         "Your shops and the tills inside them."),
-        ("register.manage", "org:devices", "cart", "ink", "Tills & phones",
-         "Every till and phone that has sold here. Switch off a lost one."),
+        ("register.manage", "org:branches", "building", "ink", "Branches & POS",
+         "Your shops and the POS inside them."),
+        ("register.manage", "org:devices", "cart", "ink", "POS & phones",
+         "Every POS and phone that has sold here. Switch off a lost one."),
         ("product.set_price", "catalog:price_lists", "tag", "brand", "Special prices",
          "A second price for bulk buyers, attached to a customer."),
-        ("settings.edit", "catalog:tiles", "layers", "brand", "Till tiles",
-         "What shows on the till for goods with no barcode."),
+        ("settings.edit", "catalog:tiles", "layers", "brand", "POS tiles",
+         "What shows on the POS for goods with no barcode."),
         ("settings.edit", "catalog:taxonomy", "tag", "brand", "Units & VAT",
          "The units you sell in, your brands, and the tax rates you charge. "
          "Categories live with the products, under Inventory."),
@@ -269,7 +269,7 @@ def register_create(request):
         audit.record("register.created", obj=register, ip=audit.client_ip(request))
         messages.success(request, f"{register.name} added to {register.branch.name}.")
         return close_modal(request, reverse("org:branches"))
-    return _settings_form(request, form, title="New till", action=reverse("org:register_create"))
+    return _settings_form(request, form, title="New POS", action=reverse("org:register_create"))
 
 
 # --------------------------------------------------------------------------

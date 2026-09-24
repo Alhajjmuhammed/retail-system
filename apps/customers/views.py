@@ -264,8 +264,8 @@ def customer_payment(request, pk):
         messages.success(
             request,
             f"{amount:,.0f} received from {customer.name}."
-            + (" Added to your till drawer." if drawer is not None else
-               " No till is open, so it is not in any drawer count." if method == "cash" else ""),
+            + (" Added to your POS drawer." if drawer is not None else
+               " No POS is open, so it is not in any drawer count." if method == "cash" else ""),
         )
 
     return redirect("customers:customer_detail", pk=pk)
@@ -301,7 +301,7 @@ def customer_payment_reverse(request, pk):
         if movement is not None and not request.membership.covers_branch(movement.shift.branch):
             # Checked before anything is written: returning from inside the
             # transaction does not undo what it has already done.
-            messages.error(request, f"That payment went into a till at "
+            messages.error(request, f"That payment went into a POS at "
                                     f"{movement.shift.branch.name}. Somebody there undoes it.")
             return redirect("customers:customer_detail", pk=customer.pk)
         undo = CreditTransaction.objects.create(
@@ -316,9 +316,9 @@ def customer_payment_reverse(request, pk):
             record_cash_movement(movement.shift, kind=CashMovementKind.PAY_OUT,
                                  amount=-movement.amount,
                                  reason=f"Undo account payment: {customer.name}"[:200])
-            till_note = " Taken back out of the till's expected cash."
+            till_note = " Taken back out of the POS's expected cash."
         elif movement is not None:
-            till_note = " Its till is already counted; check that cash-up."
+            till_note = " Its POS is already counted; check that cash-up."
     audit.record("credit.payment_undone", obj=undo, ip=audit.client_ip(request))
     messages.success(request, f"Payment of {back:,.0f} undone.{till_note}")
     return redirect("customers:customer_detail", pk=customer.pk)

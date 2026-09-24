@@ -139,7 +139,7 @@ def dashboard(request):
     if can("cashup.approve"):
         flag(Shift.objects.filter(branch__in=branches, status=ShiftStatus.OPEN,
                                   opened_at__lt=now - timedelta(hours=14)).count(),
-             "till(s) left open since yesterday", reverse("finance:cashups"), "danger")
+             "POS left open since yesterday", reverse("finance:cashups"), "danger")
         flag(Shift.objects.filter(branch__in=branches, closed_at__isnull=False, approved_by__isnull=True)
              .exclude(variance=0).count(),
              "cash-up(s) with a difference waiting for approval", reverse("finance:cashups"))
@@ -180,7 +180,7 @@ def dashboard(request):
         from apps.org.models import Device
 
         flag(Device.objects.filter(branch__in=branches, is_active=True, queued__gt=0).count(),
-             "till(s) holding sales they have not sent", reverse("org:devices"))
+             "POS holding sales they have not sent", reverse("org:devices"))
     context["attention"] = attention
     # A role with nothing ticked yet: say so, rather than "nothing needs you".
     from apps.core.permissions import registry
@@ -229,7 +229,7 @@ def dashboard(request):
     product_count = Product.objects.filter(is_active=True).count()
     steps = []
     if can("register.manage"):
-        steps.append({"label": "Check your branch and tills", "done": Branch.objects.filter(is_active=True).exists(),
+        steps.append({"label": "Check your branch and POS", "done": Branch.objects.filter(is_active=True).exists(),
                       "url": reverse("org:branches")})
     if can("product.manage"):
         steps.append({"label": "Add your products", "done": product_count > 0,

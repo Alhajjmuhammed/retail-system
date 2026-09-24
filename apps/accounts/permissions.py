@@ -34,10 +34,10 @@ ADMIN = "Administration"
 
 registry.register_many([
     # -- Sales -------------------------------------------------------------
-    P("pos.operate", SALES, "Use a till"),
+    P("pos.operate", SALES, "Use a POS"),
     P("pos.sell", SALES, "Complete a sale"),
     P("pos.discount", SALES, "Give a discount", V.PERCENT, is_dangerous=True),
-    P("pos.price_override", SALES, "Change a price at the till", is_dangerous=True),
+    P("pos.price_override", SALES, "Change a price at the POS", is_dangerous=True),
     P("pos.void", SALES, "Void a sale", V.AMOUNT, is_dangerous=True),
     P("pos.refund", SALES, "Refund a sale", V.AMOUNT, is_dangerous=True),
     P("pos.open_item", SALES, "Sell an unlisted item", V.AMOUNT, is_dangerous=True),
@@ -105,7 +105,7 @@ registry.register_many([
     P("cashup.perform", MONEY, "Close a shift and count the drawer"),
     # Money out of the drawer that is not a sale. Unlimited, it hid any
     # shortfall: a 9,000,000 "pay out" left the cash-up looking perfect.
-    P("cash.movement", MONEY, "Take money out of the till or bank it", V.AMOUNT,
+    P("cash.movement", MONEY, "Take money out of the POS or bank it", V.AMOUNT,
       is_dangerous=True),
     P("cashup.approve", MONEY, "Approve a cash variance", is_dangerous=True),
     P("fiscal.manage", MONEY, "Manage fiscal receipts", requires_feature=FISCAL_RECEIPTS),
@@ -123,7 +123,7 @@ registry.register_many([
     P("branch.manage", ADMIN, "Manage branches", requires_feature=MULTI_BRANCH),
     # Tills and phones exist on every plan: a one-shop owner has to be able
     # to add a till and switch off a stolen phone.
-    P("register.manage", ADMIN, "Manage tills and devices"),
+    P("register.manage", ADMIN, "Manage POS and devices"),
     P("settings.edit", ADMIN, "Change business settings"),
     P("billing.manage", ADMIN, "Manage the subscription and invoices"),
 ])
@@ -169,7 +169,7 @@ STARTER_ROLES = {
         },
     },
     "Cashier": {
-        "description": "Sells at the till. No cost prices, no adjustments.",
+        "description": "Sells at the POS. No cost prices, no adjustments.",
         "permissions": {
             "pos.operate": None, "pos.sell": None, "pos.reprint": None,
             "pos.discount": 5,

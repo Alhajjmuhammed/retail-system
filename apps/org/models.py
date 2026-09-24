@@ -92,7 +92,7 @@ class TenantSettings(TenantModel):
     )
     negative_stock_allowed = models.BooleanField(
         default=True,
-        help_text="Offline tills can oversell. Blocking it loses real sales.",
+        help_text="Offline POS can oversell. Blocking it loses real sales.",
     )
     low_stock_alerts = models.BooleanField(default=True)
     expiry_warning_days = models.PositiveIntegerField(default=30)
@@ -118,7 +118,7 @@ class TenantSettings(TenantModel):
 
 
 class DeviceKind(models.TextChoices):
-    TILL = "till", "Till"
+    TILL = "till", "POS"
     PHONE = "phone", "Phone"
 
 

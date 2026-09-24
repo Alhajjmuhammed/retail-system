@@ -23,7 +23,7 @@ Needs: row (a User), shops (how many shops they belong to), next (return path).
   <form method="post" action="{% url 'platform:user_toggle_active' row.pk %}?next={{ next|urlencode }}" x-data
         @submit.prevent="$store.confirm.ask($el, {
           title: '{% if row.is_active %}Deactivate{% else %}Reactivate{% endif %} {{ row.name|default:row.email|escapejs }}?',
-          body: '{% if row.is_active %}They are signed out everywhere, including any till, and cannot sign in again. Everything they recorded stays.{% else %}They can sign in again straight away with their existing password.{% endif %}',
+          body: '{% if row.is_active %}They are signed out everywhere, including any POS, and cannot sign in again. Everything they recorded stays.{% else %}They can sign in again straight away with their existing password.{% endif %}',
           label: '{% if row.is_active %}Deactivate{% else %}Reactivate{% endif %}',
           danger: {% if row.is_active %}true{% else %}false{% endif %} })">
     {% csrf_token %}

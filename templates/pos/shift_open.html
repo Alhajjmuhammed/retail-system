@@ -5,34 +5,34 @@
 {% block content %}
 {% if not registers %}
 <div class="mx-auto max-w-sm card card-body text-center">
-  {% include "partials/empty.html" with icon="cart" title="No till at "|add:request.branch.name text="A shift runs on a till, and this branch has none yet." %}
+  {% include "partials/empty.html" with icon="cart" title="No POS at "|add:request.branch.name text="A shift runs on a POS, and this branch has none yet." %}
   {% can_do "branch.manage" as may_branch %}
-  {% if may_branch %}<a href="{% url 'org:branches' %}" class="btn btn-primary mt-3">Add a till</a>
+  {% if may_branch %}<a href="{% url 'org:branches' %}" class="btn btn-primary mt-3">Add a POS</a>
   {% else %}<p class="hint mt-3">Ask the owner or a manager to add one.</p>{% endif %}
 </div>
 {% else %}
 {% comment %}
-Two panels, because opening a till is two questions: what am I counting into
-the drawer, and is anybody already on this till. The second used to be
-unanswerable from this screen, which is how two people ended up on one till.
+Two panels, because opening a POS is two questions: what am I counting into
+the drawer, and is anybody already on this POS. The second used to be
+unanswerable from this screen, which is how two people ended up on one POS.
 {% endcomment %}
 <div class="grid items-start gap-5 lg:grid-cols-5">
 
   {% if not free %}
   {% comment %}
-  Every till is already being used. Offering a form with an empty dropdown
+  Every POS is already being used. Offering a form with an empty dropdown
   and a "Start selling" button that cannot work is worse than saying so.
   {% endcomment %}
   <div class="card card-body lg:col-span-2">
     <span class="feed-icon feed-amber mb-3">{% icon "alert" class="h-4 w-4" %}</span>
-    <p class="text-sm font-semibold text-ink-900">Every till here is in use</p>
+    <p class="text-sm font-semibold text-ink-900">Every POS here is in use</p>
     <p class="hint mt-1">
-      One person to a till. Wait for one to be closed, or ask a manager to add
-      another till for this branch.
+      One person to a POS. Wait for one to be closed, or ask a manager to add
+      another POS for this branch.
     </p>
     {% can_do "register.manage" as may_register %}
     {% if may_register %}
-    <a href="{% url 'org:branches' %}" class="btn btn-secondary btn-sm mt-3 self-start">{% icon "plus" %} Add a till</a>
+    <a href="{% url 'org:branches' %}" class="btn btn-secondary btn-sm mt-3 self-start">{% icon "plus" %} Add a POS</a>
     {% endif %}
   </div>
   {% else %}
@@ -45,7 +45,7 @@ unanswerable from this screen, which is how two people ended up on one till.
       </div>
       <div class="card-body space-y-4">
         <div>
-          <label class="label" for="register">Till</label>
+          <label class="label" for="register">POS</label>
           <select name="register" id="register" class="input" required>
             {% for till in tills %}
             {% if not till.running %}
@@ -69,8 +69,8 @@ unanswerable from this screen, which is how two people ended up on one till.
 
   <div class="card lg:col-span-3">
     <div class="card-head">
-      <h2 class="card-title"><span class="card-icon">{% icon "building" class="h-3.5 w-3.5" %}</span>Tills at {{ request.branch.name }}</h2>
-      <span class="hint">{{ tills|length }} till{{ tills|length|pluralize }}</span>
+      <h2 class="card-title"><span class="card-icon">{% icon "building" class="h-3.5 w-3.5" %}</span>POS at {{ request.branch.name }}</h2>
+      <span class="hint">{{ tills|length }} POS{{ tills|length|pluralize }}</span>
     </div>
     <div class="divide-y divide-ink-100">
       {% for till in tills %}
@@ -110,7 +110,7 @@ unanswerable from this screen, which is how two people ended up on one till.
     </div>
     <div class="border-t border-ink-100 px-5 py-3">
       <p class="hint">
-        One person to a till. The drawer is counted into the shift when it opens and
+        One person to a POS. The drawer is counted into the shift when it opens and
         counted out when it closes, and the difference is what a cash-up shows.
       </p>
     </div>
