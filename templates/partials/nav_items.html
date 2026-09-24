@@ -12,8 +12,10 @@ and once used it stays out.
 {% endcomment %}
 
 <div class="nav-head flex h-16 shrink-0 items-center gap-2.5 border-b px-4">
-  <div class="nav-mark flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm">
-    {{ tenant.name|slice:":1"|upper|default:"R" }}
+  <div class="nav-mark {% if tenant.logo %}nav-mark-logo {% endif %}flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-bold shadow-sm">
+    {% if tenant.logo %}
+    <img src="{{ tenant.logo.url }}" alt="{{ tenant.name }}" class="h-full w-full object-contain">
+    {% else %}{{ tenant.name|slice:":1"|upper|default:"R" }}{% endif %}
   </div>
   <div class="nav-label min-w-0 flex-1">
     <p class="nav-shop truncate text-sm font-semibold">{{ tenant.name|default:"Retail" }}</p>

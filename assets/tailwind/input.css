@@ -330,6 +330,12 @@
   .nav-mark {
     @apply bg-white/15 text-white ring-1 ring-inset ring-white/20;
   }
+  /* A shop that has uploaded its mark shows it here instead of its initial.
+     White behind it, because most logos are drawn for paper and disappear
+     against the dark sidebar. */
+  .nav-mark-logo {
+    @apply bg-white p-0.5 ring-white/30;
+  }
   .nav-foot {
     @apply border-white/10;
   }

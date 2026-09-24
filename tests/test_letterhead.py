@@ -60,3 +60,23 @@ def test_the_logo_reaches_the_paperwork(client, shop_with_logo, main_branch, own
         reverse("selling:quotation_print", args=[quotation.pk])).content.decode()
     assert shop_with_logo.logo.url in body
     assert "<img" in body
+
+
+def test_the_sidebar_shows_the_mark_instead_of_the_initial(
+        client, shop_with_logo, main_branch, owner):
+    """
+    The tile at the top of the sidebar held the first letter of the shop's
+    name. A shop that has gone to the trouble of uploading its logo should
+    see it there, every day, on every page.
+    """
+    client.force_login(owner)
+    body = client.get(reverse("core:dashboard")).content.decode()
+    assert shop_with_logo.logo.url in body
+    assert "nav-mark-logo" in body
+
+
+def test_without_a_logo_the_initial_stays(client, shop, main_branch, owner):
+    client.force_login(owner)
+    body = client.get(reverse("core:dashboard")).content.decode()
+    assert "nav-mark-logo" not in body
+    assert "/media/tenants/logos/" not in body
