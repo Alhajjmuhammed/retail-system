@@ -39,10 +39,12 @@ def test_no_logo_leaves_no_gap(client, shop, main_branch, owner):
 
 
 def test_the_logo_reaches_the_paperwork(client, shop_with_logo, main_branch, owner):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
     from apps.customers.models import Customer
     from apps.selling.models import Quotation, QuotationStatus
-    from django.utils import timezone
-    from datetime import timedelta
 
     today = timezone.localdate()
     with tenant_context(shop_with_logo, branch=main_branch):
