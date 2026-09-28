@@ -134,12 +134,23 @@ month -- so the page shows both rather than folding them into one state.
         <div class="card-head"><h2 class="card-title"><span class="card-icon">{% icon "truck" class="h-3.5 w-3.5" %}</span>What has gone out</h2></div>
         <div class="divide-y divide-ink-100">
           {% for note in invoice.deliveries.all %}
-          <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm {% if note.voided_at %}text-ink-400{% endif %}">
             <div>
-              <a href="{% url 'selling:delivery_print' note.pk %}" target="_blank" class="font-medium text-ink-900 hover:text-brand-700">{{ note.reference }}</a>
+              <a href="{% url 'selling:delivery_print' note.pk %}" target="_blank" class="font-medium {% if note.voided_at %}line-through{% else %}text-ink-900{% endif %} hover:text-brand-700">{{ note.reference }}</a>
               <span class="hint">{{ note.delivered_on|date:"j M Y" }}{% if note.received_by %} &middot; received by {{ note.received_by }}{% endif %}</span>
+              {% if note.voided_at %}<span class="badge ml-1">cancelled {{ note.voided_at|date:"j M" }}</span>{% endif %}
             </div>
-            <span class="tnum font-semibold">{{ note.total|floatformat:0|intcomma }}</span>
+            <div class="flex items-center gap-3">
+              <span class="tnum font-semibold">{{ note.total|floatformat:0|intcomma }}</span>
+              {% if may_deliver and not note.voided_at %}
+              <form method="post" x-data
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Cancel {{ note.reference|escapejs }}?', body: 'For goods that came back, or a trip recorded by mistake. The stock goes back and the goods are owed to {{ invoice.customer.name|escapejs }} again on this invoice. What they owe does not change.', label: 'Cancel delivery' })">
+                {% csrf_token %}<input type="hidden" name="action" value="cancel_delivery">
+                <input type="hidden" name="note" value="{{ note.pk }}">
+                <button type="submit" class="btn-icon btn-icon-danger" title="Cancel this delivery" aria-label="Cancel {{ note.reference }}">{% icon "restore" class="h-4 w-4" %}</button>
+              </form>
+              {% endif %}
+            </div>
           </div>
           {% endfor %}
         </div>

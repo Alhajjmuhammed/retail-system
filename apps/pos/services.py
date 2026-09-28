@@ -277,12 +277,17 @@ def complete_sale(
     buyer_name="",
     buyer_phone="",
     invoice=None,
+    respect_stock_setting=False,
 ):
     """
     Turn a basket into a sale: stock out, payments recorded, receipt ready.
 
     ``payments`` is a list of ``{"method", "amount", "reference"}``. Splitting
     across cash and mobile money is normal, not an edge case.
+
+    A counter sale always goes through, stock or no stock: the goods are in
+    the customer's hand. ``respect_stock_setting`` is for goods that have not
+    left yet (a delivery), where the shop's no-negative-stock setting holds.
     """
     if not cart.lines.exists():
         raise ValueError("Nothing to sell.")
@@ -359,7 +364,8 @@ def complete_sale(
         return stored
 
     for line in lines:
-        _write_sale_line(sale, line, branch, user, currency)
+        _write_sale_line(sale, line, branch, user, currency,
+                         allow_negative=None if respect_stock_setting else True)
 
     for payment in payments:
         SalePayment.objects.create(
@@ -401,7 +407,7 @@ def _tax_for(line, currency=None) -> Decimal:
     return (net * rate / (Decimal("100") + rate)).quantize(MONEY, rounding=ROUND_HALF_UP)
 
 
-def _write_sale_line(sale, cart_line, branch, user, currency=None):
+def _write_sale_line(sale, cart_line, branch, user, currency=None, allow_negative=True):
     variant = cart_line.variant
     unit_cost = ZERO
     batch = None
@@ -439,7 +445,7 @@ def _write_sale_line(sale, cart_line, branch, user, currency=None):
             source=sale,
             note=sale.number,
             user=user,
-            allow_negative=True,
+            allow_negative=allow_negative,
         )
     return line
 
@@ -518,8 +524,17 @@ def next_sale_number(branch) -> str:
 # Undoing a sale
 # --------------------------------------------------------------------------
 
+# Goods sent against an invoice: the invoice holds the debt, and the delivery
+# note says what is still to go. Undoing the sale on its own put the stock back
+# and left both of those saying the goods were out and owed for.
+_INVOICED_SALE = (
+    "This sale is a delivery against an invoice. Cancel the delivery note on "
+    "the invoice instead, so the invoice knows the goods came back."
+)
+
+
 @transaction.atomic
-def void_sale(sale, *, reason, user=None, authorised_by=None):
+def void_sale(sale, *, reason, user=None, authorised_by=None, for_delivery=False):
     """
     Cancel a whole sale and put the stock back.
 
@@ -530,6 +545,8 @@ def void_sale(sale, *, reason, user=None, authorised_by=None):
     sale = type(sale).objects.select_for_update().get(pk=sale.pk)
     if sale.status != SaleStatus.COMPLETED:
         raise ValueError(f"{sale.number} is already {sale.get_status_display().lower()}.")
+    if sale.invoice_id and not for_delivery:
+        raise ValueError(_INVOICED_SALE)
 
     for line in sale.lines.select_related("variant"):
         if line.variant_id:
@@ -572,6 +589,8 @@ def create_return(sale, quantities: dict, *, reason, method=PaymentMethod.CASH,
     sale = type(sale).objects.select_for_update().get(pk=sale.pk)
     if sale.status == SaleStatus.VOIDED:
         raise ValueError("A voided sale cannot be returned.")
+    if sale.invoice_id:
+        raise ValueError(_INVOICED_SALE)
 
     paid_by = set(sale.payments.values_list("method", flat=True))
     if method not in paid_by:

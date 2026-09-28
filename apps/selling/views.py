@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -153,6 +154,9 @@ def _act_on(request, quotation):
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
     if action == "send":
+        if not editable:
+            messages.error(request, f"{quotation.reference} has already gone out.")
+            return redirect("selling:quotation_detail", pk=quotation.pk)
         if not quotation.lines.exists():
             messages.error(request, "There is nothing on this quotation yet.")
             return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -162,7 +166,11 @@ def _act_on(request, quotation):
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
     if action in {"accept", "decline"}:
-        services.decide(quotation, accepted=action == "accept", user=request.user)
+        try:
+            services.decide(quotation, accepted=action == "accept", user=request.user)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:quotation_detail", pk=quotation.pk)
         audit.record(f"quote.{action}ed", obj=quotation, ip=audit.client_ip(request))
         messages.success(
             request,
@@ -295,13 +303,21 @@ def invoice_create(request):
     quotation = Quotation.objects.filter(
         pk=int_or(request.GET.get("quotation") or request.POST.get("quotation"))
     ).first()
+    if quotation is not None and not request.membership.covers_branch(quotation.branch):
+        # The quotation's own page is branch-checked; billing it must be too.
+        messages.error(request, f"{quotation.reference} belongs to {quotation.branch.name}.")
+        return redirect("selling:invoice_list")
 
     if request.method == "POST":
         terms = int_or(request.POST.get("terms_days"))
         terms = DEFAULT_TERMS_DAYS if terms is None else terms
 
         if quotation is not None:
-            invoice = services.invoice_from_quotation(quotation, terms_days=terms)
+            try:
+                invoice = services.invoice_from_quotation(quotation, terms_days=terms)
+            except ValueError as refused:
+                messages.error(request, str(refused))
+                return redirect("selling:quotation_detail", pk=quotation.pk)
         else:
             customer = Customer.objects.filter(
                 pk=int_or(request.POST.get("customer")), is_active=True).first()
@@ -362,6 +378,9 @@ PAYMENT_METHODS = [("cash", "Cash"), ("mpesa", "M-Pesa"), ("tigopesa", "Tigo Pes
 
 def _act_on_invoice(request, invoice):
     action = request.POST.get("action")
+    # Locked for the rest of the request: a double tap on "Issue it" or
+    # "Record it" used to run twice against the same unchanged invoice.
+    invoice = Invoice.objects.select_for_update().select_related("customer").get(pk=invoice.pk)
     editable = invoice.status == InvoiceStatus.DRAFT
     may_manage = request.membership.can("invoice.manage")
 
@@ -393,15 +412,32 @@ def _act_on_invoice(request, invoice):
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
     if action == "issue":
+        if not editable:
+            return redirect("selling:invoice_detail", pk=invoice.pk)
         if not invoice.lines.exists():
             messages.error(request, "There is nothing on this invoice yet.")
             return redirect("selling:invoice_detail", pk=invoice.pk)
-        services.issue(invoice)
+        total = invoice.total
+        if not request.membership.can("invoice.manage", value=total):
+            # The role's "biggest invoice they may issue". Owners have none.
+            limit = request.membership.check_permission("invoice.manage").limit or 0
+            messages.error(
+                request,
+                f"You may issue invoices up to {limit:,.0f}. This one is {total:,.0f}: "
+                "ask the owner or a manager to issue it.",
+            )
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        try:
+            services.issue(invoice)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        invoice.refresh_from_db()
         audit.record("invoice.issued", obj=invoice, ip=audit.client_ip(request))
         messages.success(
             request,
             f"{invoice.reference} issued. {invoice.customer.name} owes "
-            f"{invoice.total:,.0f}, due {invoice.due_on:%-d %b}.",
+            f"{total:,.0f}, due {invoice.due_on.day} {invoice.due_on:%b}.",
         )
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
@@ -410,26 +446,38 @@ def _act_on_invoice(request, invoice):
             messages.error(request, "You may not record a payment.")
             return redirect("selling:invoice_detail", pk=invoice.pk)
         try:
-            amount = parse_decimal(request.POST.get("amount"), "Amount", positive=True)
+            amount = parse_decimal(request.POST.get("amount"), "Amount", positive=True,
+                                   places=2)
         except BadInput as bad:
             messages.error(request, str(bad))
             return redirect("selling:invoice_detail", pk=invoice.pk)
-        if amount > invoice.balance:
-            messages.error(
-                request,
-                f"That is more than the {invoice.balance:,.0f} still owed on "
-                f"{invoice.reference}.",
+        method = request.POST.get("method", "cash")
+        if method not in dict(PAYMENT_METHODS):
+            method = "cash"
+
+        drawer = None
+        if method == "cash":
+            from apps.pos.views import _open_shift_for
+
+            drawer = _open_shift_for(request)
+        try:
+            movement = services.take_payment(
+                invoice, amount=amount, method=method,
+                reference=request.POST.get("reference", "").strip(),
+                user=request.user, shift=drawer,
             )
+        except ValueError as refused:
+            messages.error(request, str(refused))
             return redirect("selling:invoice_detail", pk=invoice.pk)
-        services.take_payment(
-            invoice, amount=amount,
-            method=request.POST.get("method", "cash"),
-            reference=request.POST.get("reference", "").strip(),
-            user=request.user,
-        )
         audit.record("invoice.payment", obj=invoice, after={"amount": str(amount)},
                      ip=audit.client_ip(request))
-        messages.success(request, f"{amount:,.0f} received against {invoice.reference}.")
+        messages.success(
+            request,
+            f"{amount:,.0f} received against {invoice.reference}."
+            + (" Added to your POS drawer." if movement is not None else
+               " No POS is open, so it is not in any drawer count." if method == "cash"
+               else ""),
+        )
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
     if action == "void":
@@ -440,6 +488,29 @@ def _act_on_invoice(request, invoice):
             return redirect("selling:invoice_detail", pk=invoice.pk)
         audit.record("invoice.voided", obj=invoice, ip=audit.client_ip(request))
         messages.warning(request, f"{invoice.reference} cancelled.")
+        return redirect("selling:invoice_detail", pk=invoice.pk)
+
+    if action == "cancel_delivery":
+        if not request.membership.can("delivery.manage", branch=invoice.branch):
+            messages.error(request, "You may not cancel a delivery.")
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        note = invoice.deliveries.filter(pk=int_or(request.POST.get("note"))).first()
+        if note is None:
+            messages.error(request, "That delivery is not on this invoice.")
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        try:
+            services.cancel_delivery(
+                note, reason=request.POST.get("reason", "").strip()[:200],
+                user=request.user)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        audit.record("delivery.cancelled", obj=note, ip=audit.client_ip(request))
+        messages.warning(
+            request,
+            f"{note.reference} cancelled. The stock is back and those goods are owed "
+            f"to {invoice.customer.name} again on this invoice.",
+        )
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
     messages.error(request, "Nothing to do.")
@@ -501,8 +572,12 @@ def delivery_create(request, pk):
     Opens with everything still outstanding filled in, because most trips
     take the lot; a part load is typed over it.
     """
-    invoice = get_object_or_404(
-        Invoice.objects.select_related("customer").prefetch_related("lines"), pk=pk)
+    invoice = get_object_or_404(Invoice.objects.select_related("customer"), pk=pk)
+    if request.method == "POST":
+        # Locked before anything is read: two people sending the same goods
+        # at once each counted the other's load as still in the store.
+        invoice = Invoice.objects.select_for_update().select_related("customer").get(
+            pk=invoice.pk)
 
     if invoice.status == InvoiceStatus.DRAFT:
         messages.error(request, "Issue the invoice before sending goods against it.")
@@ -514,18 +589,7 @@ def delivery_create(request, pk):
     outstanding = [line for line in invoice.lines.all() if line.qty_outstanding > 0]
 
     if request.method == "POST":
-        note = DeliveryNote(
-            branch=invoice.branch, invoice=invoice,
-            delivered_on=date_or(request.POST.get("delivered_on")) or timezone.localdate(),
-            received_by=request.POST.get("received_by", "").strip()[:120],
-            note=request.POST.get("note", "").strip()[:500],
-        )
-        note = save_with_number(
-            note, field="reference",
-            generate=lambda: services.next_reference(DeliveryNote, "DN"),
-        )
-
-        sent_anything = False
+        wanted = []
         for line in outstanding:
             raw = request.POST.get(f"qty:{line.pk}", "")
             if not raw.strip():
@@ -533,27 +597,45 @@ def delivery_create(request, pk):
             try:
                 qty = parse_decimal(raw, f"Quantity for {line.description}", minimum=0)
             except BadInput as bad:
-                note.delete()
                 messages.error(request, str(bad))
                 return redirect("selling:delivery_create", pk=invoice.pk)
             if qty <= 0:
                 continue
             if qty > line.qty_outstanding:
-                note.delete()
                 messages.error(
                     request,
                     f"{line.description}: only {line.qty_outstanding:,.3f} left to send.",
                 )
                 return redirect("selling:delivery_create", pk=invoice.pk)
-            note.lines.create(invoice_line=line, qty=qty)
-            sent_anything = True
+            wanted.append((line, qty))
 
-        if not sent_anything:
-            note.delete()
+        if not wanted:
             messages.error(request, "Type what is going out on this trip.")
             return redirect("selling:delivery_create", pk=invoice.pk)
 
-        services.deliver(note, user=request.user)
+        try:
+            # One savepoint for the note and its sale: goods that are not in
+            # the store take the whole trip back, rather than leaving a note
+            # behind with nothing sent on it.
+            with transaction.atomic():
+                note = save_with_number(
+                    DeliveryNote(
+                        branch=invoice.branch, invoice=invoice,
+                        delivered_on=(date_or(request.POST.get("delivered_on"))
+                                      or timezone.localdate()),
+                        received_by=request.POST.get("received_by", "").strip()[:120],
+                        note=request.POST.get("note", "").strip()[:500],
+                    ),
+                    field="reference",
+                    generate=lambda: services.next_reference(DeliveryNote, "DN"),
+                )
+                for line, qty in wanted:
+                    note.lines.create(invoice_line=line, qty=qty)
+                services.deliver(note, user=request.user)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:delivery_create", pk=invoice.pk)
+
         audit.record("delivery.sent", obj=note, ip=audit.client_ip(request))
         messages.success(
             request,

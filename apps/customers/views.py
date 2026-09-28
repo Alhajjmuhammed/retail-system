@@ -153,6 +153,15 @@ def _account_code(request, **kwargs):
     return "customer.manage" if request.membership.can("customer.manage") else "credit.collect"
 
 
+def _open_invoices(customer, lock=False):
+    """Invoices on this account with something still to pay."""
+    from apps.selling.models import Invoice, InvoiceStatus
+
+    rows = Invoice.objects.filter(
+        customer=customer, status__in=[InvoiceStatus.OPEN, InvoiceStatus.PART_PAID])
+    return rows.select_for_update() if lock else rows.order_by("due_on", "pk")
+
+
 @login_required
 @requires(_account_code)
 def customer_detail(request, pk):
@@ -168,6 +177,7 @@ def customer_detail(request, pk):
             "sales": customer.sales.select_related("branch").order_by("-sold_at")[:20],
             "sales_count": customer.sales.count(),
             "methods": PAYMENT_METHODS,
+            "open_invoices": _open_invoices(customer).prefetch_related("lines", "credit_entries"),
             "loyalty": customer.loyalty_transactions.select_related("sale")[:30],
             "has_loyalty": request.tenant.has_feature(LOYALTY),
             "may_manage": request.membership.can("customer.manage"),
@@ -237,15 +247,34 @@ def customer_payment(request, pk):
                 messages.error(request, f"{customer.name} owes {max(owed, 0):,.0f}. "
                                         "Record no more than that.")
                 return redirect("customers:customer_detail", pk=pk)
+            # Money for a particular invoice says so, or the invoice went on
+            # showing it as owed after the account had been cleared.
+            invoice = None
+            if int_or(request.POST.get("invoice")):
+                invoice = _open_invoices(customer, lock=True).filter(
+                    pk=int_or(request.POST.get("invoice"))).first()
+                if invoice is None:
+                    messages.error(request, "That invoice is not open on this account.")
+                    return redirect("customers:customer_detail", pk=pk)
+                if amount > invoice.balance:
+                    messages.error(request, f"{invoice.reference} has {invoice.balance:,.0f} "
+                                            "left on it. Record no more than that against it.")
+                    return redirect("customers:customer_detail", pk=pk)
             entry = CreditTransaction.objects.create(
                 customer=customer,
                 kind=CreditKind.PAYMENT,
                 amount=-amount,
                 balance_after=owed - amount,
                 method=method,
-                reference=request.POST.get("reference", "").strip()[:60],
+                invoice=invoice,
+                reference=(request.POST.get("reference", "").strip()
+                           or (invoice.reference if invoice else ""))[:60],
                 note=request.POST.get("note", "").strip()[:200],
             )
+            if invoice is not None:
+                from apps.selling.services import refresh_payment_status
+
+                refresh_payment_status(invoice)
             drawer = None
             if method == "cash":
                 # Cash handed over at the counter goes in the drawer; without
@@ -308,7 +337,15 @@ def customer_payment_reverse(request, pk):
             customer=customer, kind=CreditKind.ADJUSTMENT, amount=back,
             balance_after=customer.balance + back, reference=f"undo:{entry.pk}",
             note=f"Undoes payment of {back:,.0f} on {entry.created_at:%d %b}",
+            # Against the same invoice, so it shows as owed again there too.
+            invoice_id=entry.invoice_id,
         )
+        if entry.invoice_id:
+            from apps.selling.models import Invoice
+            from apps.selling.services import refresh_payment_status
+
+            refresh_payment_status(
+                Invoice.objects.select_for_update().get(pk=entry.invoice_id))
         if movement is not None and movement.shift.closed_at is None:
             from apps.pos.models import CashMovementKind
             from apps.pos.services import record_cash_movement

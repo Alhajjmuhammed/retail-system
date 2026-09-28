@@ -58,7 +58,7 @@
       {% endif %}
     </p>
     {% can_do "invoice.manage" as may_invoice %}
-    {% if may_invoice and not quotation.invoices.all %}
+    {% if may_invoice and not quotation.live_invoice %}
     <a href="{% url 'selling:invoice_create' %}?quotation={{ quotation.pk }}"
        hx-get="{% url 'selling:invoice_create' %}?quotation={{ quotation.pk }}" hx-target="#modal"
        class="btn btn-primary shrink-0">{% icon "receipt" %} Make an invoice</a>

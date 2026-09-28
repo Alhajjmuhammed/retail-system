@@ -31,6 +31,16 @@
     <div class="sm:col-span-2"><label class="label" for="amount">Payment received</label><input type="number" step="0.01" min="0.01" max="{{ customer.balance|floatformat:'-2' }}" name="amount" id="amount" class="input" required></div>
     <div class="sm:col-span-2"><label class="label" for="method">How</label><select name="method" id="method" class="input">{% for value, label in methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
     <div class="sm:col-span-2"><label class="label" for="reference">Reference</label><input name="reference" id="reference" maxlength="60" class="input" placeholder="Transaction no."></div>
+    {% if open_invoices %}
+    <div class="sm:col-span-6">
+      <label class="label" for="pay_invoice">Against invoice</label>
+      <select name="invoice" id="pay_invoice" class="input">
+        <option value="">Not for an invoice (POS sales on account)</option>
+        {% for inv in open_invoices %}<option value="{{ inv.pk }}">{{ inv.reference }} &middot; {{ inv.balance|floatformat:0|intcomma }} left &middot; due {{ inv.due_on|date:"j M" }}</option>{% endfor %}
+      </select>
+      <p class="hint">Choose the invoice this money is for, so the invoice shows it as paid.</p>
+    </div>
+    {% endif %}
     <div class="sm:col-span-4"><label class="label" for="pay_note">Note</label><input name="note" id="pay_note" maxlength="200" class="input"></div>
     <div class="flex items-end sm:col-span-2"><button type="submit" class="btn btn-primary w-full">Record payment</button></div>
   </form>

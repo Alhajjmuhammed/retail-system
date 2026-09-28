@@ -93,6 +93,11 @@ class Quotation(BranchModel):
     def has_expired(self, today) -> bool:
         return self.is_open and self.valid_until < today
 
+    @property
+    def live_invoice(self):
+        """The invoice this offer became, unless that invoice was cancelled."""
+        return next((inv for inv in self.invoices.all() if inv.status != "void"), None)
+
 
 class QuotationLine(TenantModel):
     """
@@ -215,8 +220,15 @@ class Invoice(BranchModel):
         """
         from apps.customers.models import CreditKind
 
-        rows = self.credit_entries.filter(kind=CreditKind.PAYMENT)
-        return -sum((row.amount for row in rows), Decimal("0"))
+        # Read through .all() so a list page's prefetch is used, not a query
+        # per invoice. A payment undone from the customer's page leaves an
+        # "undo:" adjustment against the same invoice; it puts the money back.
+        total = Decimal("0")
+        for row in self.credit_entries.all():
+            undone = row.kind == CreditKind.ADJUSTMENT and row.reference.startswith("undo:")
+            if row.kind == CreditKind.PAYMENT or undone:
+                total -= row.amount
+        return total
 
     @property
     def balance(self) -> Decimal:
@@ -248,7 +260,7 @@ class Invoice(BranchModel):
 
     @property
     def has_deliveries(self) -> bool:
-        return self.deliveries.filter(voided_at__isnull=True).exists()
+        return any(note.voided_at is None for note in self.deliveries.all())
 
 
 class InvoiceLine(TenantModel):
@@ -291,8 +303,8 @@ class InvoiceLine(TenantModel):
     @property
     def qty_delivered(self) -> Decimal:
         """Across every delivery note that has not been cancelled."""
-        rows = self.deliveries.filter(note__voided_at__isnull=True)
-        return sum((row.qty for row in rows), Decimal("0"))
+        rows = self.deliveries.select_related("note")
+        return sum((row.qty for row in rows if row.note.voided_at is None), Decimal("0"))
 
     @property
     def qty_outstanding(self) -> Decimal:

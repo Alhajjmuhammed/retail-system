@@ -26,6 +26,7 @@ statement, because a shop's paperwork should look like one shop's paperwork.
       <div class="text-right">
         <p class="text-2xl font-bold tracking-tight">Delivery note</p>
         <p class="text-sm font-medium">{{ note.reference }}</p>
+        {% if note.voided_at %}<p class="mt-1 text-sm font-bold uppercase text-red-700">Cancelled {{ note.voided_at|date:"j M Y" }}</p>{% endif %}
         <p class="text-sm text-ink-600">{{ note.delivered_on|date:"j M Y" }}</p>
       </div>
     </div>
