@@ -145,7 +145,18 @@ class TaxRate(TenantModel):
 
 class Product(TenantModel):
     name = models.CharField(max_length=160, db_index=True)
+    # The shop's own code. Three more exist because one product is known by a
+    # different code to everybody who touches it: the factory prints one, the
+    # shop used another before the last stock-take, and the supplier's list
+    # has a third. A shopkeeper asked for the old code more than once -- a
+    # customer rings quoting a number nobody uses any more.
     sku = models.CharField(max_length=40, blank=True, db_index=True)
+    factory_code = models.CharField(max_length=40, blank=True, db_index=True)
+    old_code = models.CharField(max_length=40, blank=True, db_index=True)
+    supplier = models.ForeignKey(
+        "purchasing.Supplier", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="products",
+    )
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to="products/", blank=True)
 
@@ -179,6 +190,8 @@ class Product(TenantModel):
         indexes = [
             models.Index(fields=["tenant", "name"]),
             models.Index(fields=["tenant", "sku"]),
+            models.Index(fields=["tenant", "factory_code"]),
+            models.Index(fields=["tenant", "old_code"]),
         ]
 
     def __str__(self):

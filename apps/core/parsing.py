@@ -33,15 +33,17 @@ def decimal_or_none(raw):
     return value
 
 
-def parse_decimal(raw, label="Amount", *, positive=False, minimum=None, default=None,
-                  places=None):
+def parse_decimal(raw, label="Amount", *, positive=False, minimum=None, maximum=None,
+                  default=None, places=None):
     """
     A Decimal the view can trust, or BadInput with a message to show.
 
-    `positive` refuses zero and below; `minimum` sets an inclusive floor;
-    `places` refuses more decimals than the column keeps. Money is places=2:
-    100.005 used to be stored as 100.01 on one row and 0.00 on another,
-    leaving stray cents on accounts.
+    `positive` refuses zero and below; `minimum` and `maximum` set inclusive
+    bounds; `places` refuses more decimals than the column keeps. Money is
+    places=2: 100.005 used to be stored as 100.01 on one row and 0.00 on
+    another, leaving stray cents on accounts.
+
+    A percentage wants both ends: 120% off is somebody paying the customer.
     """
     value = decimal_or_none(raw)
     if value is not None and places is not None and value != value.quantize(
@@ -55,6 +57,8 @@ def parse_decimal(raw, label="Amount", *, positive=False, minimum=None, default=
         raise BadInput(f"{label} must be more than zero.")
     if minimum is not None and value < Decimal(minimum):
         raise BadInput(f"{label} cannot be less than {minimum}.")
+    if maximum is not None and value > Decimal(maximum):
+        raise BadInput(f"{label} cannot be more than {maximum}.")
     return value
 
 

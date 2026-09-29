@@ -61,7 +61,7 @@ statement, because a shop's paperwork should look like one shop's paperwork.
       <tbody>
         {% for line in invoice.lines.all %}
         <tr class="border-b border-ink-100">
-          <td class="py-2">{{ line.description }}</td>
+          <td class="py-2">{{ line.description }}{% if line.discount_percent %} <span class="text-ink-500">(less {{ line.discount_percent|floatformat:"-2" }}%)</span>{% endif %}</td>
           <td class="py-2 text-right">{{ line.qty|floatformat:"-3" }}</td>
           <td class="py-2 text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
           <td class="py-2 text-right">{{ line.line_total|floatformat:0|intcomma }}</td>
@@ -69,6 +69,16 @@ statement, because a shop's paperwork should look like one shop's paperwork.
         {% endfor %}
       </tbody>
       <tfoot>
+        {% if invoice.discount_percent %}
+        <tr>
+          <td colspan="3" class="pt-3 text-right text-ink-600">Subtotal</td>
+          <td class="pt-3 text-right">{{ invoice.lines_total|floatformat:0|intcomma }}</td>
+        </tr>
+        <tr>
+          <td colspan="3" class="text-right text-ink-600">Discount {{ invoice.discount_percent|floatformat:"-2" }}%</td>
+          <td class="text-right">&minus;{{ invoice.order_discount|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endif %}
         <tr>
           <td colspan="3" class="pt-3 text-right text-ink-600">VAT included</td>
           <td class="pt-3 text-right">{{ invoice.tax|floatformat:0|intcomma }}</td>

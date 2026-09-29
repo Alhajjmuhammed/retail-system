@@ -38,7 +38,8 @@ class ProductForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            "name", "sku", "category", "brand", "base_unit", "tax_rate",
+            "name", "sku", "factory_code", "old_code", "supplier",
+            "category", "brand", "base_unit", "tax_rate",
             "description", "image", "track_stock", "sellable_at_pos",
             "discount_allowed", "min_price", "is_active",
         ]

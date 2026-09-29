@@ -9,6 +9,7 @@ lives in a view is a rule the rest of the system cannot reach.
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.context import get_current_user
@@ -458,3 +459,27 @@ def cancel_delivery(note, *, reason="", user=None):
     note.voided_by = user or get_current_user()
     note.save(update_fields=["voided_at", "voided_by", "updated_at"])
     return note
+
+
+def prices_for(customer):
+    """
+    What each product would be charged at for this customer.
+
+    Used to fill a line in the moment a product is picked, so nobody types a
+    shelf price from memory. A customer on their own price list gets that
+    list's price; everybody else gets the default one.
+
+    The figure is a suggestion and stays editable -- a quoted price is a
+    negotiation, and the shop has the last word on it.
+    """
+    from apps.catalog.models import Price
+
+    wanted = getattr(customer, "price_list", None)
+    rows = Price.objects.filter(min_qty=1).select_related("price_list")
+    if wanted is not None and wanted.is_active:
+        rows = rows.filter(Q(price_list=wanted) | Q(price_list__is_default=True))
+        # The customer's own list is applied second, so it wins.
+        rows = rows.order_by("price_list__is_default")
+    else:
+        rows = rows.filter(price_list__is_default=True)
+    return {row.variant_id: row.amount for row in rows}

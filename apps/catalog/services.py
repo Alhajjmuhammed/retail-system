@@ -98,6 +98,10 @@ def search(term: str, *, limit=25, sellable_only=True):
             | Q(name__icontains=term)
             | Q(sku__icontains=term)
             | Q(product__sku__icontains=term)
+            # A customer rings quoting the number off an old price list, or
+            # the one printed on the carton. Both find the product.
+            | Q(product__factory_code__icontains=term)
+            | Q(product__old_code__icontains=term)
             | Q(barcodes__code__startswith=term)
         ).distinct()
 

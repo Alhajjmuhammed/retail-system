@@ -35,6 +35,12 @@
   undefined" and did nothing.
   {% endcomment %}
   <script src="{% versioned_static 'js/confirm.js' %}" defer></script>
+  {% comment %}
+  A page that defines its own Alpine component puts the file here, for the
+  same reason: Alpine must find the function already on `window` when it
+  starts, or x-data throws and that part of the page is dead.
+  {% endcomment %}
+  {% block page_scripts %}{% endblock %}
   <script src="{% versioned_static 'vendor/alpine-3.14.9.min.js' %}" defer></script>
 </head>
 <body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load assets %}
+{% block page_scripts %}<script src="{% versioned_static 'js/line-entry.js' %}" defer></script>{% endblock %}
 {% block title %}{{ quotation.reference }}{% endblock %}
 {% block heading %}{{ quotation.reference }}{% endblock %}
 
@@ -84,6 +86,7 @@
           <td>
             <span class="font-medium text-ink-900">{{ line.description }}</span>
             {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
+            {% if line.discount_percent %}<span class="ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">&minus;{{ line.discount_percent|floatformat:"-2" }}%</span>{% endif %}
           </td>
           <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
           <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
@@ -106,7 +109,7 @@
     </table>
 
     {% if editable %}
-    <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+    <form method="post" x-data="lineEntry()" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
       {% csrf_token %}<input type="hidden" name="action" value="add_line">
       {% comment %}
       Not the shared product picker: that one is marked required, which made
@@ -115,10 +118,14 @@
       {% endcomment %}
       <div class="min-w-48 flex-1">
         <label class="label" for="variant">Product</label>
-        <select name="variant" id="variant" class="input">
+        <select name="variant" id="variant" class="input" x-ref="pick" @change="picked($event.target)">
           <option value="">&mdash;</option>
           {% for v in variants %}
-          <option value="{{ v.pk }}">{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>
+          <option value="{{ v.pk }}"
+                  data-price="{{ v.suggested|default_if_none:'' }}"
+                  data-tax="{{ v.product.tax_rate.pk }}"
+                  data-decimal="{% if v.product.base_unit.allows_decimal %}1{% else %}0{% endif %}"
+          >{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>
           {% endfor %}
         </select>
       </div>
@@ -126,13 +133,18 @@
         <label class="label" for="description">or type a line</label>
         <input name="description" id="description" maxlength="200" class="input" placeholder="Delivery to Nungwi">
       </div>
-      <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" step="0.001" min="0.001" name="qty" id="qty" value="1" class="input" required></div>
-      <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="0.01" min="0" name="unit_price" id="unit_price" class="input" required></div>
+      <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" :step="step" :min="step" name="qty" id="qty" value="1" class="input" x-model="qty" required></div>
+      <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="1" min="0" name="unit_price" id="unit_price" class="input" x-model="price" required></div>
+      <div class="w-20"><label class="label" for="discount_percent">Off %</label><input type="number" step="1" min="0" max="100" name="discount_percent" id="discount_percent" value="0" class="input" x-model="off"></div>
       <div class="w-36">
         <label class="label" for="tax_rate">VAT</label>
-        <select name="tax_rate" id="tax_rate" class="input">
+        <select name="tax_rate" id="tax_rate" class="input" x-ref="tax">
           {% for t in taxes %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
         </select>
+      </div>
+      <div class="w-28">
+        <span class="label">Line</span>
+        <p class="tnum py-2 text-right text-sm font-semibold text-ink-900" x-text="lineTotal()"></p>
       </div>
       <button type="submit" class="btn btn-secondary">Add</button>
     </form>
@@ -142,10 +154,16 @@
   {% if editable %}
   <form method="post" class="card card-body space-y-4">
     {% csrf_token %}<input type="hidden" name="action" value="header">
-    <div class="grid gap-4 sm:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-3">
       <div>
         <label class="label" for="valid_until">Hold the price until</label>
         <input type="date" name="valid_until" id="valid_until" value="{{ quotation.valid_until|date:'Y-m-d' }}" class="input">
+      </div>
+      <div>
+        <label class="label" for="doc_discount">Off the whole quotation %</label>
+        <input type="number" step="1" min="0" max="100" name="discount_percent" id="doc_discount"
+               value="{{ quotation.discount_percent|floatformat:'-2' }}" class="input">
+        <p class="hint">On top of anything taken off a line.</p>
       </div>
       <div>
         <label class="label" for="note">Note on the quotation</label>

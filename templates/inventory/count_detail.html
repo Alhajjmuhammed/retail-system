@@ -23,7 +23,7 @@
           <td class="text-right text-ink-500">{{ line.system_qty|floatformat:"-3" }}</td>
           <td class="text-right">
             {% if editable %}
-              <input type="number" step="0.001" min="0" name="qty:{{ line.pk }}" aria-label="Counted {{ line.variant }}"
+              <input type="number" step="{% if line.variant.product.base_unit.allows_decimal %}0.001{% else %}1{% endif %}" min="0" name="qty:{{ line.pk }}" aria-label="Counted {{ line.variant }}"
                      value="{{ line.counted_qty|floatformat:'-3'|default:'' }}"
                      class="input w-28 py-1 text-right text-sm" placeholder="—">
             {% else %}{{ line.counted_qty|floatformat:"-3"|default:"—" }}{% endif %}

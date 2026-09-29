@@ -36,7 +36,7 @@
         </select>
       </div>
       {% endif %}
-      <div class="sm:col-span-{% if open_invoices %}3{% else %}2{% endif %}"><label class="label" for="amount">Amount</label><input type="number" step="0.01" min="0.01" name="amount" id="amount" class="input" required></div>
+      <div class="sm:col-span-{% if open_invoices %}3{% else %}2{% endif %}"><label class="label" for="amount">Amount</label><input type="number" step="1" min="1" name="amount" id="amount" class="input" required></div>
       <div class="sm:col-span-2"><label class="label" for="paid_at">Date</label><input type="date" name="paid_at" id="paid_at" class="input"></div>
       <div class="sm:col-span-2" x-data="{ m: 'cash' }"><label class="label" for="method">Method</label><select name="method" id="method" class="input" x-model="m"><option value="cash">Cash</option><option value="mpesa">Mobile money</option><option value="bank">Bank</option></select>
         <label class="mt-1.5 flex items-center gap-2 text-xs text-ink-600" x-show="m === 'cash'"><input type="checkbox" name="from_drawer" class="checkbox"> From my POS drawer</label></div>
@@ -52,7 +52,7 @@
     <form method="post" action="{% url 'purchasing:supplier_bill' supplier.pk %}" class="card-body grid gap-3 sm:grid-cols-4">
       {% csrf_token %}
       <div><label class="label" for="bill_number">Their number</label><input name="number" id="bill_number" maxlength="40" class="input" required></div>
-      <div><label class="label" for="bill_amount">Amount</label><input type="number" step="0.01" min="0.01" name="amount" id="bill_amount" class="input" required></div>
+      <div><label class="label" for="bill_amount">Amount</label><input type="number" step="1" min="1" name="amount" id="bill_amount" class="input" required></div>
       <div><label class="label" for="bill_date">Dated</label><input type="date" name="invoice_date" id="bill_date" class="input"></div>
       <div><label class="label" for="bill_due">Due</label><input type="date" name="due_date" id="bill_due" class="input"></div>
       <div class="sm:col-span-3"><label class="label" for="bill_note">What for</label><input name="note" id="bill_note" maxlength="200" class="input" placeholder="Transport, repairs&hellip;"></div>

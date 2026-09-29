@@ -55,6 +55,9 @@ class Quotation(BranchModel):
     issued_on = models.DateField()
     valid_until = models.DateField()
     note = models.TextField(blank=True, help_text="Printed under the lines.")
+    # Per cent off the whole thing, on top of anything taken off a line --
+    # the "and five off the lot" that closes an order.
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     sent_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -74,12 +77,41 @@ class Quotation(BranchModel):
     # until it is sent, and a stored total is a total that goes stale.
 
     @property
-    def net(self) -> Decimal:
+    def lines_total(self) -> Decimal:
+        """The lines added up, after any discount on a line of its own."""
         return sum((line.line_total for line in self.lines.all()), Decimal("0"))
 
     @property
+    def order_discount(self) -> Decimal:
+        """Money off the whole document, on top of anything off a line."""
+        from apps.pos.services import ZERO, money
+
+        if not self.discount_percent:
+            return ZERO
+        return money(self.lines_total * self.discount_percent / Decimal("100"))
+
+    @property
+    def net(self) -> Decimal:
+        return self.lines_total - self.order_discount
+
+    @property
     def tax(self) -> Decimal:
-        return sum((line.tax_amount for line in self.lines.all()), Decimal("0"))
+        """
+        VAT inside what is actually charged.
+
+        A discount on the whole document lowers every line's share of it, so
+        the tax is scaled by the same proportion. Left unscaled it would
+        declare tax on money the customer never paid.
+        """
+        from decimal import ROUND_HALF_UP
+
+        from apps.pos.services import MONEY
+
+        raw = sum((line.tax_amount for line in self.lines.all()), Decimal("0"))
+        gross = self.lines_total
+        if not self.discount_percent or gross <= 0:
+            return raw
+        return (raw * self.net / gross).quantize(MONEY, rounding=ROUND_HALF_UP)
 
     @property
     def total(self) -> Decimal:
@@ -117,6 +149,8 @@ class QuotationLine(TenantModel):
     qty = models.DecimalField(max_digits=14, decimal_places=3, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    # Per cent off this one line: "ten off the cement, nothing off the rest".
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     position = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -126,10 +160,25 @@ class QuotationLine(TenantModel):
         return f"{self.description} x {self.qty}"
 
     @property
+    def discount(self) -> Decimal:
+        """
+        Money off this line. `_tax_for` takes it off before working out the
+        VAT, which is what a discounted price means: there is less tax
+        inside it.
+        """
+        from apps.pos.services import ZERO, money
+
+        if not self.discount_percent:
+            return ZERO
+        return money(self.qty * self.unit_price * self.discount_percent / Decimal("100"))
+
+    @property
     def line_total(self) -> Decimal:
         from apps.pos.services import money
 
-        return money(self.qty * self.unit_price)
+        # The same expression `_tax_for` works from, so the tax can never
+        # disagree with the figure it was taken out of.
+        return money((self.qty * self.unit_price) - self.discount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -139,11 +188,6 @@ class QuotationLine(TenantModel):
         if not self.tax_rate:
             return ZERO
         return _tax_for(self)
-
-    @property
-    def discount(self) -> Decimal:
-        """A quotation has no per-line discount; `_tax_for` expects one."""
-        return Decimal("0")
 
 
 class InvoiceStatus(models.TextChoices):
@@ -182,6 +226,8 @@ class Invoice(BranchModel):
     issued_on = models.DateField()
     due_on = models.DateField()
     note = models.TextField(blank=True)
+    # Per cent off the whole invoice, on top of anything off a line.
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     issued_at = models.DateTimeField(null=True, blank=True)
     voided_at = models.DateTimeField(null=True, blank=True)
@@ -197,12 +243,41 @@ class Invoice(BranchModel):
         return self.reference
 
     @property
-    def net(self) -> Decimal:
+    def lines_total(self) -> Decimal:
+        """The lines added up, after any discount on a line of its own."""
         return sum((line.line_total for line in self.lines.all()), Decimal("0"))
 
     @property
+    def order_discount(self) -> Decimal:
+        """Money off the whole document, on top of anything off a line."""
+        from apps.pos.services import ZERO, money
+
+        if not self.discount_percent:
+            return ZERO
+        return money(self.lines_total * self.discount_percent / Decimal("100"))
+
+    @property
+    def net(self) -> Decimal:
+        return self.lines_total - self.order_discount
+
+    @property
     def tax(self) -> Decimal:
-        return sum((line.tax_amount for line in self.lines.all()), Decimal("0"))
+        """
+        VAT inside what is actually charged.
+
+        A discount on the whole document lowers every line's share of it, so
+        the tax is scaled by the same proportion. Left unscaled it would
+        declare tax on money the customer never paid.
+        """
+        from decimal import ROUND_HALF_UP
+
+        from apps.pos.services import MONEY
+
+        raw = sum((line.tax_amount for line in self.lines.all()), Decimal("0"))
+        gross = self.lines_total
+        if not self.discount_percent or gross <= 0:
+            return raw
+        return (raw * self.net / gross).quantize(MONEY, rounding=ROUND_HALF_UP)
 
     @property
     def total(self) -> Decimal:
@@ -274,6 +349,8 @@ class InvoiceLine(TenantModel):
     qty = models.DecimalField(max_digits=14, decimal_places=3, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    # Per cent off this one line: "ten off the cement, nothing off the rest".
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     position = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -283,10 +360,19 @@ class InvoiceLine(TenantModel):
         return f"{self.description} x {self.qty}"
 
     @property
+    def discount(self) -> Decimal:
+        """Money off this line, taken off before the VAT is worked out."""
+        from apps.pos.services import ZERO, money
+
+        if not self.discount_percent:
+            return ZERO
+        return money(self.qty * self.unit_price * self.discount_percent / Decimal("100"))
+
+    @property
     def line_total(self) -> Decimal:
         from apps.pos.services import money
 
-        return money(self.qty * self.unit_price)
+        return money((self.qty * self.unit_price) - self.discount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -295,10 +381,6 @@ class InvoiceLine(TenantModel):
         if not self.tax_rate:
             return ZERO
         return _tax_for(self)
-
-    @property
-    def discount(self) -> Decimal:
-        return Decimal("0")
 
     @property
     def qty_delivered(self) -> Decimal:

@@ -116,8 +116,7 @@ def quotation_detail(request, pk):
 
     return render(request, "selling/quotation_detail.html", {
         "quotation": quotation,
-        "variants": (Variant.objects.filter(is_active=True, product__is_active=True)
-                     .select_related("product").order_by("product__name", "name")),
+        "variants": _sellable(quotation.customer),
         "may_edit": may_edit,
         "editable": quotation.status == QuotationStatus.DRAFT,
         "taxes": TaxRate.objects.filter(is_active=True).order_by("-is_default", "name"),
@@ -149,7 +148,15 @@ def _act_on(request, quotation):
         if valid_until is not None:
             quotation.valid_until = valid_until
         quotation.note = request.POST.get("note", "").strip()[:500]
-        quotation.save(update_fields=["valid_until", "note", "updated_at"])
+        try:
+            quotation.discount_percent = parse_decimal(
+                request.POST.get("discount_percent") or 0, "Discount",
+                minimum=0, maximum=100)
+        except BadInput as bad:
+            messages.error(request, str(bad))
+            return redirect("selling:quotation_detail", pk=quotation.pk)
+        quotation.save(update_fields=["valid_until", "note", "discount_percent",
+                                      "updated_at"])
         messages.success(request, "Saved.")
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
@@ -189,6 +196,26 @@ def _act_on(request, quotation):
     return redirect("selling:quotation_detail", pk=quotation.pk)
 
 
+def _sellable(customer):
+    """
+    The products a line can be picked from, each carrying what it would be
+    charged at for this customer, the unit it is sold in and its VAT rate.
+
+    Attached here rather than looked up in the template, because a template
+    cannot index a dictionary by a variable and a lookup per row would be a
+    query per row.
+    """
+    price_map = services.prices_for(customer)
+    rows = list(
+        Variant.objects.filter(is_active=True, product__is_active=True)
+        .select_related("product", "product__base_unit", "product__tax_rate")
+        .order_by("product__name", "name")
+    )
+    for row in rows:
+        row.suggested = price_map.get(row.pk)
+    return rows
+
+
 def _add_line(request, quotation):
     """
     A product, or a line typed by hand.
@@ -204,6 +231,8 @@ def _add_line(request, quotation):
     try:
         qty = parse_decimal(request.POST.get("qty"), "Quantity", positive=True)
         price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0)
+        off = parse_decimal(request.POST.get("discount_percent") or 0,
+                            "Discount", minimum=0, maximum=100)
     except BadInput as bad:
         messages.error(request, str(bad))
         return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -222,6 +251,7 @@ def _add_line(request, quotation):
         description=description or str(variant),
         qty=qty,
         unit_price=price,
+        discount_percent=off,
         tax_rate=tax.rate if tax else 0,
         position=(quotation.lines.count() + 1) * 10,
     )
@@ -359,8 +389,7 @@ def invoice_detail(request, pk):
 
     return render(request, "selling/invoice_detail.html", {
         "invoice": invoice,
-        "variants": (Variant.objects.filter(is_active=True, product__is_active=True)
-                     .select_related("product").order_by("product__name", "name")),
+        "variants": _sellable(invoice.customer),
         "taxes": TaxRate.objects.filter(is_active=True).order_by("-is_default", "name"),
         "editable": invoice.status == InvoiceStatus.DRAFT,
         "may_manage": request.membership.can("invoice.manage"),
@@ -407,7 +436,14 @@ def _act_on_invoice(request, invoice):
         if due_on is not None:
             invoice.due_on = due_on
         invoice.note = request.POST.get("note", "").strip()[:500]
-        invoice.save(update_fields=["due_on", "note", "updated_at"])
+        try:
+            invoice.discount_percent = parse_decimal(
+                request.POST.get("discount_percent") or 0, "Discount",
+                minimum=0, maximum=100)
+        except BadInput as bad:
+            messages.error(request, str(bad))
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        invoice.save(update_fields=["due_on", "note", "discount_percent", "updated_at"])
         messages.success(request, "Saved.")
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
@@ -526,6 +562,8 @@ def _add_invoice_line(request, invoice):
     try:
         qty = parse_decimal(request.POST.get("qty"), "Quantity", positive=True)
         price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0)
+        off = parse_decimal(request.POST.get("discount_percent") or 0,
+                            "Discount", minimum=0, maximum=100)
     except BadInput as bad:
         messages.error(request, str(bad))
         return redirect("selling:invoice_detail", pk=invoice.pk)
@@ -540,7 +578,8 @@ def _add_invoice_line(request, invoice):
 
     InvoiceLine.objects.create(
         invoice=invoice, variant=variant, description=description or str(variant),
-        qty=qty, unit_price=price, tax_rate=tax.rate if tax else 0,
+        qty=qty, unit_price=price, discount_percent=off,
+        tax_rate=tax.rate if tax else 0,
         position=(invoice.lines.count() + 1) * 10,
     )
     messages.success(request, "Line added.")

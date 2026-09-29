@@ -25,6 +25,9 @@ forms inside forms are ignored by browsers.
     {% include "catalog/_field.html" with field=form.name label="Name" cls="sm:col-span-2" %}
     {% if form.barcode %}{% include "catalog/_field.html" with field=form.barcode label="Barcode" hint="Scan it into this box, or leave empty for loose goods." %}{% endif %}
     {% include "catalog/_field.html" with field=form.sku label="Your own code" %}
+    {% include "catalog/_field.html" with field=form.factory_code label="Factory code" hint="What the maker prints on the carton." %}
+    {% include "catalog/_field.html" with field=form.old_code label="Old code" hint="What you called it before. Customers still ring quoting it." %}
+    {% include "catalog/_field.html" with field=form.supplier label="Factory or supplier" %}
     <div>
       <label class="label" for="{{ form.category.id_for_label }}">Category</label>
       {{ form.category }}
@@ -72,7 +75,7 @@ forms inside forms are ignored by browsers.
       {% for row in other_lists %}
       <div>
         <label class="label" for="{{ row.field }}">{{ row.list.name }} <span class="hint">({{ row.list.get_kind_display|lower }})</span></label>
-        <input type="number" step="0.01" min="0" name="{{ row.field }}" id="{{ row.field }}" value="{{ row.value }}" class="input">
+        <input type="number" step="1" min="0" name="{{ row.field }}" id="{{ row.field }}" value="{{ row.value }}" class="input">
         {% if row.error %}<p class="hint text-red-600">{{ row.error }}</p>{% endif %}
       </div>
       {% endfor %}

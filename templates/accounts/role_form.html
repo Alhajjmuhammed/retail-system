@@ -64,7 +64,7 @@ because flattening it into switches would quietly take permissions away.
         {% if row.job.limit_on %}
         <div x-show="on" x-cloak class="mt-2 flex items-center gap-2 pl-8">
           <label class="text-xs text-ink-500" for="joblimit-{{ row.job.key }}">{{ row.job.limit_label }}</label>
-          <input type="number" step="0.01" min="0" id="joblimit-{{ row.job.key }}"
+          <input type="number" step="1" min="0" id="joblimit-{{ row.job.key }}"
                  name="joblimit:{{ row.job.key }}" value="{{ row.limit }}"
                  placeholder="no limit" class="input w-28 py-1.5 text-sm">
         </div>
@@ -129,7 +129,7 @@ because flattening it into switches would quietly take permissions away.
           {% if item.takes_limit and item.available %}
           <div x-show="on" x-cloak class="flex items-center gap-2">
             <span class="text-xs text-ink-500">up to</span>
-            <input type="number" step="0.01" min="0"
+            <input type="number" step="1" min="0"
                    name="limit:{{ item.permission.code }}"
                    value="{{ item.limit|default_if_none:'' }}"
                    placeholder="{% if item.permission.value_type == 'percent' %}%{% else %}no limit{% endif %}"

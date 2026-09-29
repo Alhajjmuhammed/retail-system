@@ -83,6 +83,8 @@ def product_list(request):
         products = products.filter(
             Q(name__icontains=term)
             | Q(sku__icontains=term)
+            | Q(factory_code__icontains=term)
+            | Q(old_code__icontains=term)
             | Q(variants__barcodes__code__startswith=term)
         ).distinct()
 
