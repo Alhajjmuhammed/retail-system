@@ -255,13 +255,25 @@ def issue(invoice):
     # The invoice number is spent here, not when the draft was started. A
     # proforma that is never issued therefore leaves no hole in the invoice
     # sequence, which is the first thing anybody auditing it looks for.
-    fields = ["status", "issued_at", "updated_at"]
+    #
+    # Saved before the charge is written, and through `save_with_number`, so
+    # that two people issuing at the same moment do not both pick INV260004
+    # and one of them get an error. The charge then carries the number that
+    # actually stuck.
+    invoice.status = InvoiceStatus.OPEN
+    invoice.issued_at = timezone.now()
     if invoice.reference.startswith("PRO"):
+        from apps.core.numbering import save_with_number
+
         if not invoice.proforma_reference:
             invoice.proforma_reference = invoice.reference
-            fields.append("proforma_reference")
-        invoice.reference = next_reference(Invoice, "INV")
-        fields.append("reference")
+        save_with_number(
+            invoice,
+            field="reference",
+            generate=lambda: next_reference(Invoice, "INV"),
+        )
+    else:
+        invoice.save(update_fields=["status", "issued_at", "updated_at"])
 
     CreditTransaction.objects.create(
         tenant=invoice.tenant,
@@ -273,9 +285,6 @@ def issue(invoice):
         reference=invoice.reference,
         note="Invoice",
     )
-    invoice.status = InvoiceStatus.OPEN
-    invoice.issued_at = timezone.now()
-    invoice.save(update_fields=fields)
     return invoice
 
 

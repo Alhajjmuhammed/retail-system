@@ -151,3 +151,49 @@ def test_a_proforma_number_is_never_handed_out_twice(shop, main_branch, owner, b
             customer=buyer, branch=main_branch, issued_on=today,
             due_on=today + timedelta(days=14)))
         assert second.reference == f"PRO{year:02d}0002"
+
+
+def test_two_people_issuing_at_once_do_not_collide(shop, main_branch, owner, buyer, monkeypatch):
+    """
+    Two proformas issued in the same moment both work out the same next
+    invoice number. Without a retry the second one fails on the unique
+    index and the person sees an error instead of an invoice.
+
+    The collision is forced here: the number generator hands out a number
+    that is already taken, once.
+    """
+    from apps.selling import services as svc
+
+    today = timezone.localdate()
+    year = today.year % 100
+    with tenant_context(shop, branch=main_branch, user=owner):
+        taken = Invoice.objects.create(
+            reference=f"INV{year:02d}0001", customer=buyer, branch=main_branch,
+            issued_on=today, due_on=today + timedelta(days=14))
+        taken.lines.create(description="Already out", qty=Decimal("1"),
+                           unit_price=Decimal("1000"), tax_rate=Decimal("0"))
+
+        proforma = svc.save_as_proforma(Invoice(
+            customer=buyer, branch=main_branch, issued_on=today,
+            due_on=today + timedelta(days=14)))
+        proforma.lines.create(description="Labour", qty=Decimal("1"),
+                              unit_price=Decimal("10000"), tax_rate=Decimal("0"))
+
+        real = svc.next_reference
+        handed = {"n": 0}
+
+        def clumsy(model, prefix, field="reference"):
+            # First ask gets a number somebody else already holds.
+            if prefix == "INV" and handed["n"] == 0:
+                handed["n"] += 1
+                return f"INV{year:02d}0001"
+            return real(model, prefix, field=field)
+
+        monkeypatch.setattr(svc, "next_reference", clumsy)
+        svc.issue(proforma)
+        proforma.refresh_from_db()
+
+        assert proforma.reference == f"INV{year:02d}0002"
+        assert handed["n"] == 1, "the collision was not actually forced"
+        # And the charge carries the number that stuck, not the one that failed.
+        assert buyer.credit_transactions.get().reference == proforma.reference
