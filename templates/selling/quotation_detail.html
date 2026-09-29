@@ -122,7 +122,7 @@
           <option value="">&mdash;</option>
           {% for v in variants %}
           <option value="{{ v.pk }}"
-                  data-price="{{ v.suggested|default_if_none:'' }}"
+                  data-price="{{ v.suggested|floatformat:'-2'|default_if_none:'' }}"
                   data-tax="{{ v.product.tax_rate.pk }}"
                   data-decimal="{% if v.product.base_unit.allows_decimal %}1{% else %}0{% endif %}"
           >{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>
