@@ -57,7 +57,9 @@ month -- so the page shows both rather than folding them into one state.
   </div>
   {% elif invoice.status == "draft" %}
   <div class="rounded-2xl bg-amber-50 px-5 py-3.5 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/15">
-    This is still a draft. Nobody owes anything yet, and nothing can be sent against it until you issue it.
+    This is a proforma. Print it and send it: it shows what the goods come to, and
+    nobody owes anything on it. It takes an invoice number and goes on the customer's
+    account the moment you issue it, and only then can goods be sent against it.
   </div>
   {% endif %}
 

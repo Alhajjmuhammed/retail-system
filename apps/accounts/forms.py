@@ -8,15 +8,24 @@ class TailwindMixin:
     """Applies the shared input styling without repeating it in every template."""
 
     default_class = "input"
+    # A rate is a percentage and 7.5% is a real one; a weight is measured.
+    # Everything else with two decimal places in this system is money, and
+    # money here is whole shillings -- Django's own step of 0.01 turned one
+    # click of the arrow into 3,000.01.
+    keeps_decimals = ("rate", "percent", "weight", "factor")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
+        for name, field in self.fields.items():
             widget = field.widget
             if isinstance(widget, (forms.CheckboxInput, forms.RadioSelect)):
                 continue
             existing = widget.attrs.get("class", "")
             widget.attrs["class"] = f"{existing} {self.default_class}".strip()
+
+            if isinstance(field, forms.DecimalField) and field.decimal_places == 2 \
+                    and not any(word in name for word in self.keeps_decimals):
+                widget.attrs["step"] = "1"
 
 
 class SignupForm(TailwindMixin, forms.Form):

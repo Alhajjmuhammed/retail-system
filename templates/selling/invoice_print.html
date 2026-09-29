@@ -7,7 +7,7 @@ statement, because a shop's paperwork should look like one shop's paperwork.
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Invoice {{ invoice.reference }} &middot; {{ invoice.customer.name }}</title>
+  <title>{% if invoice.status == "draft" %}Proforma{% else %}Invoice{% endif %} {{ invoice.reference }} &middot; {{ invoice.customer.name }}</title>
   <link rel="icon" type="image/png" href="{% versioned_static 'img/easyfix-icon.png' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <style>@page { size: A4; margin: 16mm; } @media print { .no-print { display: none; } body { background: #fff; } }</style>
@@ -24,7 +24,11 @@ statement, because a shop's paperwork should look like one shop's paperwork.
         {% if invoice.branch.phone %}<p class="text-sm text-ink-600">{{ invoice.branch.phone }}</p>{% endif %}
       </div>
       <div class="text-right">
-        <p class="text-2xl font-bold tracking-tight">Invoice</p>
+        {% comment %}
+        A draft is a proforma and says so. Printed as "Invoice" a customer
+        could reasonably treat it as one, and nobody owes anything on it.
+        {% endcomment %}
+        <p class="text-2xl font-bold tracking-tight">{% if invoice.status == "draft" %}Proforma invoice{% else %}Invoice{% endif %}</p>
         <p class="text-sm font-medium">{{ invoice.reference }}</p>
         <p class="text-sm text-ink-600">{{ invoice.issued_on|date:"j M Y" }}</p>
       </div>
@@ -89,6 +93,14 @@ statement, because a shop's paperwork should look like one shop's paperwork.
         </tr>
       </tfoot>
     </table>
+
+    {% if invoice.status == "draft" %}
+    <p class="mt-5 rounded-lg bg-ink-50 px-4 py-3 text-sm text-ink-700">
+      This is a proforma invoice: what the goods would come to, sent so you can
+      raise an order or arrange payment. It is not a demand for payment and
+      nothing is owed on it. A tax invoice follows once the order is confirmed.
+    </p>
+    {% endif %}
 
     {% if invoice.note %}
     <p class="mt-5 whitespace-pre-line text-sm text-ink-700">{{ invoice.note }}</p>

@@ -16,28 +16,56 @@ from apps.core.context import get_current_user
 from apps.selling.models import Quotation, QuotationStatus
 
 
-def next_reference(model, prefix: str) -> str:
+def next_reference(model, prefix: str, field: str = "reference") -> str:
     """
     A number a shop can read down the phone: QUO260001.
 
     Per tenant and per year, longest-first so the ten-thousandth document
     does not sort below the ninth and start the count again.
+
+    `field` exists for the proforma: its number is kept in a column of its
+    own, because `reference` is overwritten with the invoice number when it
+    is issued. Counting from `reference` there would hand the next customer
+    a proforma number another customer is already holding.
     """
     from django.db.models.functions import Length
 
     year = timezone.localdate().year
     stem = f"{prefix}{year % 100:02d}"
+    lookup = {f"{field}__startswith": stem}
     last = (
-        model.objects.filter(reference__startswith=stem)
-        .order_by(Length("reference").desc(), "-reference")
-        .values_list("reference", flat=True)
+        model.objects.filter(**lookup)
+        .order_by(Length(field).desc(), f"-{field}")
+        .values_list(field, flat=True)
         .first()
     )
     try:
         counter = int(last[len(stem):]) + 1 if last else 1
     except (TypeError, ValueError):
-        counter = model.objects.filter(reference__startswith=stem).count() + 1
+        counter = model.objects.filter(**lookup).count() + 1
     return f"{stem}{counter:04d}"
+
+
+def save_as_proforma(invoice):
+    """
+    Give a new invoice its proforma number, in both columns.
+
+    `reference` is what the document shows and is replaced by the invoice
+    number when it is issued. `proforma_reference` keeps the proforma
+    number for good, and the sequence counts from that column -- otherwise
+    issuing PRO260001 would free the number for the next customer.
+    """
+    from apps.core.numbering import save_with_number
+    from apps.selling.models import Invoice
+
+    saved = save_with_number(
+        invoice,
+        field="reference",
+        generate=lambda: next_reference(Invoice, "PRO", field="proforma_reference"),
+    )
+    Invoice.objects.filter(pk=saved.pk).update(proforma_reference=saved.reference)
+    saved.proforma_reference = saved.reference
+    return saved
 
 
 @transaction.atomic
@@ -107,6 +135,7 @@ def copy_for_new(quotation):
             valid_until=today + timedelta(
                 days=(quotation.valid_until - quotation.issued_on).days or 14),
             note=quotation.note,
+            discount_percent=quotation.discount_percent,
         ),
         field="reference",
         generate=lambda: next_reference(Quotation, "QUO"),
@@ -114,7 +143,8 @@ def copy_for_new(quotation):
     for line in quotation.lines.all():
         fresh.lines.create(
             variant=line.variant, description=line.description, qty=line.qty,
-            unit_price=line.unit_price, tax_rate=line.tax_rate, position=line.position,
+            unit_price=line.unit_price, tax_rate=line.tax_rate,
+            discount_percent=line.discount_percent, position=line.position,
         )
     return fresh
 
@@ -136,7 +166,6 @@ def invoice_from_quotation(quotation, *, terms_days=14):
     """
     from datetime import timedelta
 
-    from apps.core.numbering import save_with_number
     from apps.selling.models import Invoice, InvoiceStatus
 
     # Locked, so two clicks on "Make an invoice" cannot both find no invoice.
@@ -151,7 +180,7 @@ def invoice_from_quotation(quotation, *, terms_days=14):
         raise ValueError(f"{quotation.reference} is already invoiced as {existing.reference}.")
 
     today = timezone.localdate()
-    invoice = save_with_number(
+    invoice = save_as_proforma(
         Invoice(
             branch=quotation.branch,
             customer=quotation.customer,
@@ -159,14 +188,16 @@ def invoice_from_quotation(quotation, *, terms_days=14):
             issued_on=today,
             due_on=today + timedelta(days=terms_days),
             note=quotation.note,
+            # The offer they accepted was the discounted one. Billing the
+            # full price is charging more than was agreed.
+            discount_percent=quotation.discount_percent,
         ),
-        field="reference",
-        generate=lambda: next_reference(Invoice, "INV"),
     )
     for line in quotation.lines.all():
         invoice.lines.create(
             variant=line.variant, description=line.description, qty=line.qty,
-            unit_price=line.unit_price, tax_rate=line.tax_rate, position=line.position,
+            unit_price=line.unit_price, tax_rate=line.tax_rate,
+            discount_percent=line.discount_percent, position=line.position,
         )
     return invoice
 
@@ -204,7 +235,7 @@ def issue(invoice):
     invoice is credit by another name. A limit of 0 means none has been set.
     """
     from apps.customers.models import CreditKind, CreditTransaction
-    from apps.selling.models import InvoiceStatus
+    from apps.selling.models import Invoice, InvoiceStatus
 
     invoice = _locked(invoice)
     if invoice.status != InvoiceStatus.DRAFT:
@@ -221,6 +252,17 @@ def issue(invoice):
             "them over. Raise their limit on the customer page, or take a payment first."
         )
 
+    # The invoice number is spent here, not when the draft was started. A
+    # proforma that is never issued therefore leaves no hole in the invoice
+    # sequence, which is the first thing anybody auditing it looks for.
+    fields = ["status", "issued_at", "updated_at"]
+    if invoice.reference.startswith("PRO"):
+        if not invoice.proforma_reference:
+            invoice.proforma_reference = invoice.reference
+            fields.append("proforma_reference")
+        invoice.reference = next_reference(Invoice, "INV")
+        fields.append("reference")
+
     CreditTransaction.objects.create(
         tenant=invoice.tenant,
         customer=customer,
@@ -233,7 +275,7 @@ def issue(invoice):
     )
     invoice.status = InvoiceStatus.OPEN
     invoice.issued_at = timezone.now()
-    invoice.save(update_fields=["status", "issued_at", "updated_at"])
+    invoice.save(update_fields=fields)
     return invoice
 
 
@@ -388,7 +430,7 @@ def deliver(note, *, user=None):
     """
     from apps.inventory.services import InsufficientStock
     from apps.pos.models import AddedVia, CartLine, PaymentMethod
-    from apps.pos.services import complete_sale, new_cart, price
+    from apps.pos.services import complete_sale, money, new_cart, price
 
     invoice = _locked(note.invoice)
     lines = list(note.lines.select_related("invoice_line__variant__product"))
@@ -409,10 +451,15 @@ def deliver(note, *, user=None):
         source = row.invoice_line
         # Written directly rather than through add_to_cart, which merges
         # lines for the same product and takes the product's own VAT rate.
+        # Whatever the invoice took off comes off here too, as an amount,
+        # so the sale the till records is the money the customer was asked
+        # for -- and the VAT inside it is worked out of that same figure.
+        gross = money(row.qty * source.unit_price)
         CartLine.objects.create(
             tenant=cart.tenant, cart=cart, variant=source.variant,
             description=source.description[:160], qty=row.qty,
             unit_price=price(source.unit_price), tax_rate=source.tax_rate,
+            discount=gross - row.line_total,
             added_via=AddedVia.MANUAL if source.variant is None else AddedVia.SEARCH,
         )
 
@@ -478,8 +525,11 @@ def prices_for(customer):
     rows = Price.objects.filter(min_qty=1).select_related("price_list")
     if wanted is not None and wanted.is_active:
         rows = rows.filter(Q(price_list=wanted) | Q(price_list__is_default=True))
-        # The customer's own list is applied second, so it wins.
-        rows = rows.order_by("price_list__is_default")
+        # Default list first, the customer's own list second, because the
+        # later row overwrites the earlier one and theirs is the one that
+        # counts. Sorted the other way round, a wholesale customer was
+        # quietly quoted the retail price.
+        rows = rows.order_by("-price_list__is_default")
     else:
         rows = rows.filter(price_list__is_default=True)
     return {row.variant_id: row.amount for row in rows}

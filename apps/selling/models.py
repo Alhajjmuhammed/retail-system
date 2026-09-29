@@ -228,6 +228,9 @@ class Invoice(BranchModel):
     note = models.TextField(blank=True)
     # Per cent off the whole invoice, on top of anything off a line.
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    # The number it carried as a proforma. Kept after issuing, so the
+    # sequence never hands the same proforma number to two customers.
+    proforma_reference = models.CharField(max_length=30, blank=True, db_index=True)
 
     issued_at = models.DateTimeField(null=True, blank=True)
     voided_at = models.DateTimeField(null=True, blank=True)
@@ -383,6 +386,22 @@ class InvoiceLine(TenantModel):
         return _tax_for(self)
 
     @property
+    def charged_share(self) -> Decimal:
+        """
+        The fraction of the gross price this line is actually charged at,
+        after the discount on the line and the one on the whole invoice.
+
+        The delivery works from this. A sale posted at the undiscounted
+        price would put money in the day's figures that the customer was
+        never asked for, and declare VAT on it.
+        """
+        one = Decimal("1")
+        hundred = Decimal("100")
+        off_line = one - (self.discount_percent / hundred)
+        off_all = one - (self.invoice.discount_percent / hundred)
+        return off_line * off_all
+
+    @property
     def qty_delivered(self) -> Decimal:
         """Across every delivery note that has not been cancelled."""
         rows = self.deliveries.select_related("note")
@@ -451,6 +470,8 @@ class DeliveryLine(TenantModel):
 
     @property
     def line_total(self) -> Decimal:
+        """This delivery's share of what the invoice actually charges."""
         from apps.pos.services import money
 
-        return money(self.qty * self.invoice_line.unit_price)
+        source = self.invoice_line
+        return money(self.qty * source.unit_price * source.charged_share)

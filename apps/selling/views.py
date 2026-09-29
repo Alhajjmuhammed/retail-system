@@ -355,14 +355,12 @@ def invoice_create(request):
                 messages.error(request, "Choose who the invoice is for.")
                 return redirect("selling:invoice_list")
             today = timezone.localdate()
-            invoice = save_with_number(
+            invoice = services.save_as_proforma(
                 Invoice(
                     customer=customer, branch=request.branch, issued_on=today,
                     due_on=today + timedelta(days=terms),
                     note=request.POST.get("note", "").strip()[:500],
-                ),
-                field="reference",
-                generate=lambda: services.next_reference(Invoice, "INV"),
+                )
             )
         audit.record("invoice.created", obj=invoice, ip=audit.client_ip(request))
         return redirect("selling:invoice_detail", pk=invoice.pk)

@@ -192,3 +192,182 @@ def test_money_boxes_step_in_whole_shillings(client, shop, main_branch, owner, i
     price_box = body[body.index('name="unit_price"') - 120:body.index('name="unit_price"') + 40]
     assert 'step="1"' in price_box
     assert 'step="0.01"' not in price_box
+
+
+# -- the discount has to survive all the way to the sale -------------------
+
+def test_a_delivery_records_the_discounted_sale(
+        shop, main_branch, buyer, invoice, stocked, owner):
+    """
+    The invoice charges 153,900; the sale the till records must say the
+    same. Posted at the full 180,000 it would put 26,100 into the day's
+    takings that nobody paid, and declare VAT on it.
+    """
+    from apps.selling import services
+    from apps.selling.models import DeliveryNote
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        line = invoice.lines.get()
+        line.discount_percent = Decimal("10")
+        line.save(update_fields=["discount_percent"])
+        invoice.discount_percent = Decimal("5")
+        invoice.save(update_fields=["discount_percent"])
+        invoice.refresh_from_db()
+        assert invoice.total == Decimal("153900")
+
+        services.issue(invoice)
+        note = DeliveryNote.objects.create(
+            reference="DN260001", invoice=invoice, branch=main_branch,
+            delivered_on=timezone.localdate())
+        note.lines.create(invoice_line=line, qty=line.qty)
+        services.deliver(note, user=owner)
+
+        note.refresh_from_db()
+        assert note.sale is not None
+        assert note.sale.total == Decimal("153900")
+        # And the customer still owes exactly the invoice, charged once.
+        buyer.refresh_from_db()
+        assert buyer.balance == Decimal("153900")
+
+
+def test_a_customers_own_price_list_beats_the_default(shop, main_branch, buyer, stocked):
+    """
+    A hotel on a wholesale list must be quoted the wholesale price. Sorted
+    the wrong way round, the default list overwrote theirs and they were
+    quietly given the shelf price.
+    """
+    from apps.catalog.models import Price, PriceList
+    from apps.selling import services
+
+    with tenant_context(shop, branch=main_branch):
+        variant = stocked["Mkate"]
+        default = PriceList.objects.get(is_default=True)
+        Price.objects.update_or_create(
+            variant=variant, price_list=default, min_qty=1,
+            defaults={"amount": Decimal("1500")})
+
+        wholesale = PriceList.objects.create(name="Wholesale", is_default=False)
+        Price.objects.create(variant=variant, price_list=wholesale, min_qty=1,
+                             amount=Decimal("1200"))
+        buyer.price_list = wholesale
+        buyer.save(update_fields=["price_list"])
+
+        assert services.prices_for(buyer)[variant.pk] == Decimal("1200")
+        # Somebody with no list of their own still gets the shelf price.
+        buyer.price_list = None
+        buyer.save(update_fields=["price_list"])
+        assert services.prices_for(buyer)[variant.pk] == Decimal("1500")
+
+
+def test_the_invoice_bills_the_discount_that_was_agreed(
+        shop, main_branch, buyer, stocked, owner):
+    """
+    They accepted an offer with 10% off the line and 5% off the lot. An
+    invoice at the full price charges more than was agreed, which is the
+    argument a shop least wants to have.
+    """
+    from apps.selling import services
+
+    today = timezone.localdate()
+    with tenant_context(shop, branch=main_branch, user=owner):
+        quotation = Quotation.objects.create(
+            reference="QUO260009", customer=buyer, branch=main_branch,
+            issued_on=today, valid_until=today + timedelta(days=14),
+            status=QuotationStatus.ACCEPTED, discount_percent=Decimal("5"))
+        quotation.lines.create(
+            variant=stocked["Mkate"], description="Mkate Mkubwa",
+            qty=Decimal("10"), unit_price=Decimal("18000"),
+            tax_rate=Decimal("18"), discount_percent=Decimal("10"), position=10)
+        assert quotation.total == Decimal("153900")
+
+        invoice = services.invoice_from_quotation(quotation)
+        assert invoice.discount_percent == Decimal("5")
+        assert invoice.lines.get().discount_percent == Decimal("10")
+        assert invoice.total == quotation.total == Decimal("153900")
+
+
+def test_the_same_offer_again_is_the_same_money(shop, main_branch, buyer, stocked, owner):
+    from apps.selling import services
+
+    today = timezone.localdate()
+    with tenant_context(shop, branch=main_branch, user=owner):
+        quotation = Quotation.objects.create(
+            reference="QUO260010", customer=buyer, branch=main_branch,
+            issued_on=today, valid_until=today + timedelta(days=14),
+            status=QuotationStatus.SENT, discount_percent=Decimal("5"))
+        quotation.lines.create(
+            variant=stocked["Mkate"], description="Mkate Mkubwa",
+            qty=Decimal("10"), unit_price=Decimal("18000"),
+            tax_rate=Decimal("18"), discount_percent=Decimal("10"), position=10)
+
+        copy = services.copy_for_new(quotation)
+        assert copy.total == quotation.total == Decimal("153900")
+
+
+def test_the_discount_cannot_move_once_the_invoice_is_out(
+        client, shop, main_branch, buyer, invoice, owner):
+    """
+    The debt was written the day it was issued. A discount changed after
+    that would leave the invoice saying one figure and the customer's
+    account another.
+    """
+    from apps.selling import services
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(invoice)
+        buyer.refresh_from_db()
+        owed = buyer.balance
+
+    client.force_login(owner)
+    client.post(reverse("selling:invoice_detail", args=[invoice.pk]), {
+        "action": "header", "due_on": invoice.due_on.isoformat(),
+        "discount_percent": "50", "note": "",
+    }, follow=True)
+
+    with tenant_context(shop, branch=main_branch):
+        invoice.refresh_from_db()
+        buyer.refresh_from_db()
+        assert invoice.discount_percent == Decimal("0")
+        assert invoice.total == Decimal("180000")
+        assert buyer.balance == owed
+
+
+def test_two_trips_add_up_to_the_one_invoice(
+        shop, main_branch, buyer, invoice, stocked, owner):
+    """Half today, half on Friday: the two sales together are the invoice."""
+    from apps.selling import services
+    from apps.selling.models import DeliveryNote
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        line = invoice.lines.get()
+        line.discount_percent = Decimal("10")
+        line.save(update_fields=["discount_percent"])
+        invoice.discount_percent = Decimal("5")
+        invoice.save(update_fields=["discount_percent"])
+        invoice.refresh_from_db()
+        services.issue(invoice)
+
+        totals = []
+        for ref, qty in (("DN260001", Decimal("3")), ("DN260002", Decimal("7"))):
+            note = DeliveryNote.objects.create(
+                reference=ref, invoice=invoice, branch=main_branch,
+                delivered_on=timezone.localdate())
+            note.lines.create(invoice_line=line, qty=qty)
+            services.deliver(note, user=owner)
+            note.refresh_from_db()
+            totals.append(note.sale.total)
+
+        assert sum(totals) == invoice.total == Decimal("153900")
+
+
+def test_money_on_forms_steps_in_whole_shillings_too(db):
+    """
+    Django sets step="0.01" itself on any two-place decimal, so the boxes
+    drawn by a form moved in cents even after the hand-written ones were
+    fixed. A rate is a percentage and keeps its decimals.
+    """
+    from apps.catalog.forms import ProductForm, TaxRateForm
+
+    assert 'step="1"' in str(ProductForm()["min_price"])
+    # 7.5% VAT is a real rate.
+    assert 'step="0.01"' in str(TaxRateForm()["rate"])
