@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Bank accounts{% endblock %}
+{% block heading %}Bank accounts{% endblock %}
+
+{% comment %}
+What prints at the foot of an invoice so a customer knows where to send the
+money. Several, because the account that takes shillings is not the one
+that takes dollars, and an invoice quoting the wrong one does not get paid.
+{% endcomment %}
+
+{% block content %}
+<div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+  <p class="section-lead max-w-xl">
+    These print at the foot of every invoice and proforma. An invoice shows
+    the account that takes the money it is asking for.
+  </p>
+  <a href="{% url 'org:bank_account_create' %}"
+     hx-get="{% url 'org:bank_account_create' %}" hx-target="#modal"
+     class="btn btn-primary shrink-0">{% icon "plus" %} New bank account</a>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="w-12 text-right">SN</th><th>Bank</th><th>Account name</th>
+        <th>Number</th><th>SWIFT</th><th>Takes</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for account in accounts %}
+      <tr class="{% if not account.is_active %}opacity-50{% endif %}">
+        <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+        <td>
+          <a href="{% url 'org:bank_account_edit' account.pk %}"
+             hx-get="{% url 'org:bank_account_edit' account.pk %}" hx-target="#modal"
+             class="font-medium text-ink-900 hover:text-brand-700">{{ account.bank_name }}</a>
+          {% if account.branch %}<span class="hint">{{ account.branch }}</span>{% endif %}
+          {% if not account.is_active %}<span class="badge badge-muted ml-1">Off</span>{% endif %}
+        </td>
+        <td class="text-ink-700">{{ account.account_name }}</td>
+        <td class="tnum text-ink-700">{{ account.account_number }}</td>
+        <td class="text-ink-600">{{ account.swift_code|default:"&mdash;" }}</td>
+        <td><span class="badge badge-muted">{{ account.currency }}</span></td>
+        <td class="text-right">
+          <form method="post" action="{% url 'org:bank_account_delete' account.pk %}"
+                @submit.prevent="$store.confirm.ask($el, { title: 'Remove {{ account.bank_name|escapejs }}?', body: 'It stops printing on new invoices. Invoices already printed are not changed.', label: 'Remove' })">
+            {% csrf_token %}
+            <button type="submit" class="btn-icon btn-icon-danger"
+                    aria-label="Remove {{ account.bank_name }}">{% icon "trash" class="h-4 w-4" %}</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">{% include "partials/empty.html" with icon="wallet" title="No bank account yet" text="Add the account a customer should pay into. It prints at the foot of every invoice and proforma." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

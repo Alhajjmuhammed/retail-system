@@ -19,6 +19,9 @@ class Customer(TenantModel):
     email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
     tin = models.CharField("TIN", max_length=30, blank=True)
+    # Zanzibar's revenue authority number. A hotel here is registered with
+    # the ZRA and expects its number on the invoice it is sent.
+    zra_number = models.CharField("ZRA number", max_length=30, blank=True)
 
     # Wholesale buyers get their own price list without duplicating products.
     price_list = models.ForeignKey(

@@ -83,6 +83,11 @@ class TenantSettings(TenantModel):
     receipt_header = models.TextField(blank=True)
     receipt_footer = models.TextField(blank=True)
     show_tin_on_receipt = models.BooleanField(default=True)
+    # A picture against each line on a quotation or invoice. Some shops sell
+    # things that look alike and want it; others want plain paperwork and a
+    # column of thumbnails is in the way. The picker always shows one --
+    # that is about choosing the right product, not about the document.
+    show_product_images = models.BooleanField(default=True)
 
     cost_method = models.CharField(
         max_length=20,
@@ -115,6 +120,34 @@ class TenantSettings(TenantModel):
 
     def __str__(self):
         return f"Settings for {self.tenant}"
+
+
+class BankAccount(TenantModel):
+    """
+    Where a customer sends the money.
+
+    Several, because a shop invoicing a hotel in dollars and a duka down the
+    road in shillings quotes a different account for each, and the account
+    printed on the invoice has to be the one that can receive what is being
+    asked for. Printed on invoices and proformas, never on a receipt.
+    """
+
+    bank_name = models.CharField(max_length=120)
+    branch = models.CharField(max_length=120, blank=True)
+    account_name = models.CharField(max_length=160)
+    account_number = models.CharField(max_length=60)
+    swift_code = models.CharField("SWIFT code", max_length=20, blank=True)
+    # Which money this account takes. An invoice shows the account that
+    # matches what it is asking for.
+    currency = models.CharField(max_length=3, default="TZS")
+    is_active = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "bank_name"]
+
+    def __str__(self):
+        return f"{self.bank_name} {self.account_number} ({self.currency})"
 
 
 class DeviceKind(models.TextChoices):

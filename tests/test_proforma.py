@@ -55,7 +55,8 @@ def test_it_prints_as_a_proforma_and_says_nothing_is_owed(
                              tax_rate=Decimal("18"), position=10)
 
     body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
-    assert "Proforma invoice" in body
+    # Headed as a proforma, however it is capitalised.
+    assert "proforma invoice" in body.lower()
     assert "not a demand for payment" in body
     assert invoice.reference in body
 
@@ -80,7 +81,7 @@ def test_issuing_spends_the_invoice_number(client, shop, main_branch, owner, buy
         assert row.reference == invoice.reference
 
     body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
-    assert "Proforma" not in body
+    assert "proforma invoice" not in body.lower()
     assert "not a demand for payment" not in body
 
 

@@ -137,6 +137,8 @@ class Tenant(TimeStampedModel):
     phone = models.CharField(max_length=30, blank=True)
     email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
+    # Printed along the foot of an invoice, beside the phone and email.
+    website = models.CharField(max_length=120, blank=True)
     logo = models.ImageField(upload_to="tenants/logos/", blank=True)
 
     status = models.CharField(

@@ -118,6 +118,7 @@ def quotation_detail(request, pk):
     return render(request, "selling/quotation_detail.html", {
         "quotation": quotation,
         "variants": _sellable(quotation.customer),
+        "shop_settings": _shop_settings(),
         "may_edit": may_edit,
         "editable": quotation.status == QuotationStatus.DRAFT,
         "taxes": TaxRate.objects.filter(is_active=True).order_by("-is_default", "name"),
@@ -197,6 +198,15 @@ def _act_on(request, quotation):
     return redirect("selling:quotation_detail", pk=quotation.pk)
 
 
+def _shop_settings():
+    """The shop's own switches, for the pages that ask one."""
+    from apps.core.context import get_current_tenant
+    from apps.org.models import TenantSettings
+
+    row, _ = TenantSettings.objects.get_or_create(tenant=get_current_tenant())
+    return row
+
+
 def _sellable(customer):
     """
     The products a line can be picked from, each carrying what it would be
@@ -264,12 +274,22 @@ def _add_line(request, quotation):
 @requires("quote.view", branch=branch_of(Quotation))
 def quotation_print(request, pk):
     """The document itself, on the shop's letterhead, ready for a printer."""
+    from apps.org.models import BankAccount
+
     quotation = get_object_or_404(
-        Quotation.objects.select_related("customer").prefetch_related("lines"), pk=pk
+        Quotation.objects.select_related("customer")
+        .prefetch_related("lines__variant__product"), pk=pk
     )
+    currency = request.tenant.currency
+    banks = list(BankAccount.objects.filter(is_active=True, currency=currency))
+    if not banks:
+        banks = list(BankAccount.objects.filter(is_active=True))
     return render(request, "selling/quotation_print.html", {
         "quotation": quotation,
         "tenant": request.tenant,
+        "banks": banks,
+        "currency": currency,
+        "filler": range(max(0, 8 - quotation.lines.count())),
         "back": reverse("selling:quotation_detail", args=[quotation.pk]),
     })
 
@@ -395,6 +415,7 @@ def invoice_detail(request, pk):
     return render(request, "selling/invoice_detail.html", {
         "invoice": invoice,
         "variants": _sellable(invoice.customer),
+        "shop_settings": _shop_settings(),
         "taxes": TaxRate.objects.filter(is_active=True).order_by("-is_default", "name"),
         "editable": invoice.status == InvoiceStatus.DRAFT,
         "may_manage": request.membership.can("invoice.manage"),
@@ -594,11 +615,25 @@ def _add_invoice_line(request, invoice):
 @login_required
 @requires("invoice.view", branch=branch_of(Invoice))
 def invoice_print(request, pk):
+    from apps.org.models import BankAccount
+
     invoice = get_object_or_404(
-        Invoice.objects.select_related("customer").prefetch_related("lines"), pk=pk)
+        Invoice.objects.select_related("customer")
+        .prefetch_related("lines__variant__product"), pk=pk)
+    currency = request.tenant.currency
+    # The account that can take what is being asked for. If none is set up
+    # for this money, every account is shown rather than none at all.
+    banks = list(BankAccount.objects.filter(is_active=True, currency=currency))
+    if not banks:
+        banks = list(BankAccount.objects.filter(is_active=True))
     return render(request, "selling/invoice_print.html", {
         "invoice": invoice,
         "tenant": request.tenant,
+        "banks": banks,
+        "currency": currency,
+        # Blank rows so a short invoice still fills the page, as a printed
+        # invoice book does.
+        "filler": range(max(0, 8 - invoice.lines.count())),
         "back": reverse("selling:invoice_detail", args=[invoice.pk]),
     })
 

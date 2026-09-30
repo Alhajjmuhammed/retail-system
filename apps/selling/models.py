@@ -95,6 +95,18 @@ class Quotation(BranchModel):
         return self.lines_total - self.order_discount
 
     @property
+    def net_of_tax(self) -> Decimal:
+        """
+        The goods without the VAT in them.
+
+        Prices here include VAT, so the total is what the customer pays. A
+        document that prints the same figure as Subtotal and again as Total,
+        with a VAT line between them, reads as though the tax were added on
+        top and the arithmetic were wrong. Subtotal + VAT = Total.
+        """
+        return self.total - self.tax
+
+    @property
     def tax(self) -> Decimal:
         """
         VAT inside what is actually charged.
@@ -158,6 +170,27 @@ class QuotationLine(TenantModel):
 
     def __str__(self):
         return f"{self.description} x {self.qty}"
+
+    @property
+    def gross_total(self) -> Decimal:
+        """What the line came to before anything was taken off it."""
+        from apps.pos.services import money
+
+        return money(self.qty * self.unit_price)
+
+    @property
+    def item_code(self) -> str:
+        """
+        The code that prints in the Item column.
+
+        The shop's own code first, because that is the one it controls and
+        quotes down the phone. A product it never gave a code to prints the
+        factory's, so the column is not blank on half the lines.
+        """
+        product = getattr(self.variant, "product", None)
+        if product is None:
+            return ""
+        return product.sku or product.factory_code or ""
 
     @property
     def discount(self) -> Decimal:
@@ -267,6 +300,18 @@ class Invoice(BranchModel):
         return self.lines_total - self.order_discount
 
     @property
+    def net_of_tax(self) -> Decimal:
+        """
+        The goods without the VAT in them.
+
+        Prices here include VAT, so the total is what the customer pays. A
+        document that prints the same figure as Subtotal and again as Total,
+        with a VAT line between them, reads as though the tax were added on
+        top and the arithmetic were wrong. Subtotal + VAT = Total.
+        """
+        return self.total - self.tax
+
+    @property
     def tax(self) -> Decimal:
         """
         VAT inside what is actually charged.
@@ -364,6 +409,27 @@ class InvoiceLine(TenantModel):
 
     def __str__(self):
         return f"{self.description} x {self.qty}"
+
+    @property
+    def gross_total(self) -> Decimal:
+        """What the line came to before anything was taken off it."""
+        from apps.pos.services import money
+
+        return money(self.qty * self.unit_price)
+
+    @property
+    def item_code(self) -> str:
+        """
+        The code that prints in the Item column.
+
+        The shop's own code first, because that is the one it controls and
+        quotes down the phone. A product it never gave a code to prints the
+        factory's, so the column is not blank on half the lines.
+        """
+        product = getattr(self.variant, "product", None)
+        if product is None:
+            return ""
+        return product.sku or product.factory_code or ""
 
     @property
     def discount(self) -> Decimal:

@@ -122,6 +122,7 @@ def customer_form(request, pk=None):
             fields = {
                 "name": name, "phone": phone, "email": email,
                 "tin": request.POST.get("tin", "").strip()[:30],
+                "zra_number": request.POST.get("zra_number", "").strip()[:30],
                 "address": request.POST.get("address", "").strip()[:500],
                 "note": request.POST.get("note", "").strip()[:1000],
                 "credit_limit": limit,

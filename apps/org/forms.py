@@ -40,6 +40,25 @@ class BranchForm(TailwindMixin, forms.ModelForm):
         return data
 
 
+class BankAccountForm(TailwindMixin, forms.ModelForm):
+    """Where a customer sends the money, as it will print on an invoice."""
+
+    class Meta:
+        from apps.org.models import BankAccount
+
+        model = BankAccount
+        fields = ["bank_name", "branch", "account_name", "account_number",
+                  "swift_code", "currency", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["branch"].label = "Branch"
+        self.fields["currency"].help_text = (
+            "The money this account takes. An invoice shows the account that "
+            "matches what it is asking for."
+        )
+
+
 class RegisterForm(TailwindMixin, forms.ModelForm):
     class Meta:
         model = Register
@@ -70,6 +89,7 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "cost_method", "default_tax_rate",
             "negative_stock_allowed", "low_stock_alerts", "expiry_warning_days",
             "receipt_header", "receipt_footer", "show_tin_on_receipt",
+            "show_product_images",
             "fiscal_provider",
         ]
         widgets = {
@@ -111,6 +131,11 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
         "receipt_header": ("Top of the receipt", ""),
         "receipt_footer": ("Bottom of the receipt", ""),
         "show_tin_on_receipt": ("Print your TIN on the receipt", ""),
+        "show_product_images": (
+            "Show product pictures on quotations and invoices",
+            "Only on the screen, never on the printed document. Switch it off "
+            "for plain paperwork; choosing a product always shows its picture.",
+        ),
     }
 
     COST_METHOD_WORDS = [
@@ -139,5 +164,6 @@ class TenantProfileForm(TailwindMixin, forms.ModelForm):
         from apps.tenancy.models import Tenant
 
         model = Tenant
-        fields = ["name", "legal_name", "tin", "vrn", "phone", "email", "address", "logo"]
+        fields = ["name", "legal_name", "tin", "vrn", "phone", "email", "website",
+                  "address", "logo"]
         widgets = {"address": forms.Textarea(attrs={"rows": 2})}

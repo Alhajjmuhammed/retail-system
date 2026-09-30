@@ -7,6 +7,7 @@
   <div><label class="label" for="email">Email</label><input type="email" name="email" id="email" maxlength="254" value="{% if values %}{{ values.email }}{% else %}{{ customer.email|default:'' }}{% endif %}" class="input"></div>
   <div><label class="label" for="credit_limit">Credit limit</label><input type="number" step="1" min="0" name="credit_limit" id="credit_limit" value="{% if values %}{{ values.credit_limit }}{% else %}{{ customer.credit_limit|default:0|floatformat:'-2' }}{% endif %}" class="input"><p class="hint">0 means cash only. Raising it needs credit rights.</p></div>
   <div><label class="label" for="tin">TIN</label><input name="tin" id="tin" maxlength="30" value="{% if values %}{{ values.tin }}{% else %}{{ customer.tin|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="zra_number">ZRA number</label><input name="zra_number" id="zra_number" maxlength="30" value="{% if values %}{{ values.zra_number }}{% else %}{{ customer.zra_number|default:'' }}{% endif %}" class="input"></div>
   {% if price_lists|length > 1 %}
   <div class="sm:col-span-2"><label class="label" for="price_list">Prices</label>
     <select name="price_list" id="price_list" class="input">

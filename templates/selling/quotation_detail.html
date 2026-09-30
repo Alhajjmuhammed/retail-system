@@ -84,13 +84,27 @@
         <tr>
           <td class="text-right text-ink-400">{{ forloop.counter }}</td>
           <td>
-            <span class="font-medium text-ink-900">{{ line.description }}</span>
-            {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
-            {% if line.discount_percent %}<span class="ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">&minus;{{ line.discount_percent|floatformat:"-2" }}%</span>{% endif %}
+            <div class="flex items-center gap-2.5">
+              {% if shop_settings.show_product_images and line.variant.product.image %}
+              <img src="{{ line.variant.product.image.url }}" alt=""
+                   class="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-inset ring-ink-200">
+              {% endif %}
+              <div class="min-w-0">
+                <span class="font-medium text-ink-900">{{ line.description }}</span>
+                {% if line.item_code %}<span class="hint">{{ line.item_code }}</span>{% endif %}
+                {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
+                {% if line.discount_percent %}<span class="ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">&minus;{{ line.discount_percent|floatformat:"-2" }}%</span>{% endif %}
+              </div>
+            </div>
           </td>
           <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
           <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
-          <td class="text-right font-semibold">{{ line.line_total|floatformat:0|intcomma }}</td>
+          <td class="text-right">
+            {% if line.discount_percent %}
+            <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:0|intcomma }}</span>
+            <span class="block font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>
+            {% else %}<span class="font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>{% endif %}
+          </td>
           {% if editable %}
           <td class="text-right">
             <form method="post" x-data
@@ -123,6 +137,9 @@
           {% for v in variants %}
           <option value="{{ v.pk }}"
                   data-price="{{ v.suggested|floatformat:'-2'|default_if_none:'' }}"
+                  data-desc="{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}"
+                  data-code="{{ v.product.sku|default:v.product.factory_code }}"
+                  data-img="{% if v.product.image %}{{ v.product.image.url }}{% endif %}"
                   data-tax="{{ v.product.tax_rate.pk }}"
                   data-decimal="{% if v.product.base_unit.allows_decimal %}1{% else %}0{% endif %}"
           >{{ v.product.name }}{% if v.name %} &mdash; {{ v.name }}{% endif %}</option>
@@ -131,7 +148,11 @@
       </div>
       <div class="min-w-40 flex-1">
         <label class="label" for="description">or type a line</label>
-        <input name="description" id="description" maxlength="200" class="input" placeholder="Delivery to Nungwi">
+        <input name="description" id="description" x-ref="desc" maxlength="200" class="input" placeholder="Delivery to Nungwi">
+        <p class="mt-1 flex items-center gap-1.5 text-xs text-ink-500" x-show="photo || code" x-cloak>
+          <img :src="photo" x-show="photo" alt="" class="h-6 w-6 rounded object-cover">
+          <span x-text="code"></span>
+        </p>
       </div>
       <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" :step="step" :min="step" name="qty" id="qty" value="1" class="input" x-model="qty" required></div>
       <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="1" min="0" name="unit_price" id="unit_price" class="input" x-model="price" required></div>

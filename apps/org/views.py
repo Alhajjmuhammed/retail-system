@@ -16,8 +16,14 @@ from apps.core import audit
 from apps.core.decorators import branch_of, requires
 from apps.core.deletion import remove_or_archive
 from apps.core.features import LimitExceeded
-from apps.org.forms import BranchForm, BusinessForm, RegisterForm, TenantProfileForm
-from apps.org.models import Branch, Register, TenantSettings
+from apps.org.forms import (
+    BankAccountForm,
+    BranchForm,
+    BusinessForm,
+    RegisterForm,
+    TenantProfileForm,
+)
+from apps.org.models import BankAccount, Branch, Register, TenantSettings
 
 
 def _branch_in_url(request, **kwargs):
@@ -65,6 +71,8 @@ def settings_home(request):
          "Categories live with the products, under Inventory."),
         ("settings.edit", "notifications:message_log", "activity", "amber", "Messages",
          "What your SMS say, and every message that has been sent."),
+        ("settings.edit", "org:bank_accounts", "wallet", "brand", "Bank accounts",
+         "Where customers send the money. Prints on every invoice."),
         ("settings.edit", "org:business", "settings", "amber", "Business",
          "Your name and TIN, what prints on a receipt, and how the system behaves."),
         ("billing.manage", "tenancy:billing", "credit-card", "amber", "Subscription",
@@ -106,7 +114,7 @@ def business(request):
     # form's.
     boxes = ["cost_method", "default_tax_rate", "expiry_warning_days", "fiscal_provider"]
     switches = ["negative_stock_allowed",
-                "low_stock_alerts", "show_tin_on_receipt"]
+                "low_stock_alerts", "show_tin_on_receipt", "show_product_images"]
     return render(
         request,
         "org/business.html",
@@ -270,6 +278,68 @@ def register_create(request):
         messages.success(request, f"{register.name} added to {register.branch.name}.")
         return close_modal(request, reverse("org:branches"))
     return _settings_form(request, form, title="New POS", action=reverse("org:register_create"))
+
+
+# --------------------------------------------------------------------------
+# Bank accounts
+#
+# Printed on invoices and proformas so a customer knows where to send the
+# money. Several, because the account that takes shillings is not the one
+# that takes dollars.
+# --------------------------------------------------------------------------
+
+@login_required
+@requires("settings.edit")
+def bank_accounts(request):
+    return render(request, "org/bank_accounts.html", {
+        "accounts": BankAccount.objects.all(),
+    })
+
+
+@login_required
+@requires("settings.edit")
+def bank_account_create(request):
+    from apps.core.listing import close_modal
+
+    form = BankAccountForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        account = form.save()
+        audit.record("bank.created", obj=account, ip=audit.client_ip(request))
+        messages.success(request, f"{account.bank_name} added.")
+        return close_modal(request, reverse("org:bank_accounts"))
+    return _settings_form(request, form, title="New bank account",
+                          action=reverse("org:bank_account_create"))
+
+
+@login_required
+@requires("settings.edit")
+def bank_account_edit(request, pk):
+    from apps.core.listing import close_modal
+
+    account = get_object_or_404(BankAccount, pk=pk)
+    form = BankAccountForm(request.POST or None, instance=account)
+    if request.method == "POST" and form.is_valid():
+        before = audit.snapshot(account)
+        account = form.save()
+        audit.record("bank.changed", obj=account, before=before,
+                     ip=audit.client_ip(request))
+        messages.success(request, "Saved.")
+        return close_modal(request, reverse("org:bank_accounts"))
+    return _settings_form(request, form, title=account.bank_name,
+                          action=reverse("org:bank_account_edit", args=[pk]))
+
+
+@login_required
+@requires("settings.edit")
+def bank_account_delete(request, pk):
+    account = get_object_or_404(BankAccount, pk=pk)
+    if request.method == "POST":
+        name = account.bank_name
+        # Nothing points at a bank account, so it can simply go.
+        account.delete()
+        audit.record("bank.removed", obj=None, ip=audit.client_ip(request))
+        messages.success(request, f"{name} removed.")
+    return redirect("org:bank_accounts")
 
 
 # --------------------------------------------------------------------------

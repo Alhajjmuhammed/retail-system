@@ -16,13 +16,25 @@ window.lineEntry = function () {
     price: "",
     off: "0",
     step: "1",
+    photo: "",
+    code: "",
 
     picked: function (select) {
       var chosen = select.options[select.selectedIndex];
       if (!chosen || !chosen.value) {
         this.step = "1";
+        this.photo = "";
+        this.code = "";
         return;
       }
+      // What the line should say, so nobody retypes the product name. It
+      // stays editable: "Mkate Mkubwa, sliced" is a better line than the
+      // catalogue name, and the customer reads this one.
+      var description = this.$refs.desc;
+      if (description && !description.value) description.value = chosen.dataset.desc || "";
+      this.photo = chosen.dataset.img || "";
+      this.code = chosen.dataset.code || "";
+
       var suggested = chosen.dataset.price;
       // A product with no price on the list leaves the box alone rather
       // than writing a zero somebody has to notice and delete.
