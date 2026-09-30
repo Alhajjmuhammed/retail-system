@@ -371,3 +371,38 @@ def test_money_on_forms_steps_in_whole_shillings_too(db):
     assert 'step="1"' in str(ProductForm()["min_price"])
     # 7.5% VAT is a real rate.
     assert 'step="0.01"' in str(TaxRateForm()["rate"])
+
+
+def test_the_vat_on_a_discounted_delivery_is_declared_on_what_was_paid(
+        shop, main_branch, buyer, invoice, stocked, owner):
+    """
+    `Sale.tax_total` is what the VAT figures and the profit report are built
+    from. Left at the undiscounted amount it would declare tax on money the
+    customer never handed over, and nothing else in the suite looks at it.
+
+    153,900 at 18% inclusive carries 23,476.27 of VAT.
+    """
+    from apps.selling import services
+    from apps.selling.models import DeliveryNote
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        line = invoice.lines.get()
+        line.discount_percent = Decimal("10")
+        line.save(update_fields=["discount_percent"])
+        invoice.discount_percent = Decimal("5")
+        invoice.save(update_fields=["discount_percent"])
+        invoice.refresh_from_db()
+        services.issue(invoice)
+
+        note = DeliveryNote.objects.create(
+            reference="DN260001", invoice=invoice, branch=main_branch,
+            delivered_on=timezone.localdate())
+        note.lines.create(invoice_line=line, qty=line.qty)
+        services.deliver(note, user=owner)
+        note.refresh_from_db()
+
+        sale = note.sale
+        assert sale.total == Decimal("153900")
+        assert sale.tax_total == Decimal("23476.27")
+        # And the sale says plainly what was taken off.
+        assert sale.discount_total == Decimal("26100")
