@@ -102,7 +102,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
     {# -- where to send it, and what it comes to --------------------------- #}
     <div class="mt-4 flex flex-wrap items-start justify-between gap-6">
       <div class="min-w-[16rem] flex-1 text-xs">
-        {% if banks %}
+        {% if banks and shop_settings.show_bank_details %}
         <p class="font-semibold uppercase">Bank details:</p>
         {% for bank in banks %}
         <div class="{% if not forloop.first %}mt-2{% endif %}">
@@ -129,6 +129,20 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
         </table>
       </div>
     </div>
+
+    {% if shop_settings.show_amount_in_words %}
+    <p class="mt-3 text-xs text-ink-700">
+      <span class="text-ink-500">Amount in words:</span>
+      <span class="font-medium">{{ words }}</span>
+    </p>
+    {% endif %}
+
+    {% if shop_settings.show_terms_on_invoice and shop_settings.invoice_terms %}
+    <div class="mt-4 border-t border-ink-200 pt-2">
+      <p class="text-xs font-semibold uppercase text-ink-600">Terms and conditions</p>
+      <p class="whitespace-pre-line text-xs text-ink-600">{{ shop_settings.invoice_terms }}</p>
+    </div>
+    {% endif %}
 
     <p class="mt-4 rounded bg-ink-50 px-3 py-2 text-xs text-ink-700">
       This is a quotation, not an invoice. Nothing is owed on it and no goods are set

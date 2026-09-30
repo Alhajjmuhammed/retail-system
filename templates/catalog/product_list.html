@@ -4,11 +4,23 @@
 
 {% block content %}
 <div class="space-y-4">
+  {% comment %}
+  Arrived from a supplier's page. Say whose goods these are and offer the
+  way back out, or the filter is invisible and the list looks wrong.
+  {% endcomment %}
+  {% if supplier_name %}
+  <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 px-4 py-2.5 text-sm ring-1 ring-inset ring-brand-600/15">
+    <p class="text-ink-700">Showing what you buy from
+      <span class="font-semibold text-ink-900">{{ supplier_name }}</span></p>
+    <a href="{% url 'catalog:product_list' %}" class="font-medium text-brand-700 hover:underline">Show every product</a>
+  </div>
+  {% endif %}
   <div class="card">
     <div class="card-head flex-wrap gap-3">
     <form hx-get="{% url 'catalog:product_list' %}" hx-target="#product-rows"
           hx-trigger="input changed delay:250ms from:input[name='q'], change from:select"
           hx-push-url="true" class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+      {% if supplier %}<input type="hidden" name="supplier" value="{{ supplier }}">{% endif %}
       <input type="search" name="q" aria-label="Search products" value="{{ q }}" placeholder="Name, code or barcode"
              class="input col-span-2 w-full sm:w-64" autocomplete="off">
       <select name="category" class="input w-full sm:w-44">

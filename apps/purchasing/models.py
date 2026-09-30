@@ -21,6 +21,22 @@ class Supplier(TenantModel):
     email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
     tin = models.CharField("TIN", max_length=30, blank=True)
+
+    # A supplier abroad is a different animal: you cannot ring them, their
+    # tax number is not a Tanzanian one, and you cannot pay them without a
+    # SWIFT code. All of it lived in somebody's WhatsApp before this.
+    city = models.CharField(max_length=80, blank=True)
+    country = models.CharField(max_length=60, blank=True)
+    website = models.CharField(max_length=120, blank=True)
+    # What they bill in. Worth knowing before the invoice arrives.
+    currency = models.CharField(max_length=3, blank=True)
+    vat_number = models.CharField("VAT / tax number", max_length=40, blank=True)
+
+    bank_name = models.CharField(max_length=120, blank=True)
+    bank_account = models.CharField(max_length=60, blank=True)
+    swift_code = models.CharField("SWIFT code", max_length=20, blank=True)
+    iban = models.CharField("IBAN", max_length=40, blank=True)
+
     payment_terms_days = models.PositiveIntegerField(default=0)
     note = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)

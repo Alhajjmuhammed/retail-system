@@ -112,9 +112,11 @@ def business(request):
     # Two shapes of field: the ones with a box to fill in, and the ones that
     # are a yes/no. The template lays each group out; the words are the
     # form's.
-    boxes = ["cost_method", "default_tax_rate", "expiry_warning_days", "fiscal_provider"]
-    switches = ["negative_stock_allowed",
-                "low_stock_alerts", "show_tin_on_receipt", "show_product_images"]
+    boxes = ["cost_method", "default_tax_rate", "expiry_warning_days",
+             "fiscal_provider", "invoice_terms"]
+    switches = ["negative_stock_allowed", "low_stock_alerts", "show_tin_on_receipt",
+                "show_product_images", "show_terms_on_invoice",
+                "show_amount_in_words", "show_bank_details"]
     return render(
         request,
         "org/business.html",

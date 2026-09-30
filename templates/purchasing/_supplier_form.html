@@ -1,4 +1,4 @@
-{% include "partials/modal_open.html" with title=supplier.name|default:"New supplier" subtitle="Who you buy from, and how long they give you to pay." width="max-w-lg" %}
+{% include "partials/modal_open.html" with title=supplier.name|default:"New supplier" subtitle="Who you buy from, where they are, and how you pay them." width="max-w-2xl" %}
 <form {% if modal %}hx-post="{% if supplier %}{% url 'purchasing:supplier_edit' supplier.pk %}{% else %}{% url 'purchasing:supplier_create' %}{% endif %}" hx-target="#modal" hx-swap="innerHTML"{% else %}method="post"{% endif %} class="grid gap-4 p-5 sm:grid-cols-2">
   {% csrf_token %}
   {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
@@ -10,6 +10,23 @@
   <div><label class="label" for="tin">TIN</label><input name="tin" id="tin" maxlength="30" value="{% if values %}{{ values.tin }}{% else %}{{ supplier.tin|default:'' }}{% endif %}" class="input"></div>
   <div><label class="label" for="payment_terms_days">Days to pay</label><input type="number" min="0" max="365" name="payment_terms_days" id="payment_terms_days" value="{% if values %}{{ values.payment_terms_days }}{% else %}{{ supplier.payment_terms_days|default:0 }}{% endif %}" class="input"><p class="hint">0 means on delivery.</p></div>
   <div class="sm:col-span-2"><label class="label" for="address">Address</label><textarea name="address" id="address" rows="2" maxlength="500" class="input">{% if values %}{{ values.address }}{% else %}{{ supplier.address|default:'' }}{% endif %}</textarea></div>
+
+  <div><label class="label" for="city">City</label><input name="city" id="city" maxlength="80" value="{% if values %}{{ values.city }}{% else %}{{ supplier.city|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="country">Country</label><input name="country" id="country" maxlength="60" placeholder="Tanzania" value="{% if values %}{{ values.country }}{% else %}{{ supplier.country|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="website">Website</label><input name="website" id="website" maxlength="120" value="{% if values %}{{ values.website }}{% else %}{{ supplier.website|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="currency">They bill in</label><input name="currency" id="currency" maxlength="3" placeholder="TZS" value="{% if values %}{{ values.currency }}{% else %}{{ supplier.currency|default:'' }}{% endif %}" class="input uppercase"><p class="hint">TZS, USD, CNY, AED.</p></div>
+  <div class="sm:col-span-2"><label class="label" for="vat_number">VAT / tax number</label><input name="vat_number" id="vat_number" maxlength="40" value="{% if values %}{{ values.vat_number }}{% else %}{{ supplier.vat_number|default:'' }}{% endif %}" class="input"><p class="hint">Their own, which a supplier abroad has instead of a TIN.</p></div>
+
+  {% comment %}
+  How to pay them. A supplier down the road needs an account number; a
+  factory abroad needs a SWIFT code and often an IBAN, and without those
+  the bank will not send the money.
+  {% endcomment %}
+  <p class="label sm:col-span-2 mt-1 border-t border-ink-100 pt-3">How you pay them</p>
+  <div><label class="label" for="bank_name">Bank</label><input name="bank_name" id="bank_name" maxlength="120" value="{% if values %}{{ values.bank_name }}{% else %}{{ supplier.bank_name|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="bank_account">Account number</label><input name="bank_account" id="bank_account" maxlength="60" value="{% if values %}{{ values.bank_account }}{% else %}{{ supplier.bank_account|default:'' }}{% endif %}" class="input"></div>
+  <div><label class="label" for="swift_code">SWIFT code</label><input name="swift_code" id="swift_code" maxlength="20" value="{% if values %}{{ values.swift_code }}{% else %}{{ supplier.swift_code|default:'' }}{% endif %}" class="input uppercase"></div>
+  <div><label class="label" for="iban">IBAN</label><input name="iban" id="iban" maxlength="40" value="{% if values %}{{ values.iban }}{% else %}{{ supplier.iban|default:'' }}{% endif %}" class="input uppercase"></div>
   <div class="flex justify-end gap-2 sm:col-span-2">
     {% if modal %}<button type="button" @click="$root.remove()" class="btn btn-secondary">Cancel</button>{% endif %}
     <button type="submit" class="btn btn-primary">Save</button>

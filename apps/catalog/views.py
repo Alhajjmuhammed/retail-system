@@ -79,6 +79,13 @@ def product_list(request):
         # bottles too.
         products = products.filter(category_id__in=category_family(int_or(category)))
 
+    from apps.purchasing.models import Supplier
+
+    # "Everything from this factory", from the supplier's own page.
+    supplier = request.GET.get("supplier", "").strip()
+    if supplier:
+        products = products.filter(supplier_id=int_or(supplier))
+
     if term:
         products = products.filter(
             Q(name__icontains=term)
@@ -109,6 +116,12 @@ def product_list(request):
         "categories": category_tree(),
         "category": category,
         "status": status,
+        "supplier": supplier,
+        # Named so the page can say whose products these are.
+        "supplier_name": (
+            Supplier.objects.filter(pk=int_or(supplier)).values_list("name", flat=True).first()
+            if supplier else None
+        ),
         "can_see_cost": request.membership.can("product.view_cost"),
     }
 

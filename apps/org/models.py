@@ -89,6 +89,15 @@ class TenantSettings(TenantModel):
     # that is about choosing the right product, not about the document.
     show_product_images = models.BooleanField(default=True)
 
+    # What the shop's own invoice says and shows. Every shop's terms differ
+    # -- when payment is due, who owns the goods until it arrives, how long
+    # a claim can be made -- so they are typed here rather than written into
+    # the system, and each switch decides whether that part prints at all.
+    invoice_terms = models.TextField(blank=True)
+    show_terms_on_invoice = models.BooleanField(default=True)
+    show_amount_in_words = models.BooleanField(default=True)
+    show_bank_details = models.BooleanField(default=True)
+
     cost_method = models.CharField(
         max_length=20,
         choices=CostMethod.choices,

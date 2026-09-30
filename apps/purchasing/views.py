@@ -99,6 +99,15 @@ def supplier_form(request, pk=None):
             "phone": request.POST.get("phone", "").strip()[:30],
             "email": request.POST.get("email", "").strip()[:254],
             "tin": request.POST.get("tin", "").strip()[:30],
+            "vat_number": request.POST.get("vat_number", "").strip()[:40],
+            "city": request.POST.get("city", "").strip()[:80],
+            "country": request.POST.get("country", "").strip()[:60],
+            "website": request.POST.get("website", "").strip()[:120],
+            "currency": request.POST.get("currency", "").strip().upper()[:3],
+            "bank_name": request.POST.get("bank_name", "").strip()[:120],
+            "bank_account": request.POST.get("bank_account", "").strip()[:60],
+            "swift_code": request.POST.get("swift_code", "").strip().upper()[:20],
+            "iban": request.POST.get("iban", "").strip().upper()[:40],
             "payment_terms_days": min(max(int_or(request.POST.get("payment_terms_days"), 0), 0), 365),
             "address": request.POST.get("address", "").strip()[:500],
         }
@@ -188,6 +197,11 @@ def supplier_detail(request, pk):
             .exclude(status=POStatus.CANCELLED).order_by("-created_at")[:10],
             "receipts": supplier.receipts.filter(branch__in=request.membership.branches())
             .prefetch_related(lines).order_by("-received_at")[:20],
+            # What you buy from them. The link existed and was invisible:
+            # "which of my products come from this factory" had no answer.
+            "products": supplier.products.filter(is_active=True)
+            .select_related("category").order_by("name")[:100],
+            "product_count": supplier.products.filter(is_active=True).count(),
         },
     )
 

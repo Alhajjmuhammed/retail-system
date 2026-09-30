@@ -284,11 +284,15 @@ def quotation_print(request, pk):
     banks = list(BankAccount.objects.filter(is_active=True, currency=currency))
     if not banks:
         banks = list(BankAccount.objects.filter(is_active=True))
+    settings_row = _shop_settings()
     return render(request, "selling/quotation_print.html", {
         "quotation": quotation,
         "tenant": request.tenant,
         "banks": banks,
         "currency": currency,
+        "shop_settings": settings_row,
+        # Worked out here rather than in the template, which cannot spell.
+        "words": quotation.total_in_words(currency),
         "filler": range(max(0, 8 - quotation.lines.count())),
         "back": reverse("selling:quotation_detail", args=[quotation.pk]),
     })
@@ -626,11 +630,15 @@ def invoice_print(request, pk):
     banks = list(BankAccount.objects.filter(is_active=True, currency=currency))
     if not banks:
         banks = list(BankAccount.objects.filter(is_active=True))
+    settings_row = _shop_settings()
     return render(request, "selling/invoice_print.html", {
         "invoice": invoice,
         "tenant": request.tenant,
         "banks": banks,
         "currency": currency,
+        "shop_settings": settings_row,
+        # Worked out here rather than in the template, which cannot spell.
+        "words": invoice.total_in_words(currency),
         # Blank rows so a short invoice still fills the page, as a printed
         # invoice book does.
         "filler": range(max(0, 8 - invoice.lines.count())),

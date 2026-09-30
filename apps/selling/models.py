@@ -94,6 +94,12 @@ class Quotation(BranchModel):
     def net(self) -> Decimal:
         return self.lines_total - self.order_discount
 
+    def total_in_words(self, currency="TZS") -> str:
+        """The total written out, for the line under it on the document."""
+        from apps.core.amounts import money_in_words
+
+        return money_in_words(self.total, currency)
+
     @property
     def net_of_tax(self) -> Decimal:
         """
@@ -298,6 +304,12 @@ class Invoice(BranchModel):
     @property
     def net(self) -> Decimal:
         return self.lines_total - self.order_discount
+
+    def total_in_words(self, currency="TZS") -> str:
+        """The total written out, for the line under it on the document."""
+        from apps.core.amounts import money_in_words
+
+        return money_in_words(self.total, currency)
 
     @property
     def net_of_tax(self) -> Decimal:

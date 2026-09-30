@@ -62,6 +62,37 @@
   {% endif %}
 
   <div class="card">
+  {% comment %}
+  What you buy from them. A shop that wants to know which goods come from
+  which factory had the answer in the data and no way to see it.
+  {% endcomment %}
+  <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">What you buy from them</h2>
+      {% if product_count %}
+      <a href="{% url 'catalog:product_list' %}?supplier={{ supplier.pk }}" class="hint hover:text-brand-700">
+        {{ product_count }} product{{ product_count|pluralize }} &rarr;
+      </a>
+      {% endif %}
+    </div>
+    <table class="table">
+      <thead><tr><th class="w-12 text-right">SN</th><th>Product</th><th>Your code</th><th>Factory code</th><th>Category</th></tr></thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td class="text-right text-ink-400">{{ forloop.counter }}</td>
+          <td><a href="{% url 'catalog:product_edit' product.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ product.name }}</a></td>
+          <td class="text-ink-600">{{ product.sku|default:"&mdash;" }}</td>
+          <td class="text-ink-600">{{ product.factory_code|default:"&mdash;" }}</td>
+          <td class="text-ink-600">{{ product.category.name|default:"&mdash;" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">{% include "partials/empty.html" with icon="tag" title="No products from them yet" text="Open a product and name this supplier on it, and it appears here." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
     <div class="card-head"><h2 class="card-title">Bills</h2></div>
     <div class="table-wrap rounded-none border-0 shadow-none">
       <table class="table">

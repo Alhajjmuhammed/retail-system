@@ -89,7 +89,8 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "cost_method", "default_tax_rate",
             "negative_stock_allowed", "low_stock_alerts", "expiry_warning_days",
             "receipt_header", "receipt_footer", "show_tin_on_receipt",
-            "show_product_images",
+            "show_product_images", "invoice_terms", "show_terms_on_invoice",
+            "show_amount_in_words", "show_bank_details",
             "fiscal_provider",
         ]
         widgets = {
@@ -131,6 +132,19 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
         "receipt_header": ("Top of the receipt", ""),
         "receipt_footer": ("Bottom of the receipt", ""),
         "show_tin_on_receipt": ("Print your TIN on the receipt", ""),
+        "invoice_terms": (
+            "Terms and conditions",
+            "Printed at the foot of every invoice, proforma and quotation. "
+            "Yours to word: when payment is due, who owns the goods until it "
+            "arrives, how long a claim can be made.",
+        ),
+        "show_terms_on_invoice": ("Print your terms on invoices", ""),
+        "show_amount_in_words": (
+            "Print the total in words",
+            "\u201cNinety thousand two hundred and eighty shillings only\u201d "
+            "under the total, so a figure cannot be altered after it leaves you.",
+        ),
+        "show_bank_details": ("Print your bank details on invoices", ""),
         "show_product_images": (
             "Show product pictures on quotations and invoices",
             "Only on the screen, never on the printed document. Switch it off "

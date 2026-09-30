@@ -310,3 +310,88 @@ def test_the_totals_block_adds_up_on_the_page(client, shop, main_branch, owner, 
     from django.contrib.humanize.templatetags.humanize import intcomma
     assert intcomma(f"{invoice.net_of_tax:.2f}") in body
     assert intcomma(f"{invoice.total:.2f}") in body
+
+
+def _settings(shop):
+    from apps.org.models import TenantSettings
+
+    with tenant_context(shop):
+        row, _ = TenantSettings.objects.get_or_create(tenant=shop)
+        return row
+
+
+def test_the_shop_writes_its_own_terms(client, shop, main_branch, owner, invoice):
+    """Every shop's terms differ, so they are typed rather than built in."""
+    terms = ("Goods remain the property of the seller until paid in full.\n"
+             "Claims must be made within 7 days of delivery.")
+    row = _settings(shop)
+    with tenant_context(shop):
+        row.invoice_terms = terms
+        row.show_terms_on_invoice = True
+        row.save(update_fields=["invoice_terms", "show_terms_on_invoice"])
+
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "Terms and conditions" in body
+    assert "remain the property of the seller" in body
+    assert "within 7 days of delivery" in body
+
+
+def test_terms_can_be_switched_off(client, shop, main_branch, owner, invoice):
+    row = _settings(shop)
+    with tenant_context(shop):
+        row.invoice_terms = "Payment on delivery."
+        row.show_terms_on_invoice = False
+        row.save(update_fields=["invoice_terms", "show_terms_on_invoice"])
+
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "Payment on delivery." not in body
+
+
+def test_the_total_is_printed_in_words(client, shop, main_branch, owner, invoice):
+    """6,000 for four loaves at 1,500."""
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "Amount in words" in body
+    assert "Six thousand shillings only" in body
+
+
+def test_the_words_can_be_switched_off(client, shop, main_branch, owner, invoice):
+    row = _settings(shop)
+    with tenant_context(shop):
+        row.show_amount_in_words = False
+        row.save(update_fields=["show_amount_in_words"])
+
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "Amount in words" not in body
+
+
+def test_the_bank_details_can_be_switched_off(client, shop, main_branch, owner, invoice):
+    from apps.org.models import BankAccount
+
+    with tenant_context(shop):
+        BankAccount.objects.create(bank_name="ABSA", account_name="Salma",
+                                   account_number="003 6005289", currency=shop.currency)
+    row = _settings(shop)
+    with tenant_context(shop):
+        row.show_bank_details = False
+        row.save(update_fields=["show_bank_details"])
+
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "003 6005289" not in body
+
+
+def test_the_words_agree_with_the_figure_on_a_discounted_invoice(
+        client, shop, main_branch, owner, invoice):
+    with tenant_context(shop, branch=main_branch):
+        invoice.discount_percent = Decimal("10")
+        invoice.save(update_fields=["discount_percent"])
+        invoice.refresh_from_db()
+        assert invoice.total == Decimal("5400")
+
+    client.force_login(owner)
+    body = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert "Five thousand four hundred shillings only" in body
