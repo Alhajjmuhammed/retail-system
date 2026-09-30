@@ -42,7 +42,7 @@
             {% elif inv.status == "part_paid" %}<span class="badge badge-warn">Part paid</span>
             {% elif inv.status == "void" %}<span class="badge badge-muted">Cancelled</span>
             {% elif inv.status == "open" %}<span class="badge badge-brand">Owed</span>
-            {% else %}<span class="badge badge-muted">Draft</span>{% endif %}
+            {% else %}<span class="badge badge-muted">Proforma</span>{% endif %}
           </td>
           <td class="text-ink-600">
             {% if inv.status == "draft" or inv.status == "void" %}&mdash;

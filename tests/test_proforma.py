@@ -197,3 +197,32 @@ def test_two_people_issuing_at_once_do_not_collide(shop, main_branch, owner, buy
         assert handed["n"] == 1, "the collision was not actually forced"
         # And the charge carries the number that stuck, not the one that failed.
         assert buyer.credit_transactions.get().reference == proforma.reference
+
+
+def test_the_proforma_number_still_finds_the_invoice(
+        client, shop, main_branch, owner, buyer):
+    """
+    The customer is holding PRO260001. By the time they ring, it is
+    INV260001 and searching the number they are reading out found nothing.
+    """
+    today = timezone.localdate()
+    with tenant_context(shop, branch=main_branch, user=owner):
+        invoice = services.save_as_proforma(Invoice(
+            customer=buyer, branch=main_branch, issued_on=today,
+            due_on=today + timedelta(days=14)))
+        invoice.lines.create(description="Labour", qty=Decimal("1"),
+                             unit_price=Decimal("10000"), tax_rate=Decimal("0"))
+        sent_as = invoice.reference
+        services.issue(invoice)
+        invoice.refresh_from_db()
+        assert invoice.reference != sent_as
+
+    client.force_login(owner)
+    found = client.get(reverse("selling:invoice_list"), {"q": sent_as}).content.decode()
+    assert invoice.reference in found, "searching the proforma number found nothing"
+
+    # And the invoice says which proforma it went out as, on screen and on paper.
+    page = client.get(reverse("selling:invoice_detail", args=[invoice.pk])).content.decode()
+    assert sent_as in page
+    printed = client.get(reverse("selling:invoice_print", args=[invoice.pk])).content.decode()
+    assert sent_as in printed

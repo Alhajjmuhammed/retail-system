@@ -22,6 +22,11 @@ month -- so the page shows both rather than folding them into one state.
         {{ invoice.issued_on|date:"j M Y" }} &middot; due {{ invoice.due_on|date:"j M Y" }}
         {% if invoice.is_owed and invoice.due_on < today %}<span class="badge badge-danger ml-1">past due</span>{% endif %}
         {% if invoice.quotation %} &middot; from <a href="{% url 'selling:quotation_detail' invoice.quotation.pk %}" class="text-brand-700 hover:underline">{{ invoice.quotation.reference }}</a>{% endif %}
+        {% comment %}
+        The number the customer is holding. They were sent a proforma and
+        will ring quoting that, not the invoice number it became.
+        {% endcomment %}
+        {% if invoice.proforma_reference and invoice.proforma_reference != invoice.reference %} &middot; sent as {{ invoice.proforma_reference }}{% endif %}
       </p>
     </div>
 

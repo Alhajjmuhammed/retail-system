@@ -191,7 +191,10 @@ class QuotationLine(TenantModel):
 
 
 class InvoiceStatus(models.TextChoices):
-    DRAFT = "draft", "Draft"
+    # The stored value stays "draft" -- it is what every existing row holds.
+    # What a person sees is "Proforma", because that is the document: it
+    # prints as one, carries a PRO number, and nobody owes anything on it.
+    DRAFT = "draft", "Proforma"
     OPEN = "open", "Owed"
     PART_PAID = "part_paid", "Part paid"
     PAID = "paid", "Paid"

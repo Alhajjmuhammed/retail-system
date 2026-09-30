@@ -12,6 +12,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -314,8 +315,14 @@ def invoice_list(request):
     elif status:
         invoices = invoices.filter(status=status)
     if term:
-        invoices = invoices.filter(reference__icontains=term) | invoices.filter(
-            customer__name__icontains=term)
+        # Also the number it went out as. A customer rings quoting the
+        # proforma in their hand; by then it has an invoice number and
+        # searching what they are reading out found nothing.
+        invoices = invoices.filter(
+            Q(reference__icontains=term)
+            | Q(proforma_reference__icontains=term)
+            | Q(customer__name__icontains=term)
+        )
 
     return render(request, "selling/invoices.html", {
         **paginate(request, invoices.order_by("-created_at")),
