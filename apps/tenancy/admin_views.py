@@ -617,6 +617,47 @@ def tenant_change_plan(request, pk):
 
 @login_required
 @platform_perm("shops.suspend")
+def tenant_extend(request, pk):
+    """
+    More time, whatever clock they are on.
+
+    "Another two weeks and they will pay" is the most ordinary thing a
+    salesperson asks for, and the only ways round it were to mark an invoice
+    paid that nobody had paid or to let the shop switch off and turn it back
+    on by hand.
+    """
+    from apps.core.parsing import int_or
+    from apps.tenancy.billing import BillingError, extend_subscription
+
+    if request.method != "POST":
+        return redirect("platform:tenant_detail", pk=pk)
+
+    days = int_or(request.POST.get("days"), 0)
+    reason = request.POST.get("reason", "").strip()[:200]
+
+    with unscoped():
+        tenant = get_object_or_404(Tenant, pk=pk)
+        try:
+            until = extend_subscription(
+                tenant.subscription, days, reason=reason,
+                as_trial=request.POST.get("as_trial") == "on")
+        except BillingError as refused:
+            messages.error(request, str(refused))
+            return redirect("platform:tenant_detail", pk=pk)
+
+    audit.record_platform(request, "platform.shop_extended", tenant.name,
+                          days=days, until=until.strftime("%d %b %Y"),
+                          reason=reason or "-",
+                          status=tenant.subscription.status)
+    messages.success(
+        request,
+        f"{tenant.name} has {days} more day{'' if days == 1 else 's'}, "
+        f"until {until:%d %b %Y}.",
+    )
+    return redirect("platform:tenant_detail", pk=pk)
+
+
+@platform_perm("shops.suspend")
 def tenant_suspend(request, pk):
     if request.method != "POST":
         return redirect("platform:tenant_detail", pk=pk)

@@ -187,6 +187,42 @@
       </div>
       {% endif %}
 
+      {% comment %}
+      More time. "Another two weeks and they will pay" is the most ordinary
+      thing a salesperson asks for; without this the only ways round it were
+      to mark an invoice paid that nobody had paid, or to let the shop switch
+      off and turn it back on by hand.
+      {% endcomment %}
+      {% if "shops.suspend" in pp %}
+      <form method="post" action="{% url 'platform:tenant_extend' tenant.pk %}"
+            class="border-t border-ink-100 px-5 py-4">
+        {% csrf_token %}
+        <p class="text-xs text-ink-500">Give them more time</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <input type="number" name="days" min="1" max="365" value="14" required
+                 aria-label="Days" class="input w-20">
+          <input name="reason" maxlength="200" placeholder="Why, for the record"
+                 class="input min-w-0 flex-1">
+          <button type="submit" class="btn btn-secondary shrink-0">Extend</button>
+        </div>
+        {% if tenant.subscription.status != "trialing" and tenant.subscription.status != "active" %}
+        <label class="mt-2 flex items-start gap-2 text-sm text-ink-700">
+          <input type="checkbox" name="as_trial" class="mt-0.5">
+          <span>Put them back on trial
+            <span class="hint">Rather than a grace period. A shop that has never paid is
+            still trying it out, and "Grace period" down their sidebar tells their staff
+            something that is not true.</span>
+          </span>
+        </label>
+        {% endif %}
+        <p class="hint mt-1.5">
+          {% if tenant.subscription.status == "trialing" %}Their trial runs longer.
+          {% elif tenant.subscription.status == "active" %}They are paid up to a later date.
+          {% else %}They can trade until the new date, and a shop that was switched off comes back.{% endif %}
+        </p>
+      </form>
+      {% endif %}
+
       {% if "shops.suspend" in pp %}
       <form method="post" action="{% url 'platform:tenant_suspend' tenant.pk %}" x-data
             @submit.prevent="$store.confirm.ask($el, {

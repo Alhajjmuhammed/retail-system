@@ -288,3 +288,79 @@ def renew_due(now=None):
             subscription.save(update_fields=["status", "updated_at"])
             lapsed += 1
     return {"raised": raised, "extended": extended, "lapsed": lapsed}
+
+
+def extend_subscription(subscription, days: int, *, reason: str = "", as_trial=False):
+    """
+    Give a shop more time, whatever clock it is on.
+
+    The most ordinary thing a salesperson asks for -- "another two weeks and
+    they will pay" -- and the platform had no way to do it. The only ways
+    round it were to mark an invoice paid that nobody had paid, which puts a
+    lie in the books, or to let the shop suspend and turn it back on by hand.
+
+    Which date moves depends on where they are:
+
+        trialing            the trial runs longer
+        active              they are paid up to a later date
+        past due, grace,    a grace period that ends when you said, which
+        suspended           is the only one of these that also brings a
+                            suspended shop back to life
+
+    ``as_trial`` puts them back on trial instead of into grace. A shop that
+    has never paid and is being given another month is still trying the
+    thing out; "Grace period" down its sidebar reads like a shop in trouble
+    and tells its staff something that is not true.
+
+    Time is added to whichever date is further away, now or their current
+    one, so two extensions in a row do not quietly overwrite each other.
+    """
+    from apps.tenancy.models import SubscriptionStatus, TenantStatus
+
+    if days <= 0:
+        raise BillingError("Say how many days to give them.")
+    if days > 365:
+        raise BillingError("A year is the most that can be given at once.")
+
+    now = timezone.now()
+    tenant = subscription.tenant
+    changed = ["updated_at"]
+
+    def pushed(current):
+        return max(current or now, now) + timedelta(days=days)
+
+    if as_trial:
+        # Back on trial, however they got here.
+        base = subscription.trial_ends_at if (
+            subscription.status == SubscriptionStatus.TRIALING) else None
+        subscription.trial_ends_at = pushed(base)
+        subscription.period_end = subscription.trial_ends_at
+        subscription.status = SubscriptionStatus.TRIALING
+        changed += ["trial_ends_at", "period_end", "status"]
+        until = subscription.trial_ends_at
+    elif subscription.status == SubscriptionStatus.TRIALING:
+        subscription.trial_ends_at = pushed(subscription.trial_ends_at)
+        subscription.period_end = subscription.trial_ends_at
+        changed += ["trial_ends_at", "period_end"]
+        until = subscription.trial_ends_at
+    elif subscription.status == SubscriptionStatus.ACTIVE:
+        subscription.period_end = pushed(subscription.period_end)
+        changed += ["period_end"]
+        until = subscription.period_end
+    else:
+        # Past due, in grace, or already switched off: a grace period that
+        # runs until the date you chose, and the shop works again.
+        subscription.grace_ends_at = pushed(subscription.grace_ends_at)
+        subscription.status = SubscriptionStatus.GRACE
+        changed += ["grace_ends_at", "status"]
+        until = subscription.grace_ends_at
+
+    subscription.save(update_fields=changed)
+
+    # A shop switched off by hand stays off until somebody says otherwise;
+    # giving it more time is somebody saying otherwise.
+    if tenant.status == TenantStatus.SUSPENDED:
+        tenant.status = TenantStatus.ACTIVE
+        tenant.save(update_fields=["status", "updated_at"])
+
+    return until
