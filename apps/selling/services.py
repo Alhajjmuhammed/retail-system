@@ -517,6 +517,63 @@ def cancel_delivery(note, *, reason="", user=None):
     return note
 
 
+def paperwork_rules():
+    """The shop's own say over prices and discounts on its paperwork."""
+    from apps.core.context import get_current_tenant
+    from apps.org.models import TenantSettings
+
+    row, _ = TenantSettings.objects.get_or_create(tenant=get_current_tenant())
+    return row
+
+
+def combined_discount(line_percent, document_percent) -> Decimal:
+    """
+    What a line really comes off by: its own discount, then the document's
+    on what is left. 40% and 40% is 64%, which is what a limit has to see.
+    """
+    hundred = Decimal("100")
+    left = (hundred - Decimal(line_percent)) * (hundred - Decimal(document_percent)) / hundred
+    return (hundred - left).quantize(Decimal("0.01"))
+
+
+def check_discount(line_percent, document_percent, rules=None):
+    """Refuse a discount above the shop's limit. Owners are held to it too:
+    the limit is theirs to raise in Settings, not to step around."""
+    rules = rules or paperwork_rules()
+    limit = rules.max_document_discount
+    total = combined_discount(line_percent or 0, document_percent or 0)
+    if total > limit:
+        def pct(value):
+            # 20.00 reads as 20, 12.50 as 12.5.
+            return format(Decimal(value).normalize(), "f")
+
+        raise ValueError(
+            f"The most this shop allows off is {pct(limit)}%. "
+            f"This comes to {pct(total)}% off"
+            + (" with the line and whole-document discounts together."
+               if line_percent and document_percent else ".")
+            + " The owner can change the limit under Settings, Business."
+        )
+
+
+def locked_price(variant, customer, rules=None):
+    """
+    The price a product must go in at when the shop has locked prices, or
+    None when staff may type their own. Typed lines (no product) are never
+    locked: delivery and labour have no catalogue price.
+    """
+    rules = rules or paperwork_rules()
+    if variant is None or not rules.lock_document_prices:
+        return None
+    amount = prices_for(customer).get(variant.pk)
+    if amount is None:
+        raise ValueError(
+            f"{variant} has no price yet, and prices are locked on quotations "
+            "and invoices. Set its price on the product first."
+        )
+    return amount
+
+
 def prices_for(customer):
     """
     What each product would be charged at for this customer.

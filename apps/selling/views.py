@@ -154,7 +154,9 @@ def _act_on(request, quotation):
             quotation.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
                 minimum=0, maximum=100, places=2)
-        except BadInput as bad:
+            deepest = max((line.discount_percent for line in quotation.lines.all()), default=0)
+            services.check_discount(deepest, quotation.discount_percent)
+        except (BadInput, ValueError) as bad:
             messages.error(request, str(bad))
             return redirect("selling:quotation_detail", pk=quotation.pk)
         quotation.save(update_fields=["valid_until", "note", "discount_percent",
@@ -251,6 +253,15 @@ def _add_line(request, quotation):
     if variant is None and not description:
         messages.error(request, "Choose a product, or type what you are quoting for.")
         return redirect("selling:quotation_detail", pk=quotation.pk)
+
+    try:
+        fixed = services.locked_price(variant, quotation.customer)
+        services.check_discount(off, quotation.discount_percent)
+    except ValueError as refused:
+        messages.error(request, str(refused))
+        return redirect("selling:quotation_detail", pk=quotation.pk)
+    if fixed is not None:
+        price = fixed
 
     tax = TaxRate.objects.filter(pk=int_or(request.POST.get("tax_rate"))).first()
     if tax is None and variant is not None:
@@ -401,7 +412,7 @@ def invoice_create(request):
         {"customers": Customer.objects.filter(is_active=True).order_by("name"),
          "quotation": quotation,
          "terms_days": DEFAULT_TERMS_DAYS},
-        title="New invoice", back=reverse("selling:invoice_list"),
+        title="New proforma", back=reverse("selling:invoice_list"),
     )
 
 
@@ -470,7 +481,9 @@ def _act_on_invoice(request, invoice):
             invoice.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
                 minimum=0, maximum=100, places=2)
-        except BadInput as bad:
+            deepest = max((line.discount_percent for line in invoice.lines.all()), default=0)
+            services.check_discount(deepest, invoice.discount_percent)
+        except (BadInput, ValueError) as bad:
             messages.error(request, str(bad))
             return redirect("selling:invoice_detail", pk=invoice.pk)
         invoice.save(update_fields=["due_on", "note", "discount_percent", "updated_at"])
@@ -601,6 +614,15 @@ def _add_invoice_line(request, invoice):
     if variant is None and not description:
         messages.error(request, "Choose a product, or type what you are charging for.")
         return redirect("selling:invoice_detail", pk=invoice.pk)
+
+    try:
+        fixed = services.locked_price(variant, invoice.customer)
+        services.check_discount(off, invoice.discount_percent)
+    except ValueError as refused:
+        messages.error(request, str(refused))
+        return redirect("selling:invoice_detail", pk=invoice.pk)
+    if fixed is not None:
+        price = fixed
 
     tax = TaxRate.objects.filter(pk=int_or(request.POST.get("tax_rate"))).first()
     if tax is None and variant is not None:

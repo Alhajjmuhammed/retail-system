@@ -10,8 +10,13 @@
  * shop has with a customer is almost never about the unit price -- it is
  * about what the line came to.
  */
-window.lineEntry = function () {
+window.lineEntry = function (locked) {
   return {
+    // The shop can lock product prices (Settings, Business). A picked
+    // product then goes in at its list price and the box cannot be typed
+    // over; a typed line -- delivery, labour -- is still priced by hand.
+    locked: !!locked,
+    fixed: false,
     qty: "1",
     price: "",
     off: "0",
@@ -22,6 +27,7 @@ window.lineEntry = function () {
     picked: function (select) {
       var chosen = select.options[select.selectedIndex];
       if (!chosen || !chosen.value) {
+        this.fixed = false;
         this.step = "1";
         this.photo = "";
         this.code = "";
@@ -39,6 +45,7 @@ window.lineEntry = function () {
       // A product with no price on the list leaves the box alone rather
       // than writing a zero somebody has to notice and delete.
       if (suggested) this.price = suggested;
+      this.fixed = this.locked && !!suggested;
 
       // Sugar is sold by the half kilo; tins are not.
       this.step = chosen.dataset.decimal === "1" ? "0.001" : "1";

@@ -16,9 +16,10 @@
       </form>
       {% can_do "invoice.manage" as may_invoice %}
       {% if may_invoice %}
-      <a href="{% url 'selling:invoice_create' %}" hx-get="{% url 'selling:invoice_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New invoice</a>
+      <a href="{% url 'selling:invoice_create' %}" hx-get="{% url 'selling:invoice_create' %}" hx-target="#modal" class="btn btn-primary">{% icon "plus" %} New proforma</a>
       {% endif %}
     </div>
+    <p class="hint px-5 pb-3">Every invoice starts as a proforma (PRO&hellip;): an offer the customer can pay against, with nothing owed yet. When you press <strong>Issue it</strong>, it becomes the invoice (INV&hellip;) and the customer owes it.</p>
     <table class="table">
       <thead><tr>
         <th class="w-12 text-right">SN</th><th>Number</th><th>Customer</th><th>Due</th>

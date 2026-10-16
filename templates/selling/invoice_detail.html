@@ -127,7 +127,7 @@ month -- so the page shows both rather than folding them into one state.
         </table>
 
         {% if editable and may_manage %}
-        <form method="post" x-data="lineEntry()" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
+        <form method="post" x-data="lineEntry({{ shop_settings.lock_document_prices|yesno:'true,false' }})" class="flex flex-wrap items-end gap-2 border-t border-ink-100 p-4">
           {% csrf_token %}<input type="hidden" name="action" value="add_line">
           <div class="min-w-48 flex-1">
             <label class="label" for="variant">Product</label>
@@ -152,8 +152,8 @@ month -- so the page shows both rather than folding them into one state.
             </p>
           </div>
           <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" :step="step" :min="step" name="qty" id="qty" value="1" class="input" x-model="qty" required></div>
-          <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="any" min="0" name="unit_price" id="unit_price" class="input" x-model="price" required></div>
-          <div class="w-20"><label class="label" for="discount_percent">Off %</label><input type="number" step="any" min="0" max="100" name="discount_percent" id="discount_percent" value="0" class="input" x-model="off"></div>
+          <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="any" min="0" name="unit_price" id="unit_price" class="input" x-model="price" :readonly="fixed" :class="fixed && 'bg-ink-50 text-ink-500'" :title="fixed ? 'Prices are locked by the owner' : ''" required></div>
+          <div class="w-20"><label class="label" for="discount_percent">Off %</label><input type="number" step="any" min="0" max="{{ shop_settings.max_document_discount|floatformat:'-2' }}" name="discount_percent" id="discount_percent" value="0" class="input" x-model="off"></div>
           <div class="w-36">
             <label class="label" for="tax_rate">VAT</label>
             <select name="tax_rate" id="tax_rate" class="input" x-ref="tax">
@@ -253,7 +253,7 @@ month -- so the page shows both rather than folding them into one state.
         </div>
         <div>
           <label class="label" for="doc_discount">Off the whole invoice %</label>
-          <input type="number" step="any" min="0" max="100" name="discount_percent" id="doc_discount"
+          <input type="number" step="any" min="0" max="{{ shop_settings.max_document_discount|floatformat:'-2' }}" name="discount_percent" id="doc_discount"
                  value="{{ invoice.discount_percent|floatformat:'-2' }}" class="input">
           <p class="hint">On top of anything taken off a line.</p>
         </div>

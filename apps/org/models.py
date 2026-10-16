@@ -5,6 +5,7 @@ A product belongs to the tenant; a quantity belongs to a branch. That split is
 the reason multi-branch can be switched on later without reshaping anything.
 """
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.features import LIMIT_BRANCHES
@@ -97,6 +98,17 @@ class TenantSettings(TenantModel):
     show_terms_on_invoice = models.BooleanField(default=True)
     show_amount_in_words = models.BooleanField(default=True)
     show_bank_details = models.BooleanField(default=True)
+
+    # Who decides the price on a quotation or invoice. Off, a product's price
+    # is a suggestion staff type over -- a quote is a negotiation. On, a
+    # product goes in at its catalogue price (the customer's list first) and
+    # only typed lines (delivery, labour) are priced by hand.
+    lock_document_prices = models.BooleanField(default=False)
+    # The most a quotation or invoice may take off, line and whole document
+    # together: 40% on a line and 40% on the total is 64% off, not 40%.
+    max_document_discount = models.DecimalField(
+        max_digits=5, decimal_places=2, default=100,
+        validators=[MinValueValidator(0), MaxValueValidator(100)])
 
     cost_method = models.CharField(
         max_length=20,

@@ -91,6 +91,7 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "receipt_header", "receipt_footer", "show_tin_on_receipt",
             "show_product_images", "invoice_terms", "show_terms_on_invoice",
             "show_amount_in_words", "show_bank_details",
+            "lock_document_prices", "max_document_discount",
             "fiscal_provider",
         ]
         widgets = {
@@ -145,6 +146,17 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "under the total, so a figure cannot be altered after it leaves you.",
         ),
         "show_bank_details": ("Print your bank details on invoices", ""),
+        "lock_document_prices": (
+            "Lock product prices on quotations and invoices",
+            "On: a product goes in at its price from the price list and cannot be "
+            "typed over. Lines you type yourself, like delivery or labour, are "
+            "still priced by hand. Off: the price is a suggestion anyone can change.",
+        ),
+        "max_document_discount": (
+            "Largest discount on a quotation or invoice (%)",
+            "Counts the line discount and the whole-document discount together: "
+            "20% on a line and 20% on the total is 36% off. 100 means no limit.",
+        ),
         "show_product_images": (
             "Show product pictures on quotations and invoices",
             "Only on the screen, never on the printed document. Switch it off "

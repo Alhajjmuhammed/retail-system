@@ -12,7 +12,7 @@ class TailwindMixin:
     # Everything else with two decimal places in this system is money, and
     # money here is whole shillings -- Django's own step of 0.01 turned one
     # click of the arrow into 3,000.01.
-    keeps_decimals = ("rate", "percent", "weight", "factor")
+    keeps_decimals = ("rate", "percent", "weight", "factor", "discount")
     # A price is kept to the cent (pos.services.price): a shop that buys at
     # 2,170.60 means it. step="any" lets that be typed while the arrows still
     # move in whole shillings; step="1" made the browser refuse the cents.
