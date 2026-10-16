@@ -185,12 +185,17 @@ def test_a_product_can_be_found_by_its_old_code(client, shop, main_branch, owner
 
 
 def test_money_boxes_step_in_whole_shillings(client, shop, main_branch, owner, invoice):
-    """Nobody hands across a cent, and the arrows used to move by 0.01."""
+    """
+    The arrows never move by 0.01. A price may still be typed with cents --
+    a shop that buys at 2,170.60 means it, and a step of 1 made the browser
+    refuse it -- so a price box takes step="any". An amount handed across is
+    whole shillings.
+    """
     client.force_login(owner)
     body = client.get(reverse("selling:invoice_detail", args=[invoice.pk])).content.decode()
     assert 'name="unit_price"' in body
     price_box = body[body.index('name="unit_price"') - 120:body.index('name="unit_price"') + 40]
-    assert 'step="1"' in price_box
+    assert 'step="any"' in price_box
     assert 'step="0.01"' not in price_box
 
 
@@ -368,7 +373,9 @@ def test_money_on_forms_steps_in_whole_shillings_too(db):
     """
     from apps.catalog.forms import ProductForm, TaxRateForm
 
-    assert 'step="1"' in str(ProductForm()["min_price"])
+    # A price keeps its cents and is never stepped in them.
+    assert 'step="any"' in str(ProductForm()["min_price"])
+    assert 'step="0.01"' not in str(ProductForm()["min_price"])
     # 7.5% VAT is a real rate.
     assert 'step="0.01"' in str(TaxRateForm()["rate"])
 
