@@ -37,7 +37,7 @@
             {% if inv.is_owed and inv.due_on < today %}<span class="badge badge-danger ml-1">past due</span>{% endif %}
           </td>
           <td class="text-right font-semibold">{{ inv.total|floatformat:0|intcomma }}</td>
-          <td class="text-right {% if inv.balance > 0 %}text-ink-900{% else %}text-ink-400{% endif %}">{{ inv.balance|floatformat:0|intcomma }}</td>
+          <td class="text-right {% if inv.balance > 0 and inv.is_owed %}text-ink-900{% else %}text-ink-400{% endif %}">{% if inv.status == "draft" or inv.status == "void" %}&mdash;{% else %}{{ inv.balance|floatformat:0|intcomma }}{% endif %}</td>
           <td>
             {% if inv.status == "paid" %}<span class="badge badge-ok">Paid</span>
             {% elif inv.status == "part_paid" %}<span class="badge badge-warn">Part paid</span>

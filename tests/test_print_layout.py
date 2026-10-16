@@ -153,3 +153,45 @@ def test_the_settings_page_lists_every_column(client, shop, owner, rules):
     assert "Printed quotations and invoices" in page
     for label in ["Picture", "Item code", "Discount", "VAT"]:
         assert label in page
+
+
+# -- what a proforma says it owes --------------------------------------------
+
+def _detail(client, owner, invoice):
+    client.force_login(owner)
+    return client.get(reverse("selling:invoice_detail", args=[invoice.pk])).content.decode()
+
+
+def test_a_proforma_does_not_say_still_owed(client, owner, proforma):
+    html = _detail(client, owner, proforma)
+    assert "To pay when issued" in html
+    assert "Still owed" not in html
+    assert "Nothing is owed yet" in html
+
+
+def test_an_issued_invoice_says_still_owed(client, shop, main_branch, owner, proforma):
+    from apps.selling import services
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(proforma)
+    html = _detail(client, owner, proforma)
+    assert "Still owed" in html
+    assert "To pay when issued" not in html
+
+
+def test_a_cancelled_proforma_owes_nothing(client, shop, main_branch, owner, proforma):
+    from apps.selling import services
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.void_invoice(proforma, user=owner)
+    html = _detail(client, owner, proforma)
+    assert "Cancelled: nothing is owed on it" in html
+    assert "Still owed" not in html
+
+
+def test_the_list_shows_no_balance_on_a_proforma(client, owner, proforma):
+    client.force_login(owner)
+    html = client.get(reverse("selling:invoice_list")).content.decode()
+    row = re.search(r"PRO260001.*?</tr>", html, re.S).group(0)
+    assert "7,803" in row          # the total is still shown
+    assert row.count("7,803") == 1  # but not again as owed
