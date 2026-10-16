@@ -40,7 +40,8 @@ def test_every_shelf_is_one_row_in_reading_order(client, shop, owner, shelves):
 
 def test_a_row_is_indented_by_its_depth(client, shop, owner, shelves):
     html = _page(client, owner)
-    row = re.search(r'data-pk="%d".*?style="--depth: (\d)"' % shelves["bottles"].pk, html, re.S)
+    pk = shelves["bottles"].pk
+    row = re.search(rf'data-pk="{pk}".*?style="--depth: (\d)"', html, re.S)
     assert row.group(1) == "2"
 
 
@@ -65,7 +66,8 @@ def test_the_product_count_opens_those_products(client, shop, owner, shelves):
 def test_add_inside_offers_every_shelf_with_room(client, shop, owner, shelves):
     html = _page(client, owner)
     select = re.search(r'<select name="parent".*?</select>', html, re.S).group(0)
-    assert "Drinks &gt; Soda" in select or "Drinks › Soda" in select or "Drinks" in select
+    # Every shelf with room is offered by its full path.
+    assert f'value="{shelves["soda"].pk}">{shelves["soda"].path_label}<' in select
     # The third level is as deep as it goes: nothing can be put inside Bottles.
     assert f'value="{shelves["bottles"].pk}"' not in select
 
