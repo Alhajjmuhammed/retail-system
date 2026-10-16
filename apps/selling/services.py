@@ -566,16 +566,46 @@ def check_discount(line_percent, document_percent, rules=None):
         )
 
 
+def check_product_rules(variant, unit_price, line_percent, document_percent):
+    """
+    What the product itself says, the same two rules the POS keeps:
+    "can be discounted" and "never sell below". The floor is checked against
+    what one unit really comes to after both discounts, so 10% on the line
+    and 10% on the whole cannot walk a price under it between them.
+    """
+    if variant is None:
+        return
+    product = variant.product
+    if not product.discount_allowed and (line_percent or document_percent):
+        raise ValueError(
+            f"{product.name} cannot be discounted: it is set that way on the product."
+        )
+    floor = product.min_price
+    if floor:
+        hundred = Decimal("100")
+        each = (Decimal(unit_price) * (hundred - Decimal(line_percent or 0))
+                * (hundred - Decimal(document_percent or 0)) / (hundred * hundred))
+        if each < floor:
+            raise ValueError(
+                f"{product.name} is never sold below {floor:,.2f}. "
+                f"This comes to {each:,.2f} each."
+            )
+
+
 def check_document_discounts(document, rules=None):
     """
-    Every line of a quotation or invoice within the shop's limit, together
-    with the whole-document discount. Run where a document moves on -- sent,
-    copied, invoiced, issued -- so one written before the limit was set, or
-    before it was lowered, cannot carry an old discount past it.
+    Every line of a quotation or invoice within the shop's limit and its
+    product's own rules, together with the whole-document discount. Run where
+    a document moves on -- sent, copied, invoiced, issued -- so one written
+    before a rule was set cannot carry an old price or discount past it.
     """
     rules = rules or paperwork_rules()
-    deepest = max((line.discount_percent for line in document.lines.all()), default=0)
+    lines = list(document.lines.select_related("variant__product"))
+    deepest = max((line.discount_percent for line in lines), default=0)
     check_discount(deepest, document.discount_percent, rules)
+    for line in lines:
+        check_product_rules(line.variant, line.unit_price, line.discount_percent,
+                            document.discount_percent)
 
 
 def locked_price(variant, customer, rules=None):

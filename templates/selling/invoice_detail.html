@@ -106,6 +106,7 @@ month -- so the page shows both rather than folding them into one state.
                     {% if line.item_code %}<span class="hint">{{ line.item_code }}</span>{% endif %}
                     {% if line.tax_rate %}<span class="hint">VAT {{ line.tax_rate|floatformat:"-2" }}%</span>{% endif %}
                     {% if line.discount_percent %}<span class="ml-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">&minus;{{ line.discount_percent|floatformat:"-2" }}%</span>{% endif %}
+                {% include "selling/_line_product.html" %}
                   </div>
                 </div>
               </td>

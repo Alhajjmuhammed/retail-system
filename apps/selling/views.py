@@ -115,6 +115,7 @@ def quotation_detail(request, pk):
             return redirect("selling:quotation_detail", pk=pk)
         return _act_on(request, quotation)
 
+    _describe_products(quotation)
     return render(request, "selling/quotation_detail.html", {
         "quotation": quotation,
         "variants": _sellable(quotation.customer),
@@ -154,8 +155,7 @@ def _act_on(request, quotation):
             quotation.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
                 minimum=0, maximum=100, places=2)
-            deepest = max((line.discount_percent for line in quotation.lines.all()), default=0)
-            services.check_discount(deepest, quotation.discount_percent)
+            services.check_document_discounts(quotation)
         except (BadInput, ValueError) as bad:
             messages.error(request, str(bad))
             return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -208,6 +208,22 @@ def _act_on(request, quotation):
     return redirect("selling:quotation_detail", pk=quotation.pk)
 
 
+def _describe_products(document):
+    """
+    What each product line's details panel shows: today's price for this
+    customer and what is on the shelf at the document's branch. Attached to
+    the lines the page already holds, so the panel costs no query per row
+    beyond the stock figure.
+    """
+    from apps.inventory.services import quantity_of
+
+    prices = services.prices_for(document.customer)
+    for line in document.lines.all():
+        if line.variant_id:
+            line.list_price = prices.get(line.variant_id)
+            line.on_hand = quantity_of(line.variant, document.branch)
+
+
 def _shop_settings():
     """The shop's own switches, for the pages that ask one."""
     from apps.core.context import get_current_tenant
@@ -237,6 +253,33 @@ def _sellable(customer):
     return rows
 
 
+def _qty(value):
+    """7.000 reads as 7, 2.500 as 2.5."""
+    return format(value.normalize(), "f")
+
+
+def _added_to_existing(document, variant, description, qty, price, off, tax, request):
+    """
+    The same product again goes on the line it already has: 5 and then 2 is
+    one line of 7, not two lines a customer has to add up. Only when it is
+    really the same -- same price, discount, VAT and wording. A different
+    price is a different line, and a typed line is never merged.
+    """
+    if variant is None:
+        return False
+    rate = tax.rate if tax else 0
+    line = document.lines.filter(
+        variant=variant, unit_price=price, discount_percent=off, tax_rate=rate,
+        description=description or str(variant),
+    ).first()
+    if line is None:
+        return False
+    line.qty += qty
+    line.save(update_fields=["qty", "updated_at"])
+    messages.success(request, f"Added {_qty(qty)} to {line.description}: now {_qty(line.qty)}.")
+    return True
+
+
 def _add_line(request, quotation):
     """
     A product, or a line typed by hand.
@@ -264,16 +307,20 @@ def _add_line(request, quotation):
 
     try:
         fixed = services.locked_price(variant, quotation.customer)
+        if fixed is not None:
+            price = fixed
         services.check_discount(off, quotation.discount_percent)
+        services.check_product_rules(variant, price, off, quotation.discount_percent)
     except ValueError as refused:
         messages.error(request, str(refused))
         return redirect("selling:quotation_detail", pk=quotation.pk)
-    if fixed is not None:
-        price = fixed
 
     tax = TaxRate.objects.filter(pk=int_or(request.POST.get("tax_rate"))).first()
     if tax is None and variant is not None:
         tax = variant.product.tax_rate
+
+    if _added_to_existing(quotation, variant, description, qty, price, off, tax, request):
+        return redirect("selling:quotation_detail", pk=quotation.pk)
 
     QuotationLine.objects.create(
         quotation=quotation,
@@ -435,6 +482,7 @@ def invoice_detail(request, pk):
     if request.method == "POST":
         return _act_on_invoice(request, invoice)
 
+    _describe_products(invoice)
     return render(request, "selling/invoice_detail.html", {
         "invoice": invoice,
         "variants": _sellable(invoice.customer),
@@ -489,8 +537,7 @@ def _act_on_invoice(request, invoice):
             invoice.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
                 minimum=0, maximum=100, places=2)
-            deepest = max((line.discount_percent for line in invoice.lines.all()), default=0)
-            services.check_discount(deepest, invoice.discount_percent)
+            services.check_document_discounts(invoice)
         except (BadInput, ValueError) as bad:
             messages.error(request, str(bad))
             return redirect("selling:invoice_detail", pk=invoice.pk)
@@ -625,16 +672,20 @@ def _add_invoice_line(request, invoice):
 
     try:
         fixed = services.locked_price(variant, invoice.customer)
+        if fixed is not None:
+            price = fixed
         services.check_discount(off, invoice.discount_percent)
+        services.check_product_rules(variant, price, off, invoice.discount_percent)
     except ValueError as refused:
         messages.error(request, str(refused))
         return redirect("selling:invoice_detail", pk=invoice.pk)
-    if fixed is not None:
-        price = fixed
 
     tax = TaxRate.objects.filter(pk=int_or(request.POST.get("tax_rate"))).first()
     if tax is None and variant is not None:
         tax = variant.product.tax_rate
+
+    if _added_to_existing(invoice, variant, description, qty, price, off, tax, request):
+        return redirect("selling:invoice_detail", pk=invoice.pk)
 
     InvoiceLine.objects.create(
         invoice=invoice, variant=variant, description=description or str(variant),
