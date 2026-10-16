@@ -67,39 +67,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
     </div>
 
     {# -- the goods -------------------------------------------------------- #}
-    <table class="mt-4 w-full border border-ink-300 text-xs">
-      <thead>
-        <tr class="border-b border-ink-300 bg-ink-50 text-left">
-          <th class="border-r border-ink-300 px-2 py-1 font-medium">Item</th>
-          <th class="border-r border-ink-300 px-2 py-1 font-medium">Description</th>
-          <th class="border-r border-ink-300 px-2 py-1 text-right font-medium">Qty</th>
-          <th class="border-r border-ink-300 px-2 py-1 text-right font-medium">Rate</th>
-          <th class="border-r border-ink-300 px-2 py-1 text-right font-medium">Amount</th>
-          <th class="px-2 py-1 text-right font-medium">VAT</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for line in invoice.lines.all %}
-        <tr class="border-b border-ink-200 align-top">
-          <td class="border-r border-ink-200 px-2 py-1 whitespace-nowrap">{{ line.item_code }}</td>
-          <td class="border-r border-ink-200 px-2 py-1">{{ line.description }}{% if line.discount_percent %} <span class="text-ink-500">(less {{ line.discount_percent|floatformat:"-2" }}%)</span>{% endif %}</td>
-          <td class="border-r border-ink-200 px-2 py-1 text-right">{{ line.qty|floatformat:"-3" }}</td>
-          <td class="border-r border-ink-200 px-2 py-1 text-right">{{ line.unit_price|floatformat:2|intcomma }}</td>
-          <td class="border-r border-ink-200 px-2 py-1 text-right">
-            {% if line.discount_percent %}
-            {# What it was, what came off, and what it is. A customer who was #}
-            {# promised ten per cent wants to see the ten per cent.           #}
-            <span class="block text-ink-400 line-through">{{ line.gross_total|floatformat:2|intcomma }}</span>
-            <span class="block text-ink-500">&minus;{{ line.discount|floatformat:2|intcomma }}</span>
-            <span class="block font-semibold">{{ line.line_total|floatformat:2|intcomma }}</span>
-            {% else %}{{ line.line_total|floatformat:2|intcomma }}{% endif %}
-          </td>
-          <td class="px-2 py-1 text-right">{% if line.tax_rate %}{{ line.tax_rate|floatformat:"-2" }}%{% else %}&mdash;{% endif %}</td>
-        </tr>
-        {% endfor %}
-        {% for _ in filler %}<tr class="border-b border-ink-100"><td class="border-r border-ink-200 px-2 py-3">&nbsp;</td><td class="border-r border-ink-200"></td><td class="border-r border-ink-200"></td><td class="border-r border-ink-200"></td><td class="border-r border-ink-200"></td><td></td></tr>{% endfor %}
-      </tbody>
-    </table>
+    {% include "selling/_print_lines.html" with doc=invoice columns=shop_settings.printed_columns %}
 
     {# -- where to send it, and what it comes to --------------------------- #}
     <div class="mt-4 flex flex-wrap items-start justify-between gap-6">
@@ -120,10 +88,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
 
       <div class="min-w-[15rem]">
         <table class="w-full text-xs">
-          {% if invoice.discount_percent %}
-          <tr><td class="px-2 py-1 text-ink-600">Lines</td><td class="px-2 py-1 text-right">{{ currency }} {{ invoice.lines_total|floatformat:2|intcomma }}</td></tr>
-          <tr><td class="px-2 py-1 text-ink-600">Discount {{ invoice.discount_percent|floatformat:"-2" }}%</td><td class="px-2 py-1 text-right">&minus;{{ invoice.order_discount|floatformat:2|intcomma }}</td></tr>
-          {% endif %}
+          {% include "selling/_print_discount_rows.html" with doc=invoice %}
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Subtotal</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.net_of_tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">VAT Total</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Total</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.total|floatformat:2|intcomma }}</td></tr>

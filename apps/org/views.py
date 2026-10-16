@@ -16,6 +16,7 @@ from apps.core import audit
 from apps.core.decorators import branch_of, requires
 from apps.core.deletion import remove_or_archive
 from apps.core.features import LimitExceeded
+from apps.core.parsing import int_or
 from apps.org.forms import (
     BankAccountForm,
     BranchForm,
@@ -23,7 +24,7 @@ from apps.org.forms import (
     RegisterForm,
     TenantProfileForm,
 )
-from apps.org.models import BankAccount, Branch, Register, TenantSettings
+from apps.org.models import PRINT_COLUMNS, BankAccount, Branch, Register, TenantSettings
 
 
 def _branch_in_url(request, **kwargs):
@@ -85,6 +86,35 @@ def settings_home(request):
     return render(request, "org/settings_home.html", {"sections": sections})
 
 
+def _print_columns_from(post):
+    """
+    The printed columns, in the order the owner numbered them. Ties keep the
+    usual order, so two columns both set to 3 do not swap at random.
+    """
+    shown = set(post.getlist("print_show")) | set(TenantSettings.REQUIRED_PRINT_COLUMNS)
+    usual = [key for key, _ in PRINT_COLUMNS]
+
+    def place(key):
+        return (int_or(post.get(f"print_pos_{key}"), usual.index(key) + 1), usual.index(key))
+
+    return sorted((key for key in usual if key in shown), key=place)
+
+
+def _print_rows(row):
+    """Every column the paperwork can carry, for the settings table."""
+    chosen = row.printed_columns
+    usual = [key for key, _ in PRINT_COLUMNS]
+    # Shown columns first in their printed order, then the rest as usual.
+    ordered = chosen + [key for key in usual if key not in chosen]
+    labels = dict(PRINT_COLUMNS)
+    return [
+        {"key": key, "label": labels[key], "shown": key in chosen,
+         "required": key in TenantSettings.REQUIRED_PRINT_COLUMNS,
+         "position": index}
+        for index, key in enumerate(ordered, start=1)
+    ]
+
+
 @login_required
 @requires("settings.edit")
 def business(request):
@@ -99,6 +129,8 @@ def business(request):
         before = audit.snapshot(row)
         profile.save()
         settings_form.save()
+        row.print_columns = _print_columns_from(request.POST)
+        row.save(update_fields=["print_columns", "updated_at"])
         audit.record(
             "settings.changed",
             obj=row,
@@ -122,6 +154,8 @@ def business(request):
         request,
         "org/business.html",
         {"profile": profile, "form": settings_form, "settings_row": row,
+         "print_rows": _print_rows(row),
+         "positions": range(1, len(PRINT_COLUMNS) + 1),
          "plain_fields": [settings_form[name] for name in boxes],
          "switch_fields": [settings_form[name] for name in switches]},
     )

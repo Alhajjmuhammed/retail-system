@@ -1,0 +1,10 @@
+{% load humanize %}
+{% comment %}
+What the customer would have paid, and what came off, ahead of the subtotal.
+Only when something was discounted: a document without a discount keeps its
+totals as short as they were.
+{% endcomment %}
+{% if doc.discount_total > 0 %}
+<tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Total before discount</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ doc.before_discount|floatformat:2|intcomma }}</td></tr>
+<tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Discount{% if doc.discount_percent %} <span class="font-normal text-ink-500">(incl. {{ doc.discount_percent|floatformat:"-2" }}% on the whole)</span>{% endif %}</td><td class="px-2 py-1.5 text-right">&minus;{{ currency }} {{ doc.discount_total|floatformat:2|intcomma }}</td></tr>
+{% endif %}

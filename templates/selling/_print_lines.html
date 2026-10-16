@@ -1,0 +1,46 @@
+{% load humanize %}
+{% comment %}
+The lines of a printed quotation, proforma or invoice, in the columns and the
+order the shop chose under Settings, Business. `doc` is the document and
+`columns` the keys to print, left to right.
+{% endcomment %}
+<table class="mt-4 w-full border border-ink-300 text-xs">
+  <thead>
+    <tr class="border-b border-ink-300 bg-ink-50 text-left">
+      {% for col in columns %}
+      <th class="{% if not forloop.last %}border-r border-ink-300 {% endif %}px-2 py-1 font-medium{% if col in 'qty rate discount amount vat' %} text-right{% endif %}">{% if col == "picture" %}<span class="sr-only">Picture</span>{% elif col == "item" %}Item{% elif col == "description" %}Description{% elif col == "qty" %}Qty{% elif col == "rate" %}Rate{% elif col == "discount" %}Discount{% elif col == "amount" %}Amount{% elif col == "vat" %}VAT{% endif %}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for line in doc.lines.all %}
+    <tr class="border-b border-ink-200 align-top">
+      {% for col in columns %}
+      <td class="{% if not forloop.last %}border-r border-ink-200 {% endif %}px-2 py-1{% if col in 'qty rate discount amount vat' %} text-right{% endif %}{% if col == 'item' %} whitespace-nowrap{% endif %}{% if col == 'picture' %} w-14{% endif %}">
+        {% if col == "picture" %}
+          {% if line.variant.product.image %}<img src="{{ line.variant.product.image.url }}" alt="" class="h-12 w-12 rounded object-cover">{% endif %}
+        {% elif col == "item" %}{{ line.item_code }}
+        {% elif col == "description" %}{{ line.description }}{% if line.discount_percent and "discount" not in columns %} <span class="text-ink-500">(less {{ line.discount_percent|floatformat:"-2" }}%)</span>{% endif %}
+        {% elif col == "qty" %}{{ line.qty|floatformat:"-3" }}
+        {% elif col == "rate" %}{{ line.unit_price|floatformat:2|intcomma }}
+        {% elif col == "discount" %}
+          {% if line.discount_percent %}&minus;{{ line.discount|floatformat:2|intcomma }}<span class="block text-ink-500">{{ line.discount_percent|floatformat:"-2" }}%</span>{% else %}&mdash;{% endif %}
+        {% elif col == "amount" %}
+          {% if line.discount_percent and "discount" not in columns %}
+          {# What it was, what came off, and what it is. A customer who was #}
+          {# promised ten per cent wants to see the ten per cent.           #}
+          <span class="block text-ink-400 line-through">{{ line.gross_total|floatformat:2|intcomma }}</span>
+          <span class="block text-ink-500">&minus;{{ line.discount|floatformat:2|intcomma }}</span>
+          <span class="block font-semibold">{{ line.line_total|floatformat:2|intcomma }}</span>
+          {% else %}{{ line.line_total|floatformat:2|intcomma }}{% endif %}
+        {% elif col == "vat" %}{% if line.tax_rate %}{{ line.tax_rate|floatformat:"-2" }}%{% else %}&mdash;{% endif %}
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    {% for _ in filler %}
+    <tr class="border-b border-ink-100">{% for col in columns %}<td class="{% if not forloop.last %}border-r border-ink-200 {% endif %}px-2 py-3">&nbsp;</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody>
+</table>

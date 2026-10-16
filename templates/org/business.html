@@ -61,6 +61,40 @@
   </div>
 
   <div class="card">
+    <div class="card-head">
+      <h2 class="card-title">Printed quotations and invoices</h2>
+    </div>
+    <div class="card-body space-y-3">
+      <p class="hint">Tick the columns the printed quotation, proforma and invoice should show, and number them in the order you want them, left to right. Description and Amount always print.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Column</th><th class="w-24 text-center">Print it</th><th class="w-28">Position</th></tr></thead>
+          <tbody>
+            {% for row in print_rows %}
+            <tr>
+              <td class="font-medium text-ink-900">{{ row.label }}{% if row.key == "picture" %}<span class="hint block">The product's photo, small, beside the line.</span>{% elif row.key == "discount" %}<span class="hint block">Its own column. Off: the discount shows under the amount instead.</span>{% endif %}</td>
+              <td class="text-center">
+                {% if row.required %}
+                <input type="hidden" name="print_show" value="{{ row.key }}">
+                <input type="checkbox" checked disabled aria-label="{{ row.label }} always prints">
+                {% else %}
+                <input type="checkbox" name="print_show" value="{{ row.key }}" {% if row.shown %}checked{% endif %} aria-label="Print {{ row.label }}">
+                {% endif %}
+              </td>
+              <td>
+                <select name="print_pos_{{ row.key }}" class="input" aria-label="Position of {{ row.label }}">
+                  {% for n in positions %}<option value="{{ n }}" {% if n == row.position %}selected{% endif %}>{{ n }}</option>{% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-head"><h2 class="card-title">Receipt</h2></div>
     <div class="card-body grid gap-4 sm:grid-cols-2">
       <div>

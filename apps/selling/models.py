@@ -77,6 +77,16 @@ class Quotation(BranchModel):
     # until it is sent, and a stored total is a total that goes stale.
 
     @property
+    def before_discount(self) -> Decimal:
+        """Every line at full price: what the customer would have paid."""
+        return sum((line.gross_total for line in self.lines.all()), Decimal("0"))
+
+    @property
+    def discount_total(self) -> Decimal:
+        """All that came off, line discounts and the whole-document one."""
+        return self.before_discount - self.total
+
+    @property
     def lines_total(self) -> Decimal:
         """The lines added up, after any discount on a line of its own."""
         return sum((line.line_total for line in self.lines.all()), Decimal("0"))
@@ -286,6 +296,16 @@ class Invoice(BranchModel):
 
     def __str__(self):
         return self.reference
+
+    @property
+    def before_discount(self) -> Decimal:
+        """Every line at full price: what the customer would have paid."""
+        return sum((line.gross_total for line in self.lines.all()), Decimal("0"))
+
+    @property
+    def discount_total(self) -> Decimal:
+        """All that came off, line discounts and the whole-document one."""
+        return self.before_discount - self.total
 
     @property
     def lines_total(self) -> Decimal:

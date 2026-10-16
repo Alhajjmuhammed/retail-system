@@ -72,6 +72,25 @@ class CostMethod(models.TextChoices):
     LAST_COST = "last_cost", "Last cost paid"
 
 
+# The columns a printed quotation, proforma or invoice can carry, with the
+# words the owner reads in Settings. Order here is the default order.
+PRINT_COLUMNS = [
+    ("picture", "Picture"),
+    ("item", "Item code"),
+    ("description", "Description"),
+    ("qty", "Qty"),
+    ("rate", "Rate"),
+    ("discount", "Discount"),
+    ("amount", "Amount"),
+    ("vat", "VAT"),
+]
+DEFAULT_PRINT_COLUMNS = ["item", "description", "qty", "rate", "amount", "vat"]
+
+
+def default_print_columns():
+    return list(DEFAULT_PRINT_COLUMNS)
+
+
 class TenantSettings(TenantModel):
     """
     Per-business configuration.
@@ -106,6 +125,10 @@ class TenantSettings(TenantModel):
     lock_document_prices = models.BooleanField(default=False)
     # The most a quotation or invoice may take off, line and whole document
     # together: 40% on a line and 40% on the total is 64% off, not 40%.
+    # Which columns the printed paperwork shows, in order. Description and
+    # Amount are always there: a line with no words or no money is not a
+    # line anybody can act on.
+    print_columns = models.JSONField(default=default_print_columns, blank=True)
     max_document_discount = models.DecimalField(
         max_digits=5, decimal_places=2, default=100,
         validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -135,6 +158,18 @@ class TenantSettings(TenantModel):
     fiscal_config = models.JSONField(default=dict, blank=True)
 
     extra = models.JSONField(default=dict, blank=True)
+
+    REQUIRED_PRINT_COLUMNS = ("description", "amount")
+
+    @property
+    def printed_columns(self):
+        """The columns to print, in order, never without description and amount."""
+        known = {key for key, _ in PRINT_COLUMNS}
+        chosen = [c for c in (self.print_columns or DEFAULT_PRINT_COLUMNS) if c in known]
+        for key in self.REQUIRED_PRINT_COLUMNS:
+            if key not in chosen:
+                chosen.append(key)
+        return list(dict.fromkeys(chosen))
 
     class Meta:
         verbose_name_plural = "tenant settings"
