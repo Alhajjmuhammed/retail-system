@@ -7,6 +7,8 @@ without a second implementation.
 """
 
 
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, DecimalField, OuterRef, Prefetch, Q, Subquery
@@ -235,6 +237,39 @@ def product_create(request):
                 return close_modal(request, reverse("catalog:product_list"))
 
     return _product_form(request, form)
+
+
+@login_required
+@requires("product.view")
+def product_detail(request, pk):
+    """
+    Everything about one product on one page, to read rather than to edit:
+    what it is, what it sells for on each list, the rules it carries, what is
+    on the shelf at each branch this person works at, and what moved lately.
+    """
+    from apps.inventory.models import StockItem, StockMovement
+
+    product = get_object_or_404(
+        Product.objects.select_related(
+            "category", "brand", "supplier", "base_unit", "tax_rate"),
+        pk=pk,
+    )
+    variants = list(product.variants.filter(is_active=True).prefetch_related(
+        "barcodes", "prices__price_list"))
+    branches = list(request.membership.branches())
+    stock = (StockItem.objects.filter(variant__product=product, branch__in=branches)
+             .select_related("branch", "variant").order_by("branch__name"))
+    movements = (StockMovement.objects.filter(variant__product=product, branch__in=branches)
+                 .select_related("branch").order_by("-created_at")[:10])
+    return render(request, "catalog/product_detail.html", {
+        "product": product,
+        "variants": variants,
+        "stock": stock,
+        "on_hand": sum((row.qty_on_hand for row in stock), Decimal("0")),
+        "movements": movements,
+        "may_edit": request.membership.can("product.manage"),
+        "may_see_cost": request.membership.can("product.view_cost"),
+    })
 
 
 @login_required

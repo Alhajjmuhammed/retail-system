@@ -67,7 +67,7 @@ def settings_home(request):
          "A second price for bulk buyers, attached to a customer."),
         ("settings.edit", "catalog:tiles", "layers", "brand", "POS tiles",
          "What shows on the POS for goods with no barcode."),
-        ("settings.edit", "catalog:taxonomy", "tag", "brand", "Units & VAT",
+        ("settings.edit", "catalog:taxonomy", "tag", "brand", "Units, brands & VAT",
          "The units you sell in, your brands, and the tax rates you charge. "
          "Categories live with the products, under Inventory."),
         ("settings.edit", "notifications:message_log", "activity", "amber", "Messages",

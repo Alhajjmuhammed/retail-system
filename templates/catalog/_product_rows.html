@@ -33,6 +33,7 @@
         <td class="tnum text-right font-medium text-ink-900">{% with p=variant.price_for %}{% if p is None %}<span class="text-ink-400">&mdash;</span>{% else %}{{ p|floatformat:0|intcomma }}{% endif %}{% endwith %}</td>
         {% if can_see_cost %}<td class="tnum text-right text-ink-500">{% if product.branch_cost is None %}&mdash;{% else %}{{ product.branch_cost|floatformat:0|intcomma }}{% endif %}</td>{% endif %}
         <td class="whitespace-nowrap text-right">
+          <a href="{% url 'catalog:product_detail' product.pk %}" class="btn-icon btn-icon-brand" title="View {{ product.name }}" aria-label="View {{ product.name }}">{% icon "eye" class="h-4 w-4" %}</a>
           {% if may_manage %}
           <a href="{% url 'catalog:product_edit' product.pk %}" hx-get="{% url 'catalog:product_edit' product.pk %}" hx-target="#modal"
              class="btn-icon btn-icon-brand" title="Edit {{ product.name }}" aria-label="Edit {{ product.name }}">{% icon "pencil" class="h-4 w-4" %}</a>

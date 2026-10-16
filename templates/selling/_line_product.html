@@ -19,8 +19,8 @@ what is on the shelf, and the rules it carries. A typed line has none.
       {% if product.track_stock and line.on_hand is not None %}<dt>In stock here</dt><dd class="{% if line.on_hand < line.qty %}font-medium text-red-700{% endif %}">{{ line.on_hand|floatformat:"-3" }}{% if line.on_hand < line.qty %} (fewer than on this line){% endif %}</dd>{% endif %}
     </dl>
   </div>
-  {% can_do "product.manage" as may_open %}
-  {% if may_open %}<a href="{% url 'catalog:product_edit' product.pk %}" target="_blank" rel="noopener" class="mt-1 inline-block text-brand-700 hover:underline">Open the product page &rarr;</a>{% endif %}
+  {% can_do "product.view" as may_open %}
+  {% if may_open %}<a href="{% url 'catalog:product_detail' product.pk %}" target="_blank" rel="noopener" class="mt-1 inline-block text-brand-700 hover:underline">Open the product page &rarr;</a>{% endif %}
 </details>
 {% endwith %}
 {% endif %}

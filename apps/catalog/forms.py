@@ -22,6 +22,10 @@ class ProductForm(TailwindMixin, forms.ModelForm):
         label="or add a new one", max_length=80, required=False,
         help_text="It goes inside the one chosen above. Leave that empty for a new top shelf.",
     )
+    new_brand = forms.CharField(
+        label="or add a new brand", max_length=80, required=False,
+        help_text="Typed here, it is made and chosen in one go.",
+    )
     opening_qty = forms.DecimalField(
         label="Stock on hand", max_digits=14, decimal_places=3, required=False, min_value=0,
         help_text="Only on a new product. Adjust stock afterwards instead.",
@@ -139,6 +143,19 @@ class ProductForm(TailwindMixin, forms.ModelForm):
                 data["category"], _ = Category.objects.get_or_create(
                     name=fresh, parent=parent, defaults={"is_active": True}
                 )
+
+        # A brand the same way: typed beside the list, made on save. Matched
+        # without regard to capitals, so "Athus" does not become a second ATHUS.
+        brand_name = (data.get("new_brand") or "").strip()
+        if brand_name:
+            existing = Brand.objects.filter(name__iexact=brand_name).first()
+            if existing is not None:
+                if not existing.is_active:
+                    existing.is_active = True
+                    existing.save(update_fields=["is_active"])
+                data["brand"] = existing
+            else:
+                data["brand"] = Brand.objects.create(name=brand_name)
 
         price, floor = data.get("price"), data.get("min_price")
         if floor is not None and floor < 0:

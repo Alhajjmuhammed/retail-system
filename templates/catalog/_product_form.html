@@ -27,7 +27,12 @@ forms inside forms are ignored by browsers.
     {% include "catalog/_field.html" with field=form.sku label="Your own code" %}
     {% include "catalog/_field.html" with field=form.factory_code label="Factory code" hint="What the maker prints on the carton." %}
     {% include "catalog/_field.html" with field=form.old_code label="Old code" hint="What you called it before. Customers still ring quoting it." %}
-    {% include "catalog/_field.html" with field=form.supplier label="Factory or supplier" %}
+    <div>
+      <label class="label" for="{{ form.supplier.id_for_label }}">Factory or supplier</label>
+      {{ form.supplier }}
+      {% if form.supplier.errors %}<p class="hint text-red-600">{{ form.supplier.errors.0 }}</p>
+      {% else %}<p class="hint">Who you buy it from. The list is your suppliers, kept under Buying &rarr; <a href="{% url 'purchasing:supplier_list' %}" target="_blank" rel="noopener" class="text-brand-700 hover:underline">Suppliers</a>, where you add a new one.</p>{% endif %}
+    </div>
     <div>
       <label class="label" for="{{ form.category.id_for_label }}">Category</label>
       {{ form.category }}
@@ -44,7 +49,17 @@ forms inside forms are ignored by browsers.
         {% else %}<p class="hint">{{ form.new_category.help_text }}</p>{% endif %}
       </div>
     </div>
-    {% include "catalog/_field.html" with field=form.brand label="Brand" %}
+    <div>
+      <label class="label" for="{{ form.brand.id_for_label }}">Brand</label>
+      {{ form.brand }}
+      {% if form.brand.errors %}<p class="hint text-red-600">{{ form.brand.errors.0 }}</p>{% endif %}
+      <div class="mt-2">
+        <label class="label" for="{{ form.new_brand.id_for_label }}">{{ form.new_brand.label }}</label>
+        {{ form.new_brand }}
+        {% if form.new_brand.errors %}<p class="hint text-red-600">{{ form.new_brand.errors.0 }}</p>
+        {% else %}<p class="hint">Typed here, it is made and chosen in one go. All your brands are under Settings &rarr; <a href="{% url 'catalog:taxonomy' %}" target="_blank" rel="noopener" class="text-brand-700 hover:underline">Units, brands &amp; VAT</a>.</p>{% endif %}
+      </div>
+    </div>
     {% include "catalog/_field.html" with field=form.base_unit label="Sold by" %}
     {% include "catalog/_field.html" with field=form.tax_rate label="VAT" %}
   </div>

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block heading %}{{ product.name }}{% endblock %}
+
+{% comment %}
+One product, to read. Editing stays in its own form; this page is for the
+question "what do we know about this?" -- asked at the counter, on a call, or
+from a line on a quotation.
+{% endcomment %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <div class="card card-body flex flex-wrap items-start gap-5">
+    {% if product.image %}
+    <img src="{{ product.image.url }}" alt="" class="h-32 w-32 shrink-0 rounded-xl object-cover ring-1 ring-inset ring-ink-200">
+    {% else %}
+    <div class="flex h-32 w-32 shrink-0 items-center justify-center rounded-xl bg-ink-100 text-3xl font-semibold text-ink-400">{{ product.name|slice:":1" }}</div>
+    {% endif %}
+    <div class="min-w-0 flex-1">
+      <p class="text-lg font-semibold text-ink-900">{{ product.name }}</p>
+      <p class="hint">{% if product.category %}{{ product.category.path_label|default:product.category }}{% else %}No category{% endif %}{% if product.brand %} &middot; {{ product.brand }}{% endif %}</p>
+      {% if not product.is_active %}<span class="badge mt-1">Switched off</span>{% endif %}
+      {% if product.description %}<p class="mt-2 whitespace-pre-line text-sm text-ink-700">{{ product.description }}</p>{% endif %}
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'catalog:product_list' %}" class="btn btn-secondary">Back to products</a>
+      {% if may_edit %}
+      <a href="{% url 'catalog:product_edit' product.pk %}" hx-get="{% url 'catalog:product_edit' product.pk %}" hx-target="#modal" class="btn btn-primary">{% icon "pencil" %} Edit</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="card lg:col-span-2">
+      <div class="card-head"><h2 class="card-title">About it</h2></div>
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-2.5 p-5 text-sm sm:grid-cols-2">
+        <div><dt class="hint">Your own code</dt><dd class="font-medium text-ink-900">{{ product.sku|default:"—" }}</dd></div>
+        <div><dt class="hint">Factory code</dt><dd class="font-medium text-ink-900">{{ product.factory_code|default:"—" }}</dd></div>
+        <div><dt class="hint">Old code</dt><dd class="font-medium text-ink-900">{{ product.old_code|default:"—" }}</dd></div>
+        <div><dt class="hint">Factory or supplier</dt><dd class="font-medium text-ink-900">{% if product.supplier %}<a href="{% url 'purchasing:supplier_detail' product.supplier.pk %}" class="text-brand-700 hover:underline">{{ product.supplier.name }}</a>{% else %}—{% endif %}</dd></div>
+        <div><dt class="hint">Sold by</dt><dd class="font-medium text-ink-900">{{ product.base_unit }}</dd></div>
+        <div><dt class="hint">VAT</dt><dd class="font-medium text-ink-900">{{ product.tax_rate }}</dd></div>
+        <div><dt class="hint">Never sell below</dt><dd class="font-medium text-ink-900">{% if product.min_price %}{{ product.min_price|floatformat:"-2"|intcomma }}{% else %}No floor{% endif %}</dd></div>
+        <div><dt class="hint">Can be discounted</dt><dd class="font-medium text-ink-900">{{ product.discount_allowed|yesno:"Yes,No" }}</dd></div>
+        <div><dt class="hint">Sold at the POS</dt><dd class="font-medium text-ink-900">{{ product.sellable_at_pos|yesno:"Yes,No" }}</dd></div>
+        <div><dt class="hint">Keeps count of stock</dt><dd class="font-medium text-ink-900">{{ product.track_stock|yesno:"Yes,No" }}</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">On the shelf</h2></div>
+      {% if product.track_stock %}
+      <div class="px-5 pt-4"><p class="tnum text-2xl font-bold text-ink-900">{{ on_hand|floatformat:"-3"|intcomma }} <span class="text-sm font-normal text-ink-500">{{ product.base_unit.code }}</span></p><p class="hint">Across the branches you work at</p></div>
+      <div class="divide-y divide-ink-100 text-sm">
+        {% for row in stock %}
+        <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ row.branch.name }}{% if row.variant.name %} &middot; {{ row.variant.name }}{% endif %}</span><span class="tnum font-medium">{{ row.qty_on_hand|floatformat:"-3"|intcomma }}{% if may_see_cost %} <span class="hint">@ {{ row.avg_cost|floatformat:0|intcomma }}</span>{% endif %}</span></div>
+        {% empty %}
+        <p class="px-5 py-3 text-ink-500">Nothing recorded yet.</p>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="p-5 text-sm text-ink-500">This product does not keep count of stock.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Prices and barcodes</h2></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th>Variant</th><th>Price list</th><th class="text-right">From qty</th><th class="text-right">Price</th><th>Barcodes</th></tr></thead>
+        <tbody>
+          {% for v in variants %}
+          {% for price in v.prices.all %}
+          <tr>
+            <td>{% if forloop.first %}{{ v.name|default:"Standard" }}{% endif %}</td>
+            <td>{{ price.price_list.name }}</td>
+            <td class="tnum text-right">{{ price.min_qty|floatformat:"-3" }}</td>
+            <td class="tnum text-right font-medium">{{ price.amount|floatformat:"-2"|intcomma }}</td>
+            <td class="text-xs text-ink-600">{% if forloop.first %}{% for code in v.barcodes.all %}<span class="mr-2 font-mono">{{ code.code }}</span>{% empty %}&mdash;{% endfor %}{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td>{{ v.name|default:"Standard" }}</td><td colspan="3" class="text-ink-500">No price set yet</td><td class="text-xs">{% for code in v.barcodes.all %}<span class="mr-2 font-mono">{{ code.code }}</span>{% empty %}&mdash;{% endfor %}</td></tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if product.track_stock %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Last stock movements</h2></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th>When</th><th>Branch</th><th>What</th><th class="text-right">In / out</th><th class="text-right">Left after</th></tr></thead>
+        <tbody>
+          {% for m in movements %}
+          <tr>
+            <td class="whitespace-nowrap text-ink-500">{{ m.created_at|date:"j M Y H:i" }}</td>
+            <td>{{ m.branch.name }}</td>
+            <td>{{ m.get_reason_display }}{% if m.note %} <span class="hint">{{ m.note }}</span>{% endif %}</td>
+            <td class="tnum text-right {% if m.qty_delta < 0 %}text-red-700{% else %}text-emerald-700{% endif %}">{{ m.qty_delta|floatformat:"-3" }}</td>
+            <td class="tnum text-right">{{ m.balance_after|floatformat:"-3" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-ink-500">No movements yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

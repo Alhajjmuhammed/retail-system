@@ -177,7 +177,7 @@ def test_a_product_line_shows_its_details_and_a_link(client, shop, main_branch, 
     assert "Product details" in html
     assert "Never below" in html
     assert "In stock here" in html
-    assert reverse("catalog:product_edit", args=[biskuti.product.pk]) in html
+    assert reverse("catalog:product_detail", args=[biskuti.product.pk]) in html
 
 
 def test_no_link_for_someone_who_cannot_open_products(client, shop, main_branch, biskuti,
@@ -195,4 +195,4 @@ def test_no_link_for_someone_who_cannot_open_products(client, shop, main_branch,
     client.force_login(person)
     html = client.get(reverse("selling:invoice_detail", args=[proforma.pk])).content.decode()
     assert "Product details" in html
-    assert reverse("catalog:product_edit", args=[biskuti.product.pk]) not in html
+    assert reverse("catalog:product_detail", args=[biskuti.product.pk]) not in html
