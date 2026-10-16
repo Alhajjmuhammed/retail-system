@@ -30,6 +30,7 @@
     </select>
     <p class="hint">The date it becomes overdue. It appears on the printed invoice.</p>
   </div>
+  {% if quotation %}{% if quotation.is_foreign %}<p class="hint">In {{ quotation.doc_currency }} at {{ quotation.rate_label }}, as quoted.</p>{% endif %}{% else %}{% include "selling/_currency_choice.html" %}{% endif %}
   {% if not quotation %}
   <div>
     <label class="label" for="note">Note</label>

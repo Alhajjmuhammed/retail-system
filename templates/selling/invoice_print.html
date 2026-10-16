@@ -92,6 +92,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Subtotal</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.net_of_tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">VAT Total</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Total</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.total|floatformat:2|intcomma }}</td></tr>
+          {% if invoice.is_foreign %}<tr><td class="px-2 py-1 text-xs text-ink-600">Equivalent in {{ invoice.main_currency }}</td><td class="px-2 py-1 text-right text-xs text-ink-600">&asymp; {{ invoice.main_currency }} {{ invoice.total_main|floatformat:2|intcomma }}<span class="block">{{ invoice.rate_label }}</span></td></tr>{% endif %}
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Payments/Credits</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ invoice.paid|floatformat:2|intcomma }}</td></tr>
           <tr class="border-2 border-ink-900"><td class="px-2 py-2 text-base font-bold">Bal. Due</td><td class="px-2 py-2 text-right text-base font-bold">{{ currency }} {{ invoice.balance|floatformat:2|intcomma }}</td></tr>
         </table>

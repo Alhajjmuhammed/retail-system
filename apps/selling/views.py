@@ -73,6 +73,11 @@ def quotation_create(request):
         if customer is None:
             messages.error(request, "Choose who the quotation is for.")
             return redirect("selling:quotation_list")
+        try:
+            currency, rate = _chosen_currency(request)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:quotation_list")
 
         today = timezone.localdate()
         days = int_or(request.POST.get("valid_days")) or DEFAULT_VALID_DAYS
@@ -83,6 +88,8 @@ def quotation_create(request):
                 issued_on=today,
                 valid_until=today + timedelta(days=days),
                 note=request.POST.get("note", "").strip()[:500],
+                currency=currency,
+                exchange_rate=rate,
             ),
             field="reference",
             generate=lambda: services.next_reference(Quotation, "QUO"),
@@ -94,7 +101,8 @@ def quotation_create(request):
         request, "selling/_quotation_form.html",
         {"customers": Customer.objects.filter(is_active=True).order_by("name"),
          "chosen": int_or(request.GET.get("customer")),
-         "valid_days": DEFAULT_VALID_DAYS},
+         "valid_days": DEFAULT_VALID_DAYS,
+         **_currency_choices()},
         title="New quotation", back=reverse("selling:quotation_list"),
     )
 
@@ -118,7 +126,7 @@ def quotation_detail(request, pk):
     _describe_products(quotation)
     return render(request, "selling/quotation_detail.html", {
         "quotation": quotation,
-        "variants": _sellable(quotation.customer),
+        "variants": _sellable(quotation.customer, quotation),
         "shop_settings": _shop_settings(),
         "may_edit": may_edit,
         "editable": quotation.status == QuotationStatus.DRAFT,
@@ -217,11 +225,33 @@ def _describe_products(document):
     """
     from apps.inventory.services import quantity_of
 
-    prices = services.prices_for(document.customer)
+    prices = services.prices_in(document.customer, document.doc_currency,
+                                document.exchange_rate)
     for line in document.lines.all():
         if line.variant_id:
             line.list_price = prices.get(line.variant_id)
             line.on_hand = quantity_of(line.variant, document.branch)
+
+
+def _currency_choices():
+    """The currencies a new document can be written in, with today's rates."""
+    from apps.core.currency import describe_rate, main_currency, rates
+
+    main = main_currency()
+    return {
+        "main_currency": main,
+        "currency_options": [(main, f"{main} (your own currency)")] + [
+            (code, describe_rate(code, rate)) for code, rate in sorted(rates().items())
+        ],
+    }
+
+
+def _chosen_currency(request):
+    """The currency picked on the form and the rate frozen with it."""
+    from apps.core.currency import main_currency, rate_for
+
+    code = (request.POST.get("currency") or main_currency()).upper()[:3]
+    return code, rate_for(code)
 
 
 def _shop_settings():
@@ -233,7 +263,7 @@ def _shop_settings():
     return row
 
 
-def _sellable(customer):
+def _sellable(customer, document=None):
     """
     The products a line can be picked from, each carrying what it would be
     charged at for this customer, the unit it is sold in and its VAT rate.
@@ -242,7 +272,8 @@ def _sellable(customer):
     cannot index a dictionary by a variable and a lookup per row would be a
     query per row.
     """
-    price_map = services.prices_for(customer)
+    price_map = (services.prices_in(customer, document.doc_currency, document.exchange_rate)
+                 if document is not None else services.prices_for(customer))
     rows = list(
         Variant.objects.filter(is_active=True, product__is_active=True)
         .select_related("product", "product__base_unit", "product__tax_rate")
@@ -306,11 +337,12 @@ def _add_line(request, quotation):
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
     try:
-        fixed = services.locked_price(variant, quotation.customer)
+        fixed = services.locked_price(variant, quotation.customer, document=quotation)
         if fixed is not None:
             price = fixed
         services.check_discount(off, quotation.discount_percent)
-        services.check_product_rules(variant, price, off, quotation.discount_percent)
+        services.check_product_rules(variant, price, off, quotation.discount_percent,
+                                     quotation.exchange_rate)
     except ValueError as refused:
         messages.error(request, str(refused))
         return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -346,7 +378,7 @@ def quotation_print(request, pk):
         Quotation.objects.select_related("customer")
         .prefetch_related("lines__variant__product"), pk=pk
     )
-    currency = request.tenant.currency
+    currency = quotation.doc_currency
     banks = list(BankAccount.objects.filter(is_active=True, currency=currency))
     if not banks:
         banks = list(BankAccount.objects.filter(is_active=True))
@@ -451,12 +483,18 @@ def invoice_create(request):
             if customer is None:
                 messages.error(request, "Choose who the invoice is for.")
                 return redirect("selling:invoice_list")
+            try:
+                currency, rate = _chosen_currency(request)
+            except ValueError as refused:
+                messages.error(request, str(refused))
+                return redirect("selling:invoice_list")
             today = timezone.localdate()
             invoice = services.save_as_proforma(
                 Invoice(
                     customer=customer, branch=request.branch, issued_on=today,
                     due_on=today + timedelta(days=terms),
                     note=request.POST.get("note", "").strip()[:500],
+                    currency=currency, exchange_rate=rate,
                 )
             )
         audit.record("invoice.created", obj=invoice, ip=audit.client_ip(request))
@@ -466,7 +504,8 @@ def invoice_create(request):
         request, "selling/_invoice_form.html",
         {"customers": Customer.objects.filter(is_active=True).order_by("name"),
          "quotation": quotation,
-         "terms_days": DEFAULT_TERMS_DAYS},
+         "terms_days": DEFAULT_TERMS_DAYS,
+         **_currency_choices()},
         title="New proforma", back=reverse("selling:invoice_list"),
     )
 
@@ -485,7 +524,7 @@ def invoice_detail(request, pk):
     _describe_products(invoice)
     return render(request, "selling/invoice_detail.html", {
         "invoice": invoice,
-        "variants": _sellable(invoice.customer),
+        "variants": _sellable(invoice.customer, invoice),
         "shop_settings": _shop_settings(),
         "taxes": TaxRate.objects.filter(is_active=True).order_by("-is_default", "name"),
         "editable": invoice.status == InvoiceStatus.DRAFT,
@@ -671,11 +710,12 @@ def _add_invoice_line(request, invoice):
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
     try:
-        fixed = services.locked_price(variant, invoice.customer)
+        fixed = services.locked_price(variant, invoice.customer, document=invoice)
         if fixed is not None:
             price = fixed
         services.check_discount(off, invoice.discount_percent)
-        services.check_product_rules(variant, price, off, invoice.discount_percent)
+        services.check_product_rules(variant, price, off, invoice.discount_percent,
+                                     invoice.exchange_rate)
     except ValueError as refused:
         messages.error(request, str(refused))
         return redirect("selling:invoice_detail", pk=invoice.pk)
@@ -705,7 +745,7 @@ def invoice_print(request, pk):
     invoice = get_object_or_404(
         Invoice.objects.select_related("customer")
         .prefetch_related("lines__variant__product"), pk=pk)
-    currency = request.tenant.currency
+    currency = invoice.doc_currency
     # The account that can take what is being asked for. If none is set up
     # for this money, every account is shown rather than none at all.
     banks = list(BankAccount.objects.filter(is_active=True, currency=currency))

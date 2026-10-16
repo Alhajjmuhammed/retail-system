@@ -1,0 +1,8 @@
+{% load humanize %}
+{% comment %}
+A document in another currency, compared with the shop's own: what it comes
+to in shillings, at the rate frozen on it when it was written.
+{% endcomment %}
+{% if doc.is_foreign %}
+<p class="mt-0.5 text-xs text-ink-500">&asymp; {{ doc.main_currency }} {{ doc.total_main|floatformat:0|intcomma }}<span class="block">{{ doc.rate_label }}</span></p>
+{% endif %}

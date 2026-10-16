@@ -1,0 +1,13 @@
+{% comment %}
+The currency a new quotation or proforma is written in. Shown only to a shop
+that deals in more than its own: everybody else is never asked.
+{% endcomment %}
+{% if currency_options|length > 1 %}
+<div>
+  <label class="label" for="currency">Currency</label>
+  <select name="currency" id="currency" class="input">
+    {% for code, label in currency_options %}<option value="{{ code }}" {% if code == main_currency %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <p class="hint">Prices are filled in at today's rate, which stays fixed on this document. Your books keep the {{ main_currency }} equivalent.</p>
+</div>
+{% endif %}

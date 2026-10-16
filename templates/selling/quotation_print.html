@@ -90,6 +90,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">Subtotal</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ quotation.net_of_tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border border-ink-300"><td class="px-2 py-1.5 font-medium">VAT Total</td><td class="px-2 py-1.5 text-right">{{ currency }} {{ quotation.tax|floatformat:2|intcomma }}</td></tr>
           <tr class="border-2 border-ink-900"><td class="px-2 py-2 text-base font-bold">Total</td><td class="px-2 py-2 text-right text-base font-bold">{{ currency }} {{ quotation.total|floatformat:2|intcomma }}</td></tr>
+          {% if quotation.is_foreign %}<tr><td class="px-2 py-1 text-xs text-ink-600">Equivalent in {{ quotation.main_currency }}</td><td class="px-2 py-1 text-right text-xs text-ink-600">&asymp; {{ quotation.main_currency }} {{ quotation.total_main|floatformat:2|intcomma }}<span class="block">{{ quotation.rate_label }}</span></td></tr>{% endif %}
           
         </table>
       </div>

@@ -36,7 +36,7 @@
       <label class="label" for="pay_invoice">Against invoice</label>
       <select name="invoice" id="pay_invoice" class="input">
         <option value="">Not for an invoice (POS sales on account)</option>
-        {% for inv in open_invoices %}<option value="{{ inv.pk }}">{{ inv.reference }} &middot; {{ inv.balance|floatformat:0|intcomma }} left &middot; due {{ inv.due_on|date:"j M" }}</option>{% endfor %}
+        {% for inv in open_invoices %}<option value="{{ inv.pk }}">{{ inv.reference }} &middot; {{ inv.balance_main|floatformat:0|intcomma }} left{% if inv.is_foreign %} ({{ inv.doc_currency }} {{ inv.balance|floatformat:2|intcomma }}){% endif %} &middot; due {{ inv.due_on|date:"j M" }}</option>{% endfor %}
       </select>
       <p class="hint">Choose the invoice this money is for, so the invoice shows it as paid.</p>
     </div>

@@ -87,6 +87,10 @@ class CreditTransaction(TenantModel):
     )
     kind = models.CharField(max_length=12, choices=CreditKind.choices)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
+    # The same entry in the currency of the invoice it belongs to, when that
+    # is not the shop's own: a dollar invoice is charged and paid in dollars,
+    # while ``amount`` keeps the account in the shop's currency.
+    doc_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     balance_after = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True
     )

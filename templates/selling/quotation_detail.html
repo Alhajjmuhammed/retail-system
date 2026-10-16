@@ -22,9 +22,10 @@
       </p>
     </div>
     <div class="text-right">
-      <p class="text-xs uppercase tracking-wide text-ink-500">Total</p>
-      <p class="tnum text-2xl font-bold text-ink-900">{{ quotation.total|floatformat:0|intcomma }}</p>
-      <p class="hint">VAT included {{ quotation.tax|floatformat:0|intcomma }}</p>
+      <p class="text-xs uppercase tracking-wide text-ink-500">Total{% if quotation.is_foreign %} ({{ quotation.doc_currency }}){% endif %}</p>
+      <p class="tnum text-2xl font-bold text-ink-900">{{ quotation.total|floatformat:quotation.money_places|intcomma }}</p>
+      {% include "selling/_currency_note.html" with doc=quotation %}
+      <p class="hint">VAT included {{ quotation.tax|floatformat:quotation.money_places|intcomma }}</p>
     </div>
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">
       <a href="{% url 'selling:quotation_print' quotation.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print</a>
@@ -99,12 +100,12 @@
             </div>
           </td>
           <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
-          <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
+          <td class="text-right">{{ line.unit_price|floatformat:quotation.money_places|intcomma }}</td>
           <td class="text-right">
             {% if line.discount_percent %}
-            <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:0|intcomma }}</span>
-            <span class="block font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>
-            {% else %}<span class="font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>{% endif %}
+            <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:quotation.money_places|intcomma }}</span>
+            <span class="block font-semibold">{{ line.line_total|floatformat:quotation.money_places|intcomma }}</span>
+            {% else %}<span class="font-semibold">{{ line.line_total|floatformat:quotation.money_places|intcomma }}</span>{% endif %}
           </td>
           {% if editable %}
           <td class="text-right">

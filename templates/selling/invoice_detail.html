@@ -32,20 +32,21 @@ month -- so the page shows both rather than folding them into one state.
 
     <div class="flex gap-6 text-right">
       <div>
-        <p class="text-xs uppercase tracking-wide text-ink-500">Total</p>
-        <p class="tnum text-xl font-bold text-ink-900">{{ invoice.total|floatformat:0|intcomma }}</p>
+        <p class="text-xs uppercase tracking-wide text-ink-500">Total{% if invoice.is_foreign %} ({{ invoice.doc_currency }}){% endif %}</p>
+        <p class="tnum text-xl font-bold text-ink-900">{{ invoice.total|floatformat:invoice.money_places|intcomma }}</p>
+        {% include "selling/_currency_note.html" with doc=invoice %}
       </div>
       <div>
         {% comment %}A proforma owes nothing and a cancelled invoice owes nothing; only an issued invoice has a balance.{% endcomment %}
         {% if invoice.status == "draft" %}
         <p class="text-xs uppercase tracking-wide text-ink-500">To pay when issued</p>
-        <p class="tnum text-xl font-bold text-ink-500">{{ invoice.total|floatformat:0|intcomma }}</p>
+        <p class="tnum text-xl font-bold text-ink-500">{{ invoice.total|floatformat:invoice.money_places|intcomma }}</p>
         {% elif invoice.status == "void" %}
         <p class="text-xs uppercase tracking-wide text-ink-500">Owed</p>
         <p class="tnum text-xl font-bold text-ink-400">&mdash;</p>
         {% else %}
         <p class="text-xs uppercase tracking-wide text-ink-500">Still owed</p>
-        <p class="tnum text-xl font-bold {% if invoice.balance > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ invoice.balance|floatformat:0|intcomma }}</p>
+        <p class="tnum text-xl font-bold {% if invoice.balance > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">{{ invoice.balance|floatformat:invoice.money_places|intcomma }}</p>
         {% endif %}
       </div>
     </div>
@@ -54,7 +55,7 @@ month -- so the page shows both rather than folding them into one state.
       <a href="{% url 'selling:invoice_print' invoice.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print</a>
       {% if invoice.status == "draft" and may_manage %}
       <form method="post" x-data
-            @submit.prevent="$store.confirm.ask($el, { title: 'Issue {{ invoice.reference|escapejs }}?', body: '{{ invoice.customer.name|escapejs }} will owe {{ invoice.total|floatformat:0|intcomma }} from today. Nothing leaves the store until you send a delivery note.', label: 'Issue it', danger: false })">
+            @submit.prevent="$store.confirm.ask($el, { title: 'Issue {{ invoice.reference|escapejs }}?', body: '{{ invoice.customer.name|escapejs }} will owe {{ invoice.total|floatformat:invoice.money_places|intcomma }} from today. Nothing leaves the store until you send a delivery note.', label: 'Issue it', danger: false })">
         {% csrf_token %}<input type="hidden" name="action" value="issue">
         <button type="submit" class="btn btn-primary">Issue it</button>
       </form>
@@ -112,12 +113,12 @@ month -- so the page shows both rather than folding them into one state.
               </td>
               <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
               <td class="text-right {% if line.qty_outstanding > 0 %}text-amber-700{% else %}text-ink-400{% endif %}">{{ line.qty_delivered|floatformat:"-3" }}</td>
-              <td class="text-right">{{ line.unit_price|floatformat:0|intcomma }}</td>
+              <td class="text-right">{{ line.unit_price|floatformat:invoice.money_places|intcomma }}</td>
               <td class="text-right">
                 {% if line.discount_percent %}
-                <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:0|intcomma }}</span>
-                <span class="block font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>
-                {% else %}<span class="font-semibold">{{ line.line_total|floatformat:0|intcomma }}</span>{% endif %}
+                <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:invoice.money_places|intcomma }}</span>
+                <span class="block font-semibold">{{ line.line_total|floatformat:invoice.money_places|intcomma }}</span>
+                {% else %}<span class="font-semibold">{{ line.line_total|floatformat:invoice.money_places|intcomma }}</span>{% endif %}
               </td>
               {% if editable %}
               <td class="text-right">
@@ -191,7 +192,7 @@ month -- so the page shows both rather than folding them into one state.
               {% if note.voided_at %}<span class="badge ml-1">cancelled {{ note.voided_at|date:"j M" }}</span>{% endif %}
             </div>
             <div class="flex items-center gap-3">
-              <span class="tnum font-semibold">{{ note.total|floatformat:0|intcomma }}</span>
+              <span class="tnum font-semibold">{{ note.total|floatformat:invoice.money_places|intcomma }}</span>
               {% if may_deliver and not note.voided_at %}
               <form method="post" x-data
                     @submit.prevent="$store.confirm.ask($el, { title: 'Cancel {{ note.reference|escapejs }}?', body: 'For goods that came back, or a trip recorded by mistake. The stock goes back and the goods are owed to {{ invoice.customer.name|escapejs }} again on this invoice. What they owe does not change.', label: 'Cancel delivery' })">
@@ -215,8 +216,8 @@ month -- so the page shows both rather than folding them into one state.
         <h2 class="card-title">Payment received</h2>
         <p class="hint">It comes off {{ invoice.customer.name }}'s account as well, so the statement stays right.</p>
         <div>
-          <label class="label" for="amount">Amount</label>
-          <input type="number" step="1" min="1" max="{{ invoice.balance|floatformat:2 }}" name="amount" id="amount" class="input" placeholder="{{ invoice.balance|floatformat:0 }}" required>
+          <label class="label" for="amount">Amount{% if invoice.is_foreign %} ({{ invoice.doc_currency }}){% endif %}</label>
+          <input type="number" step="{{ invoice.money_step }}" min="{{ invoice.money_step }}" max="{{ invoice.balance|floatformat:2 }}" name="amount" id="amount" class="input" placeholder="{{ invoice.balance|floatformat:0 }}" required>
         </div>
         <div>
           <label class="label" for="method">How</label>
@@ -236,25 +237,25 @@ month -- so the page shows both rather than folding them into one state.
         <div class="card-head"><h2 class="card-title">Money</h2></div>
         <div class="divide-y divide-ink-100 text-sm">
           {% if invoice.discount_percent %}
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Lines</span><span class="tnum">{{ invoice.lines_total|floatformat:0|intcomma }}</span></div>
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Discount {{ invoice.discount_percent|floatformat:"-2" }}%</span><span class="tnum text-emerald-700">&minus;{{ invoice.order_discount|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Lines</span><span class="tnum">{{ invoice.lines_total|floatformat:invoice.money_places|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Discount {{ invoice.discount_percent|floatformat:"-2" }}%</span><span class="tnum text-emerald-700">&minus;{{ invoice.order_discount|floatformat:invoice.money_places|intcomma }}</span></div>
           {% endif %}
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{% if invoice.status == "draft" %}Proforma total{% else %}Invoiced{% endif %}</span><span class="tnum font-medium">{{ invoice.total|floatformat:0|intcomma }}</span></div>
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">VAT inside it</span><span class="tnum">{{ invoice.tax|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{% if invoice.status == "draft" %}Proforma total{% else %}Invoiced{% endif %}</span><span class="tnum font-medium">{{ invoice.total|floatformat:invoice.money_places|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">VAT inside it</span><span class="tnum">{{ invoice.tax|floatformat:invoice.money_places|intcomma }}</span></div>
           {% if invoice.status == "draft" %}
           <div class="bg-ink-50 px-5 py-2.5 text-ink-600">Nothing is owed yet. It goes on {{ invoice.customer.name }}'s account when you issue it.</div>
           {% elif invoice.status == "void" %}
           <div class="bg-ink-50 px-5 py-2.5 text-ink-600">Cancelled: nothing is owed on it.</div>
           {% else %}
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Paid</span><span class="tnum font-medium text-emerald-700">{{ invoice.paid|floatformat:0|intcomma }}</span></div>
-          <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Still owed</span><span class="tnum font-semibold">{{ invoice.balance|floatformat:0|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Paid</span><span class="tnum font-medium text-emerald-700">{{ invoice.paid|floatformat:invoice.money_places|intcomma }}</span></div>
+          <div class="flex justify-between bg-ink-50 px-5 py-2.5"><span class="font-semibold text-ink-900">Still owed</span><span class="tnum font-semibold">{{ invoice.balance|floatformat:invoice.money_places|intcomma }}</span></div>
           {% endif %}
         </div>
         {% for row in invoice.credit_entries.all %}
         {% if row.kind == "payment" %}
         <div class="flex justify-between border-t border-ink-100 px-5 py-2 text-xs text-ink-500">
           <span>{{ row.created_at|date:"j M Y" }} &middot; {{ row.method|default:"payment" }}{% if row.note %} &middot; {{ row.note }}{% endif %}</span>
-          <span class="tnum">{{ row.amount|floatformat:0|intcomma }}</span>
+          <span class="tnum">{{ row.amount|floatformat:invoice.money_places|intcomma }}</span>
         </div>
         {% endif %}
         {% endfor %}

@@ -58,6 +58,11 @@ class Quotation(BranchModel):
     # Per cent off the whole thing, on top of anything taken off a line --
     # the "and five off the lot" that closes an order.
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    # The currency it is written in, and what one unit of it was worth in
+    # the shop's own on the day -- frozen, so a rate changed tomorrow does
+    # not rewrite an offer already in the customer's hands.
+    currency = models.CharField(max_length=3, blank=True)
+    exchange_rate = models.DecimalField(max_digits=18, decimal_places=6, default=1)
 
     sent_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -75,6 +80,61 @@ class Quotation(BranchModel):
     # -- money ------------------------------------------------------------
     # Worked out from the lines rather than stored: a quotation is edited
     # until it is sent, and a stored total is a total that goes stale.
+
+    # -- currency ----------------------------------------------------------
+
+    @property
+    def doc_currency(self) -> str:
+        """What it is written in; a document from before currencies is the shop's."""
+        from apps.core.currency import main_currency
+
+        return (self.currency or main_currency(self.tenant)).upper()
+
+    @property
+    def main_currency(self) -> str:
+        from apps.core.currency import main_currency
+
+        return main_currency(self.tenant)
+
+    @property
+    def is_foreign(self) -> bool:
+        return self.doc_currency != self.main_currency
+
+    @property
+    def money_step(self) -> str:
+        """The step for an amount box in this document's currency."""
+        from apps.core.currency import quantum
+
+        return "1" if quantum(self.doc_currency) == 1 else "0.01"
+
+    @property
+    def money_places(self) -> int:
+        """Decimals to show: none for shillings, two for dollars."""
+        return 0 if self.money_step == "1" else 2
+
+    def to_main(self, amount) -> Decimal:
+        """An amount on this document, in the shop's own currency."""
+        from apps.core.currency import to_main
+
+        if not self.is_foreign:
+            return amount
+        return to_main(amount, self.exchange_rate, self.tenant)
+
+    @property
+    def total_main(self) -> Decimal:
+        """The total in the shop's own currency, at the frozen rate."""
+        return self.to_main(self.total)
+
+    @property
+    def rate_label(self) -> str:
+        from apps.core.currency import describe_rate
+
+        return describe_rate(self.doc_currency, self.exchange_rate, self.tenant)
+
+    def _money(self, amount) -> Decimal:
+        from apps.core.currency import round_to
+
+        return round_to(amount, self.doc_currency)
 
     @property
     def before_discount(self) -> Decimal:
@@ -94,21 +154,19 @@ class Quotation(BranchModel):
     @property
     def order_discount(self) -> Decimal:
         """Money off the whole document, on top of anything off a line."""
-        from apps.pos.services import ZERO, money
-
         if not self.discount_percent:
-            return ZERO
-        return money(self.lines_total * self.discount_percent / Decimal("100"))
+            return Decimal("0")
+        return self._money(self.lines_total * self.discount_percent / Decimal("100"))
 
     @property
     def net(self) -> Decimal:
         return self.lines_total - self.order_discount
 
-    def total_in_words(self, currency="TZS") -> str:
+    def total_in_words(self, currency=None) -> str:
         """The total written out, for the line under it on the document."""
         from apps.core.amounts import money_in_words
 
-        return money_in_words(self.total, currency)
+        return money_in_words(self.total, currency or self.doc_currency)
 
     @property
     def net_of_tax(self) -> Decimal:
@@ -188,11 +246,13 @@ class QuotationLine(TenantModel):
         return f"{self.description} x {self.qty}"
 
     @property
+    def document(self):
+        return self.quotation if hasattr(self, "quotation_id") else self.invoice
+
+    @property
     def gross_total(self) -> Decimal:
         """What the line came to before anything was taken off it."""
-        from apps.pos.services import money
-
-        return money(self.qty * self.unit_price)
+        return self.document._money(self.qty * self.unit_price)
 
     @property
     def item_code(self) -> str:
@@ -215,19 +275,16 @@ class QuotationLine(TenantModel):
         VAT, which is what a discounted price means: there is less tax
         inside it.
         """
-        from apps.pos.services import ZERO, money
-
         if not self.discount_percent:
-            return ZERO
-        return money(self.qty * self.unit_price * self.discount_percent / Decimal("100"))
+            return Decimal("0")
+        return self.document._money(
+            self.qty * self.unit_price * self.discount_percent / Decimal("100"))
 
     @property
     def line_total(self) -> Decimal:
-        from apps.pos.services import money
-
         # The same expression `_tax_for` works from, so the tax can never
         # disagree with the figure it was taken out of.
-        return money((self.qty * self.unit_price) - self.discount)
+        return self.document._money((self.qty * self.unit_price) - self.discount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -236,7 +293,7 @@ class QuotationLine(TenantModel):
 
         if not self.tax_rate:
             return ZERO
-        return _tax_for(self)
+        return _tax_for(self, self.document.doc_currency)
 
 
 class InvoiceStatus(models.TextChoices):
@@ -280,6 +337,11 @@ class Invoice(BranchModel):
     note = models.TextField(blank=True)
     # Per cent off the whole invoice, on top of anything off a line.
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    # The currency it is written in, and what one unit of it was worth in
+    # the shop's own on the day -- frozen, so a rate changed tomorrow does
+    # not rewrite an offer already in the customer's hands.
+    currency = models.CharField(max_length=3, blank=True)
+    exchange_rate = models.DecimalField(max_digits=18, decimal_places=6, default=1)
     # The number it carried as a proforma. Kept after issuing, so the
     # sequence never hands the same proforma number to two customers.
     proforma_reference = models.CharField(max_length=30, blank=True, db_index=True)
@@ -296,6 +358,61 @@ class Invoice(BranchModel):
 
     def __str__(self):
         return self.reference
+
+    # -- currency ----------------------------------------------------------
+
+    @property
+    def doc_currency(self) -> str:
+        """What it is written in; a document from before currencies is the shop's."""
+        from apps.core.currency import main_currency
+
+        return (self.currency or main_currency(self.tenant)).upper()
+
+    @property
+    def main_currency(self) -> str:
+        from apps.core.currency import main_currency
+
+        return main_currency(self.tenant)
+
+    @property
+    def is_foreign(self) -> bool:
+        return self.doc_currency != self.main_currency
+
+    @property
+    def money_step(self) -> str:
+        """The step for an amount box in this document's currency."""
+        from apps.core.currency import quantum
+
+        return "1" if quantum(self.doc_currency) == 1 else "0.01"
+
+    @property
+    def money_places(self) -> int:
+        """Decimals to show: none for shillings, two for dollars."""
+        return 0 if self.money_step == "1" else 2
+
+    def to_main(self, amount) -> Decimal:
+        """An amount on this document, in the shop's own currency."""
+        from apps.core.currency import to_main
+
+        if not self.is_foreign:
+            return amount
+        return to_main(amount, self.exchange_rate, self.tenant)
+
+    @property
+    def total_main(self) -> Decimal:
+        """The total in the shop's own currency, at the frozen rate."""
+        return self.to_main(self.total)
+
+    @property
+    def rate_label(self) -> str:
+        from apps.core.currency import describe_rate
+
+        return describe_rate(self.doc_currency, self.exchange_rate, self.tenant)
+
+    def _money(self, amount) -> Decimal:
+        from apps.core.currency import round_to
+
+        return round_to(amount, self.doc_currency)
 
     @property
     def before_discount(self) -> Decimal:
@@ -315,21 +432,19 @@ class Invoice(BranchModel):
     @property
     def order_discount(self) -> Decimal:
         """Money off the whole document, on top of anything off a line."""
-        from apps.pos.services import ZERO, money
-
         if not self.discount_percent:
-            return ZERO
-        return money(self.lines_total * self.discount_percent / Decimal("100"))
+            return Decimal("0")
+        return self._money(self.lines_total * self.discount_percent / Decimal("100"))
 
     @property
     def net(self) -> Decimal:
         return self.lines_total - self.order_discount
 
-    def total_in_words(self, currency="TZS") -> str:
+    def total_in_words(self, currency=None) -> str:
         """The total written out, for the line under it on the document."""
         from apps.core.amounts import money_in_words
 
-        return money_in_words(self.total, currency)
+        return money_in_words(self.total, currency or self.doc_currency)
 
     @property
     def net_of_tax(self) -> Decimal:
@@ -381,12 +496,41 @@ class Invoice(BranchModel):
         # Read through .all() so a list page's prefetch is used, not a query
         # per invoice. A payment undone from the customer's page leaves an
         # "undo:" adjustment against the same invoice; it puts the money back.
+        # The account is kept in the shop's own currency; each entry against
+        # an invoice also carries what it was in the invoice's, so a dollar
+        # invoice is paid down in dollars.
+        total = Decimal("0")
+        for row in self.credit_entries.all():
+            undone = row.kind == CreditKind.ADJUSTMENT and row.reference.startswith("undo:")
+            if row.kind == CreditKind.PAYMENT or undone:
+                total -= row.doc_amount if row.doc_amount is not None else row.amount
+        return total
+
+    @property
+    def paid_main(self) -> Decimal:
+        """Paid, in the shop's own currency: what came off the account."""
+        from apps.customers.models import CreditKind
+
         total = Decimal("0")
         for row in self.credit_entries.all():
             undone = row.kind == CreditKind.ADJUSTMENT and row.reference.startswith("undo:")
             if row.kind == CreditKind.PAYMENT or undone:
                 total -= row.amount
         return total
+
+    @property
+    def charged_main(self) -> Decimal:
+        """What issuing it put on the account, in the shop's own currency."""
+        from apps.customers.models import CreditKind
+
+        for row in self.credit_entries.all():
+            if row.kind == CreditKind.CHARGE:
+                return row.amount
+        return self.total_main
+
+    @property
+    def balance_main(self) -> Decimal:
+        return self.charged_main - self.paid_main
 
     @property
     def balance(self) -> Decimal:
@@ -443,11 +587,13 @@ class InvoiceLine(TenantModel):
         return f"{self.description} x {self.qty}"
 
     @property
+    def document(self):
+        return self.quotation if hasattr(self, "quotation_id") else self.invoice
+
+    @property
     def gross_total(self) -> Decimal:
         """What the line came to before anything was taken off it."""
-        from apps.pos.services import money
-
-        return money(self.qty * self.unit_price)
+        return self.document._money(self.qty * self.unit_price)
 
     @property
     def item_code(self) -> str:
@@ -466,17 +612,14 @@ class InvoiceLine(TenantModel):
     @property
     def discount(self) -> Decimal:
         """Money off this line, taken off before the VAT is worked out."""
-        from apps.pos.services import ZERO, money
-
         if not self.discount_percent:
-            return ZERO
-        return money(self.qty * self.unit_price * self.discount_percent / Decimal("100"))
+            return Decimal("0")
+        return self.document._money(
+            self.qty * self.unit_price * self.discount_percent / Decimal("100"))
 
     @property
     def line_total(self) -> Decimal:
-        from apps.pos.services import money
-
-        return money((self.qty * self.unit_price) - self.discount)
+        return self.document._money((self.qty * self.unit_price) - self.discount)
 
     @property
     def tax_amount(self) -> Decimal:
@@ -484,7 +627,7 @@ class InvoiceLine(TenantModel):
 
         if not self.tax_rate:
             return ZERO
-        return _tax_for(self)
+        return _tax_for(self, self.document.doc_currency)
 
     @property
     def charged_share(self) -> Decimal:
@@ -572,7 +715,10 @@ class DeliveryLine(TenantModel):
     @property
     def line_total(self) -> Decimal:
         """This delivery's share of what the invoice actually charges."""
-        from apps.pos.services import money
-
         source = self.invoice_line
-        return money(self.qty * source.unit_price * source.charged_share)
+        return source.invoice._money(self.qty * source.unit_price * source.charged_share)
+
+    @property
+    def line_total_main(self) -> Decimal:
+        """The same, in the shop's own currency: what the sale records."""
+        return self.invoice_line.invoice.to_main(self.line_total)

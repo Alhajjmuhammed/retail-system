@@ -154,6 +154,21 @@ def _account_code(request, **kwargs):
     return "customer.manage" if request.membership.can("customer.manage") else "credit.collect"
 
 
+def _in_invoice_currency(invoice, amount):
+    """
+    A payment taken in the shop's own currency, as it stands against an
+    invoice written in another. The one that clears the invoice clears it
+    exactly; a part-payment converts at the invoice's frozen rate.
+    """
+    if invoice is None or not invoice.is_foreign:
+        return None
+    from apps.core.currency import round_to
+
+    if amount == invoice.balance_main:
+        return -invoice.balance
+    return -round_to(amount / invoice.exchange_rate, invoice.doc_currency)
+
+
 def _open_invoices(customer, lock=False):
     """Invoices on this account with something still to pay."""
     from apps.selling.models import Invoice, InvoiceStatus
@@ -257,8 +272,10 @@ def customer_payment(request, pk):
                 if invoice is None:
                     messages.error(request, "That invoice is not open on this account.")
                     return redirect("customers:customer_detail", pk=pk)
-                if amount > invoice.balance:
-                    messages.error(request, f"{invoice.reference} has {invoice.balance:,.0f} "
+                # The account is in the shop's own currency; so is this
+                # payment. A dollar invoice is held to its balance in shillings.
+                if amount > invoice.balance_main:
+                    messages.error(request, f"{invoice.reference} has {invoice.balance_main:,.0f} "
                                             "left on it. Record no more than that against it.")
                     return redirect("customers:customer_detail", pk=pk)
             entry = CreditTransaction.objects.create(
@@ -268,6 +285,7 @@ def customer_payment(request, pk):
                 balance_after=owed - amount,
                 method=method,
                 invoice=invoice,
+                doc_amount=_in_invoice_currency(invoice, amount),
                 reference=(request.POST.get("reference", "").strip()
                            or (invoice.reference if invoice else ""))[:60],
                 note=request.POST.get("note", "").strip()[:200],
@@ -340,6 +358,7 @@ def customer_payment_reverse(request, pk):
             note=f"Undoes payment of {back:,.0f} on {entry.created_at:%d %b}",
             # Against the same invoice, so it shows as owed again there too.
             invoice_id=entry.invoice_id,
+            doc_amount=-entry.doc_amount if entry.doc_amount is not None else None,
         )
         if entry.invoice_id:
             from apps.selling.models import Invoice

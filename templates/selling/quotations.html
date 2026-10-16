@@ -44,7 +44,7 @@
             {{ q.valid_until|date:"j M Y" }}
             {% if q.is_open and q.valid_until < today %}<span class="badge badge-warn ml-1">lapsed</span>{% endif %}
           </td>
-          <td class="text-right font-semibold">{{ q.total|floatformat:0|intcomma }}</td>
+          <td class="text-right font-semibold">{% if q.is_foreign %}<span class="text-xs text-ink-500">{{ q.doc_currency }}</span> {% endif %}{{ q.total|floatformat:q.money_places|intcomma }}</td>
           <td>
             {% if q.status == "accepted" %}<span class="badge badge-ok">Accepted</span>
             {% elif q.status == "declined" %}<span class="badge badge-danger">Declined</span>

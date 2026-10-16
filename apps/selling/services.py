@@ -125,11 +125,15 @@ def copy_for_new(quotation):
     """
     from datetime import timedelta
 
+    from apps.core.currency import rate_for
     from apps.core.numbering import save_with_number
 
     rules = paperwork_rules()
     check_document_discounts(quotation, rules)
-    current = prices_for(quotation.customer) if rules.lock_document_prices else {}
+    currency = quotation.doc_currency
+    rate = rate_for(currency)
+    current = (prices_in(quotation.customer, currency, rate)
+               if rules.lock_document_prices else {})
 
     today = timezone.localdate()
     fresh = save_with_number(
@@ -141,6 +145,8 @@ def copy_for_new(quotation):
                 days=(quotation.valid_until - quotation.issued_on).days or 14),
             note=quotation.note,
             discount_percent=quotation.discount_percent,
+            currency=currency,
+            exchange_rate=rate,
         ),
         field="reference",
         generate=lambda: next_reference(Quotation, "QUO"),
@@ -148,7 +154,8 @@ def copy_for_new(quotation):
     for line in quotation.lines.all():
         # The same offer again is today's offer: with prices locked, a
         # product is quoted at today's list price, not last month's.
-        unit_price = current.get(line.variant_id, line.unit_price) if line.variant_id             else line.unit_price
+        unit_price = (current.get(line.variant_id, line.unit_price) if line.variant_id
+                      else line.unit_price)
         fresh.lines.create(
             variant=line.variant, description=line.description, qty=line.qty,
             unit_price=unit_price, tax_rate=line.tax_rate,
@@ -200,6 +207,10 @@ def invoice_from_quotation(quotation, *, terms_days=14):
             # The offer they accepted was the discounted one. Billing the
             # full price is charging more than was agreed.
             discount_percent=quotation.discount_percent,
+            # And in the currency and at the rate it was offered in: a
+            # customer who accepted USD 176.50 is billed USD 176.50.
+            currency=quotation.doc_currency,
+            exchange_rate=quotation.exchange_rate,
         ),
     )
     for line in quotation.lines.all():
@@ -253,7 +264,9 @@ def issue(invoice):
 
     customer = invoice.customer
     _lock_customer(customer)
-    total = invoice.total
+    # The account is kept in the shop's own currency. A dollar invoice goes
+    # on it at the rate frozen on the invoice.
+    total = invoice.total_main
     balance = customer.balance
     if customer.credit_limit > 0 and balance + total > customer.credit_limit:
         raise ValueError(
@@ -290,10 +303,12 @@ def issue(invoice):
         customer=customer,
         kind=CreditKind.CHARGE,
         amount=total,
+        doc_amount=invoice.total if invoice.is_foreign else None,
         balance_after=balance + total,
         invoice=invoice,
         reference=invoice.reference,
-        note="Invoice",
+        note="Invoice" + (f" {invoice.doc_currency} {invoice.total:,.2f} at "
+                          f"{invoice.rate_label}" if invoice.is_foreign else ""),
     )
     return invoice
 
@@ -327,15 +342,26 @@ def take_payment(invoice, *, amount, method="cash", reference="", user=None, shi
     _lock_customer(customer)
     if amount > invoice.balance:
         raise ValueError(
-            f"That is more than the {invoice.balance:,.0f} still owed on {invoice.reference}."
+            f"That is more than the {invoice.doc_currency} {invoice.balance:,.2f} still "
+            f"owed on {invoice.reference}."
         )
+
+    # What comes off the account, in the shop's own currency. The payment
+    # that clears the invoice takes exactly what is left of the charge, so
+    # rounding each part-payment can never leave a shilling behind.
+    if invoice.is_foreign:
+        main = (invoice.balance_main if amount == invoice.balance
+                else invoice.to_main(amount))
+    else:
+        main = amount
 
     entry = CreditTransaction.objects.create(
         tenant=invoice.tenant,
         customer=customer,
         kind=CreditKind.PAYMENT,
-        amount=-amount,
-        balance_after=customer.balance - amount,
+        amount=-main,
+        doc_amount=-amount if invoice.is_foreign else None,
+        balance_after=customer.balance - main,
         invoice=invoice,
         reference=invoice.reference,
         method=method,
@@ -343,7 +369,10 @@ def take_payment(invoice, *, amount, method="cash", reference="", user=None, shi
     )
 
     movement = None
-    if method == "cash" and shift is not None:
+    # Cash in the shop's own currency goes in the drawer. Foreign notes are
+    # counted with the POS's own foreign cash, not added to the shilling
+    # count, where they would show the cashier over.
+    if method == "cash" and shift is not None and not invoice.is_foreign:
         from apps.pos.models import CashMovementKind
         from apps.pos.services import record_cash_movement
 
@@ -405,12 +434,14 @@ def void_invoice(invoice, *, user=None):
     if invoice.status == InvoiceStatus.OPEN:
         customer = invoice.customer
         _lock_customer(customer)
-        total = invoice.total
+        # Exactly what issuing it put on the account, whatever the rate is now.
+        total = invoice.charged_main
         CreditTransaction.objects.create(
             tenant=invoice.tenant,
             customer=customer,
             kind=CreditKind.ADJUSTMENT,
             amount=-total,
+            doc_amount=-invoice.total if invoice.is_foreign else None,
             balance_after=customer.balance - total,
             invoice=invoice,
             reference=invoice.reference,
@@ -473,16 +504,20 @@ def deliver(note, *, user=None):
         # Whatever the invoice took off comes off here too, as an amount,
         # so the sale the till records is the money the customer was asked
         # for -- and the VAT inside it is worked out of that same figure.
-        gross = money(row.qty * source.unit_price)
+        # A sale is always in the shop's own currency, whatever the invoice
+        # was written in: the price goes over at the invoice's frozen rate.
+        unit_price = price(source.unit_price * invoice.exchange_rate) if invoice.is_foreign \
+            else price(source.unit_price)
+        gross = money(row.qty * unit_price)
         CartLine.objects.create(
             tenant=cart.tenant, cart=cart, variant=source.variant,
             description=source.description[:160], qty=row.qty,
-            unit_price=price(source.unit_price), tax_rate=source.tax_rate,
-            discount=gross - row.line_total,
+            unit_price=unit_price, tax_rate=source.tax_rate,
+            discount=max(gross - row.line_total_main, Decimal("0")),
             added_via=AddedVia.MANUAL if source.variant is None else AddedVia.SEARCH,
         )
 
-    total = sum((row.line_total for row in lines), Decimal("0"))
+    total = sum((row.line_total_main for row in lines), Decimal("0"))
     try:
         sale = complete_sale(
             cart,
@@ -566,7 +601,7 @@ def check_discount(line_percent, document_percent, rules=None):
         )
 
 
-def check_product_rules(variant, unit_price, line_percent, document_percent):
+def check_product_rules(variant, unit_price, line_percent, document_percent, rate=1):
     """
     What the product itself says, the same two rules the POS keeps:
     "can be discounted" and "never sell below". The floor is checked against
@@ -583,7 +618,9 @@ def check_product_rules(variant, unit_price, line_percent, document_percent):
     floor = product.min_price
     if floor:
         hundred = Decimal("100")
-        each = (Decimal(unit_price) * (hundred - Decimal(line_percent or 0))
+        # The floor is in the shop's own currency; a dollar price is held to
+        # it at the document's rate.
+        each = (Decimal(unit_price) * Decimal(rate) * (hundred - Decimal(line_percent or 0))
                 * (hundred - Decimal(document_percent or 0)) / (hundred * hundred))
         if each < floor:
             raise ValueError(
@@ -605,10 +642,10 @@ def check_document_discounts(document, rules=None):
     check_discount(deepest, document.discount_percent, rules)
     for line in lines:
         check_product_rules(line.variant, line.unit_price, line.discount_percent,
-                            document.discount_percent)
+                            document.discount_percent, document.exchange_rate)
 
 
-def locked_price(variant, customer, rules=None):
+def locked_price(variant, customer, rules=None, document=None):
     """
     The price a product must go in at when the shop has locked prices, or
     None when staff may type their own. Typed lines (no product) are never
@@ -618,12 +655,30 @@ def locked_price(variant, customer, rules=None):
     if variant is None or not rules.lock_document_prices:
         return None
     amount = prices_for(customer).get(variant.pk)
+    if amount is not None and document is not None and document.is_foreign:
+        from apps.core.currency import from_main
+
+        amount = from_main(amount, document.exchange_rate)
     if amount is None:
         raise ValueError(
             f"{variant} has no price yet, and prices are locked on quotations "
             "and invoices. Set its price on the product first."
         )
     return amount
+
+
+def prices_in(customer, currency, rate):
+    """
+    What each product would be charged at for this customer, in ``currency``
+    at ``rate``. The shop's own currency needs no converting; another one is
+    worked out from the shop's price, to the cent.
+    """
+    from apps.core.currency import from_main, main_currency
+
+    prices = prices_for(customer)
+    if (currency or "").upper() == main_currency():
+        return prices
+    return {key: from_main(value, rate) for key, value in prices.items()}
 
 
 def prices_for(customer):

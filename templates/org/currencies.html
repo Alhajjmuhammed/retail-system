@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Currencies{% endblock %}
+{% block heading %}Currencies{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-5">
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Your own currency</h2></div>
+    <div class="card-body space-y-3">
+      <p class="text-sm text-ink-700">Your books are kept in <strong>{{ main }}</strong>: prices, sales, stock, customer accounts and reports.</p>
+      {% if locked_main %}
+      <p class="hint">It is fixed now that something has been sold, quoted or paid in it. Changing it would turn every price and balance into a different amount of money.</p>
+      {% else %}
+      <form method="post" class="flex flex-wrap items-end gap-2">
+        {% csrf_token %}<input type="hidden" name="action" value="main">
+        <div>
+          <label class="label" for="main_code">Change it to</label>
+          <select name="code" id="main_code" class="input w-64">
+            {% for code, label in choices %}<option value="{{ code }}" {% if code == main %}selected{% endif %}>{{ code }} &mdash; {{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-secondary">Save</button>
+      </form>
+      <p class="hint">You can change it until the first sale, quotation or payment.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Other currencies you deal in</h2></div>
+    <div class="card-body space-y-4">
+      <p class="hint">Each with what one unit is worth in {{ main }}. A quotation or invoice can be written in any of these; it keeps the rate it was written with, so updating a rate here changes nothing already sent.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Currency</th><th class="text-right">One is worth</th><th class="w-56">Update the rate</th><th class="w-12"></th></tr></thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td class="font-medium text-ink-900">{{ row.code }}</td>
+              <td class="tnum text-right">{{ main }} {{ row.rate_display }}<span class="hint block">since {{ row.updated_at|date:"j M Y H:i" }}</span></td>
+              <td>
+                <form method="post" class="flex gap-2">
+                  {% csrf_token %}<input type="hidden" name="action" value="save_rate"><input type="hidden" name="code" value="{{ row.code }}">
+                  <input type="number" step="any" min="0.000001" name="rate" value="{{ row.rate_display }}" class="input" aria-label="New rate for {{ row.code }}" required>
+                  <button type="submit" class="btn btn-secondary btn-sm">Save</button>
+                </form>
+              </td>
+              <td class="text-right">
+                <form method="post" x-data @submit.prevent="$store.confirm.ask($el, { title: 'Stop offering {{ row.code }}?', body: 'Documents already in {{ row.code }} keep it.', label: 'Stop' })">
+                  {% csrf_token %}<input type="hidden" name="action" value="remove"><input type="hidden" name="code" value="{{ row.code }}">
+                  <button type="submit" class="btn-icon btn-icon-danger" aria-label="Stop offering {{ row.code }}">{% icon "trash" class="h-4 w-4" %}</button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-ink-500">Only {{ main }} so far. Add a currency below to quote and invoice in it.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if addable %}
+      <form method="post" class="flex flex-wrap items-end gap-2 border-t border-ink-100 pt-4">
+        {% csrf_token %}<input type="hidden" name="action" value="save_rate">
+        <div>
+          <label class="label" for="new_code">Add a currency</label>
+          <select name="code" id="new_code" class="input w-56">
+            {% for code, label in addable %}<option value="{{ code }}">{{ code }} &mdash; {{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="label" for="new_rate">One is worth ({{ main }})</label>
+          <input type="number" step="any" min="0.000001" name="rate" id="new_rate" class="input w-40" placeholder="2650" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{% icon "plus" %} Add</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

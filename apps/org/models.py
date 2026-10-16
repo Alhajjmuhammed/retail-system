@@ -5,6 +5,8 @@ A product belongs to the tenant; a quantity belongs to a branch. That split is
 the reason multi-branch can be switched on later without reshaping anything.
 """
 
+from decimal import Decimal
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -176,6 +178,35 @@ class TenantSettings(TenantModel):
 
     def __str__(self):
         return f"Settings for {self.tenant}"
+
+
+class ExchangeRate(TenantModel):
+    """
+    One other currency the shop deals in, and what it is worth.
+
+    ``rate`` is how much of the shop's own currency one unit buys: 1 USD =
+    2,650 TZS is stored as 2650. The owner keeps it current; every quotation
+    and invoice freezes the rate it was written with, so changing it tomorrow
+    rewrites nothing already sent.
+    """
+
+    code = models.CharField(max_length=3)
+    rate = models.DecimalField(
+        max_digits=18, decimal_places=6,
+        validators=[MinValueValidator(Decimal("0.000001"))])
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["code"]
+        unique_together = [("tenant", "code")]
+
+    def __str__(self):
+        return f"1 {self.code} = {self.rate_display}"
+
+    @property
+    def rate_display(self) -> str:
+        """2650.000000 as 2650, 0.000377 as 0.000377 -- never 2.65E+3."""
+        return format(self.rate.normalize(), "f")
 
 
 class BankAccount(TenantModel):

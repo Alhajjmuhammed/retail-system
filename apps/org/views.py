@@ -67,6 +67,8 @@ def settings_home(request):
          "A second price for bulk buyers, attached to a customer."),
         ("settings.edit", "catalog:tiles", "layers", "brand", "POS tiles",
          "What shows on the POS for goods with no barcode."),
+        ("settings.edit", "org:currencies", "receipt", "brand", "Currencies",
+         "Your own currency, the others you quote and take, and what each is worth."),
         ("settings.edit", "catalog:taxonomy", "tag", "brand", "Units, brands & VAT",
          "The units you sell in, your brands, and the tax rates you charge. "
          "Categories live with the products, under Inventory."),
@@ -467,3 +469,95 @@ def device_update(request, pk):
         return redirect("org:devices")
     audit.record(f"device.{action}", obj=device, ip=audit.client_ip(request))
     return redirect("org:devices")
+
+
+def _has_money_history(tenant):
+    """
+    Whether anything has been priced or paid in the shop's own currency yet.
+    Once it has, changing that currency would quietly turn every price,
+    sale and balance into a different amount of money.
+    """
+    from apps.customers.models import CreditTransaction
+    from apps.pos.models import Sale
+    from apps.selling.models import Invoice, Quotation
+
+    return any(model.objects.exists()
+               for model in (Sale, Invoice, Quotation, CreditTransaction))
+
+
+@login_required
+@requires("settings.edit")
+def currencies(request):
+    """
+    The shop's own currency and the others it deals in, each with what it is
+    worth. Documents freeze the rate they are written with, so a rate can be
+    kept current without rewriting anything already sent.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    from apps.core.currency import CHOICES, KNOWN, main_currency
+    from apps.org.models import ExchangeRate
+
+    tenant = request.tenant
+    main = main_currency(tenant)
+    locked_main = _has_money_history(tenant)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        code = (request.POST.get("code") or "").strip().upper()[:3]
+
+        if action == "main":
+            if locked_main:
+                messages.error(request, "Your own currency is fixed once something has been "
+                                        "sold, quoted or paid in it.")
+            elif code not in KNOWN:
+                messages.error(request, "Choose a currency from the list.")
+            else:
+                before = tenant.currency
+                tenant.currency = code
+                tenant.save(update_fields=["currency"])
+                ExchangeRate.objects.filter(code=code).delete()
+                audit.record("currency.main_changed", obj=tenant,
+                             before={"currency": before}, after={"currency": code},
+                             ip=audit.client_ip(request))
+                messages.success(request, f"Your own currency is now {code}.")
+            return redirect("org:currencies")
+
+        if action == "save_rate":
+            try:
+                rate = Decimal(str(request.POST.get("rate") or "").replace(",", ""))
+            except InvalidOperation:
+                rate = None
+            if code not in KNOWN or code == main:
+                messages.error(request, "Choose a currency other than your own.")
+            elif rate is None or rate <= 0:
+                messages.error(request, f"How many {main} is one {code} worth? Type a number "
+                                        "above nothing.")
+            else:
+                row, _ = ExchangeRate.objects.update_or_create(
+                    code=code, defaults={"rate": rate, "is_active": True})
+                audit.record("currency.rate_set", obj=row, after={"code": code, "rate": str(rate)},
+                             ip=audit.client_ip(request))
+                messages.success(request, f"{row}. New quotations and invoices use it; "
+                                          "ones already written keep their own.")
+            return redirect("org:currencies")
+
+        if action == "remove":
+            row = ExchangeRate.objects.filter(code=code).first()
+            if row is not None:
+                row.is_active = False
+                row.save(update_fields=["is_active", "updated_at"])
+                audit.record("currency.removed", obj=row, ip=audit.client_ip(request))
+                messages.success(request, f"{code} is no longer offered. Documents already in "
+                                          f"{code} keep it.")
+            return redirect("org:currencies")
+
+    rows = ExchangeRate.objects.filter(is_active=True).exclude(code=main).order_by("code")
+    taken = {row.code for row in rows} | {main}
+    return render(request, "org/currencies.html", {
+        "main": main,
+        "locked_main": locked_main,
+        "rows": rows,
+        "choices": CHOICES,
+        "addable": [(c, label) for c, label in CHOICES if c not in taken],
+    })
