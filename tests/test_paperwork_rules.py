@@ -222,3 +222,61 @@ def test_the_button_says_proforma(client, shop, owner):
     page = client.get(reverse("selling:invoice_list")).content.decode()
     assert "New proforma" in page
     assert "Issue it" in page
+
+
+# -- documents written before the limit --------------------------------------
+
+def _old_quotation(shop, main_branch, buyer, stocked, status, off="80"):
+    from apps.selling.models import Quotation
+
+    today = timezone.localdate()
+    with tenant_context(shop, branch=main_branch):
+        q = Quotation.objects.create(
+            reference="QUO260009", customer=buyer, branch=main_branch, status=status,
+            issued_on=today, valid_until=today + timedelta(days=14))
+        q.lines.create(variant=stocked["Mkate"], description="Mkate", qty=Decimal("10"),
+                       unit_price=Decimal("999"), discount_percent=Decimal(off), position=10)
+        return q
+
+
+@pytest.mark.parametrize("step", ["send", "copy", "invoice"])
+def test_an_old_discount_cannot_slip_past_a_new_limit(
+        shop, main_branch, owner, buyer, stocked, rules, step):
+    from apps.selling.models import QuotationStatus
+
+    status = {"send": QuotationStatus.DRAFT, "copy": QuotationStatus.SENT,
+              "invoice": QuotationStatus.ACCEPTED}[step]
+    q = _old_quotation(shop, main_branch, buyer, stocked, status)
+    rules.max_document_discount = Decimal("20")
+    rules.save()
+    action = {"send": services.send, "copy": services.copy_for_new,
+              "invoice": services.invoice_from_quotation}[step]
+    with tenant_context(shop, branch=main_branch, user=owner), \
+            pytest.raises(ValueError, match="allows off is 20%"):
+        action(q)
+
+
+def test_an_old_proforma_cannot_be_issued_over_the_limit(
+        shop, main_branch, owner, rules, proforma):
+    with tenant_context(shop, branch=main_branch, user=owner):
+        proforma.lines.create(description="Mincer", qty=Decimal("1"),
+                              unit_price=Decimal("2170.60"),
+                              discount_percent=Decimal("80"), position=10)
+        rules.max_document_discount = Decimal("20")
+        rules.save()
+        with pytest.raises(ValueError, match="allows off is 20%"):
+            services.issue(proforma)
+        proforma.refresh_from_db()
+        assert proforma.status == "draft"
+
+
+def test_with_prices_locked_a_copy_takes_todays_price(
+        shop, main_branch, owner, buyer, stocked, rules):
+    from apps.selling.models import QuotationStatus
+
+    q = _old_quotation(shop, main_branch, buyer, stocked, QuotationStatus.SENT, off="0")
+    rules.lock_document_prices = True
+    rules.save()
+    with tenant_context(shop, branch=main_branch, user=owner):
+        fresh = services.copy_for_new(q)
+        assert fresh.lines.get().unit_price == Decimal("1500")

@@ -72,6 +72,7 @@ def save_as_proforma(invoice):
 def send(quotation):
     """Mark it as given to the customer. The date it was sent is the date
     the shop will be asked about later."""
+    check_document_discounts(quotation)
     quotation.status = QuotationStatus.SENT
     quotation.sent_at = timezone.now()
     quotation.save(update_fields=["status", "sent_at", "updated_at"])
@@ -126,6 +127,10 @@ def copy_for_new(quotation):
 
     from apps.core.numbering import save_with_number
 
+    rules = paperwork_rules()
+    check_document_discounts(quotation, rules)
+    current = prices_for(quotation.customer) if rules.lock_document_prices else {}
+
     today = timezone.localdate()
     fresh = save_with_number(
         Quotation(
@@ -141,9 +146,12 @@ def copy_for_new(quotation):
         generate=lambda: next_reference(Quotation, "QUO"),
     )
     for line in quotation.lines.all():
+        # The same offer again is today's offer: with prices locked, a
+        # product is quoted at today's list price, not last month's.
+        unit_price = current.get(line.variant_id, line.unit_price) if line.variant_id             else line.unit_price
         fresh.lines.create(
             variant=line.variant, description=line.description, qty=line.qty,
-            unit_price=line.unit_price, tax_rate=line.tax_rate,
+            unit_price=unit_price, tax_rate=line.tax_rate,
             discount_percent=line.discount_percent, position=line.position,
         )
     return fresh
@@ -178,6 +186,7 @@ def invoice_from_quotation(quotation, *, terms_days=14):
     existing = quotation.invoices.exclude(status=InvoiceStatus.VOID).first()
     if existing is not None:
         raise ValueError(f"{quotation.reference} is already invoiced as {existing.reference}.")
+    check_document_discounts(quotation)
 
     today = timezone.localdate()
     invoice = save_as_proforma(
@@ -240,6 +249,7 @@ def issue(invoice):
     invoice = _locked(invoice)
     if invoice.status != InvoiceStatus.DRAFT:
         return invoice
+    check_document_discounts(invoice)
 
     customer = invoice.customer
     _lock_customer(customer)
@@ -554,6 +564,18 @@ def check_discount(line_percent, document_percent, rules=None):
                if line_percent and document_percent else ".")
             + " The owner can change the limit under Settings, Business."
         )
+
+
+def check_document_discounts(document, rules=None):
+    """
+    Every line of a quotation or invoice within the shop's limit, together
+    with the whole-document discount. Run where a document moves on -- sent,
+    copied, invoiced, issued -- so one written before the limit was set, or
+    before it was lowered, cannot carry an old discount past it.
+    """
+    rules = rules or paperwork_rules()
+    deepest = max((line.discount_percent for line in document.lines.all()), default=0)
+    check_discount(deepest, document.discount_percent, rules)
 
 
 def locked_price(variant, customer, rules=None):

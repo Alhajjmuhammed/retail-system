@@ -171,7 +171,11 @@ def _act_on(request, quotation):
         if not quotation.lines.exists():
             messages.error(request, "There is nothing on this quotation yet.")
             return redirect("selling:quotation_detail", pk=quotation.pk)
-        services.send(quotation)
+        try:
+            services.send(quotation)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:quotation_detail", pk=quotation.pk)
         audit.record("quote.sent", obj=quotation, ip=audit.client_ip(request))
         messages.success(request, f"{quotation.reference} marked as sent.")
         return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -191,7 +195,11 @@ def _act_on(request, quotation):
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
     if action == "copy":
-        fresh = services.copy_for_new(quotation)
+        try:
+            fresh = services.copy_for_new(quotation)
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:quotation_detail", pk=quotation.pk)
         audit.record("quote.copied", obj=fresh, ip=audit.client_ip(request))
         messages.success(request, f"{fresh.reference} is a copy of {quotation.reference}.")
         return redirect("selling:quotation_detail", pk=fresh.pk)
