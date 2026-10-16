@@ -34,6 +34,11 @@
         <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
         <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
       </select>
+      {% if show_options %}
+      <select name="show" class="input w-full sm:w-40" aria-label="Show prices in">
+        {% for code in show_options %}<option value="{% if not forloop.first %}{{ code }}{% endif %}" {% if code == show or forloop.first and not show %}selected{% endif %}>Prices in {{ code }}</option>{% endfor %}
+      </select>
+      {% endif %}
     </form>
 
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">

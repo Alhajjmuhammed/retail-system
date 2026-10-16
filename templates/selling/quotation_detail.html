@@ -24,7 +24,7 @@
     <div class="text-right">
       <p class="text-xs uppercase tracking-wide text-ink-500">Total{% if quotation.is_foreign %} ({{ quotation.doc_currency }}){% endif %}</p>
       <p class="tnum text-2xl font-bold text-ink-900">{{ quotation.total|floatformat:quotation.money_places|intcomma }}</p>
-      {% include "selling/_currency_note.html" with doc=quotation %}
+      {% include "selling/_currency_note.html" with doc=quotation %}{% include "selling/_currency_switch.html" with doc=quotation %}
       <p class="hint">VAT included {{ quotation.tax|floatformat:quotation.money_places|intcomma }}</p>
     </div>
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">

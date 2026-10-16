@@ -125,6 +125,9 @@ def quotation_detail(request, pk):
 
     _describe_products(quotation)
     return render(request, "selling/quotation_detail.html", {
+        **_currency_choices(),
+        "comparisons": _comparisons(quotation),
+        "may_change_currency": request.membership.can("quote.manage"),
         "quotation": quotation,
         "variants": _sellable(quotation.customer, quotation),
         "shop_settings": _shop_settings(),
@@ -152,6 +155,20 @@ def _act_on(request, quotation):
         if line is not None:
             line.delete()
             messages.success(request, "Line removed.")
+        return redirect("selling:quotation_detail", pk=quotation.pk)
+
+    if action == "currency" and editable:
+        try:
+            services.change_currency(quotation, request.POST.get("currency"))
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:quotation_detail", pk=quotation.pk)
+        audit.record("quotation.currency_changed", obj=quotation,
+                     after={"currency": quotation.doc_currency, "rate": str(quotation.exchange_rate)},
+                     ip=audit.client_ip(request))
+        messages.success(request, f"Now in {quotation.doc_currency}"
+                         + (f" at {quotation.rate_label}" if quotation.is_foreign else "")
+                         + ". Every price was converted.")
         return redirect("selling:quotation_detail", pk=quotation.pk)
 
     if action == "header" and editable:
@@ -231,6 +248,19 @@ def _describe_products(document):
         if line.variant_id:
             line.list_price = prices.get(line.variant_id)
             line.on_hand = quantity_of(line.variant, document.branch)
+
+
+def _comparisons(document):
+    """Its total in the other currencies the shop deals in, at today's rates."""
+    from apps.core.currency import compare, rates
+
+    if not rates():
+        return []
+    rows = compare(document.total_main, exclude=document.doc_currency)
+    # A foreign document already shows its shilling figure beside the total.
+    if document.is_foreign:
+        rows = [(code, amount) for code, amount in rows if code != document.main_currency]
+    return rows
 
 
 def _currency_choices():
@@ -523,6 +553,9 @@ def invoice_detail(request, pk):
 
     _describe_products(invoice)
     return render(request, "selling/invoice_detail.html", {
+        **_currency_choices(),
+        "comparisons": _comparisons(invoice),
+        "may_change_currency": request.membership.can("invoice.manage"),
         "invoice": invoice,
         "variants": _sellable(invoice.customer, invoice),
         "shop_settings": _shop_settings(),
@@ -549,7 +582,8 @@ def _act_on_invoice(request, invoice):
     editable = invoice.status == InvoiceStatus.DRAFT
     may_manage = request.membership.can("invoice.manage")
 
-    if action in {"add_line", "remove_line", "header", "issue", "void"} and not may_manage:
+    if (action in {"add_line", "remove_line", "header", "currency", "issue", "void"}
+            and not may_manage):
         messages.error(request, "You may not change an invoice.")
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
@@ -565,6 +599,20 @@ def _act_on_invoice(request, invoice):
         if line is not None:
             line.delete()
             messages.success(request, "Line removed.")
+        return redirect("selling:invoice_detail", pk=invoice.pk)
+
+    if action == "currency" and editable:
+        try:
+            services.change_currency(invoice, request.POST.get("currency"))
+        except ValueError as refused:
+            messages.error(request, str(refused))
+            return redirect("selling:invoice_detail", pk=invoice.pk)
+        audit.record("invoice.currency_changed", obj=invoice,
+                     after={"currency": invoice.doc_currency, "rate": str(invoice.exchange_rate)},
+                     ip=audit.client_ip(request))
+        messages.success(request, f"Now in {invoice.doc_currency}"
+                         + (f" at {invoice.rate_label}" if invoice.is_foreign else "")
+                         + ". Every price was converted.")
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
     if action == "header" and editable:

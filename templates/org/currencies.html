@@ -30,15 +30,32 @@
   <div class="card">
     <div class="card-head"><h2 class="card-title">Other currencies you deal in</h2></div>
     <div class="card-body space-y-4">
-      <p class="hint">Each with what one unit is worth in {{ main }}. A quotation or invoice can be written in any of these; it keeps the rate it was written with, so updating a rate here changes nothing already sent.</p>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <p class="hint max-w-xl">Each with what one unit is worth in {{ main }}. A <strong>market</strong> rate is brought up to date every morning; a rate you type is <strong>yours</strong> and stays until you change it. A quotation or invoice keeps the rate it was written with, so a new rate changes nothing already sent.</p>
+        {% if rows %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="refresh">
+          <button type="submit" class="btn btn-secondary btn-sm">Get today's market rates now</button>
+        </form>
+        {% endif %}
+      </div>
       <div class="table-wrap">
         <table class="table">
-          <thead><tr><th>Currency</th><th class="text-right">One is worth</th><th class="w-56">Update the rate</th><th class="w-12"></th></tr></thead>
+          <thead><tr><th>Currency</th><th class="text-right">One is worth</th><th>Source</th><th class="w-64">Type your own rate</th><th class="w-12"></th></tr></thead>
           <tbody>
             {% for row in rows %}
             <tr>
               <td class="font-medium text-ink-900">{{ row.code }}</td>
               <td class="tnum text-right">{{ main }} {{ row.rate_display }}<span class="hint block">since {{ row.updated_at|date:"j M Y H:i" }}</span></td>
+              <td>
+                {% if row.source == "market" %}
+                <span class="badge badge-ok">Market</span><span class="hint block">updated every morning</span>
+                {% else %}
+                <span class="badge">Yours</span>
+                <form method="post" class="mt-1">{% csrf_token %}<input type="hidden" name="action" value="use_market"><input type="hidden" name="code" value="{{ row.code }}">
+                  <button type="submit" class="text-xs text-brand-700 hover:underline">Use the market rate</button>
+                </form>
+                {% endif %}
+              </td>
               <td>
                 <form method="post" class="flex gap-2">
                   {% csrf_token %}<input type="hidden" name="action" value="save_rate"><input type="hidden" name="code" value="{{ row.code }}">
@@ -54,7 +71,7 @@
               </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-ink-500">Only {{ main }} so far. Add a currency below to quote and invoice in it.</td></tr>
+            <tr><td colspan="5" class="text-ink-500">Only {{ main }} so far. Add a currency below to quote and invoice in it.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -71,10 +88,11 @@
         </div>
         <div>
           <label class="label" for="new_rate">One is worth ({{ main }})</label>
-          <input type="number" step="any" min="0.000001" name="rate" id="new_rate" class="input w-40" placeholder="2650" required>
+          <input type="number" step="any" min="0.000001" name="rate" id="new_rate" class="input w-44" placeholder="Market rate">
         </div>
         <button type="submit" class="btn btn-primary">{% icon "plus" %} Add</button>
       </form>
+      <p class="hint">Leave the rate empty to follow the market (fetched now and every morning), or type your own.</p>
       {% endif %}
     </div>
   </div>

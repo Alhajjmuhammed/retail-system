@@ -485,6 +485,29 @@ def _has_money_history(tenant):
                for model in (Sale, Invoice, Quotation, CreditTransaction))
 
 
+def _follow_market(request, code):
+    """Set ``code`` to follow the market, fetching today's rate for it now."""
+    from django.utils import timezone
+
+    from apps.core.currency import fetch_market_table, main_currency, market_rate
+    from apps.org.models import ExchangeRate
+
+    try:
+        rate = market_rate(code, main_currency(request.tenant), fetch_market_table())
+    except ValueError as refused:
+        messages.error(request, str(refused))
+        return redirect("org:currencies")
+    row, _ = ExchangeRate.objects.update_or_create(
+        code=code, defaults={"rate": rate, "is_active": True, "source": "market",
+                             "fetched_at": timezone.now()})
+    audit.record("currency.rate_set", obj=row,
+                 after={"code": code, "rate": str(rate), "source": "market"},
+                 ip=audit.client_ip(request))
+    messages.success(request, f"{row}, today's market rate. It is brought up to date every "
+                              "morning.")
+    return redirect("org:currencies")
+
+
 @login_required
 @requires("settings.edit")
 def currencies(request):
@@ -524,22 +547,45 @@ def currencies(request):
             return redirect("org:currencies")
 
         if action == "save_rate":
-            try:
-                rate = Decimal(str(request.POST.get("rate") or "").replace(",", ""))
-            except InvalidOperation:
-                rate = None
+            typed = str(request.POST.get("rate") or "").replace(",", "").strip()
             if code not in KNOWN or code == main:
                 messages.error(request, "Choose a currency other than your own.")
-            elif rate is None or rate <= 0:
+                return redirect("org:currencies")
+            if not typed:
+                # No rate typed: follow the market, starting with today's.
+                return _follow_market(request, code)
+            try:
+                rate = Decimal(typed)
+            except InvalidOperation:
+                rate = None
+            if rate is None or rate <= 0:
                 messages.error(request, f"How many {main} is one {code} worth? Type a number "
-                                        "above nothing.")
+                                        "above nothing, or leave it empty for the market rate.")
             else:
+                # Typed by the owner: theirs, and the morning update leaves it.
                 row, _ = ExchangeRate.objects.update_or_create(
-                    code=code, defaults={"rate": rate, "is_active": True})
-                audit.record("currency.rate_set", obj=row, after={"code": code, "rate": str(rate)},
+                    code=code, defaults={"rate": rate, "is_active": True, "source": "manual"})
+                audit.record("currency.rate_set", obj=row,
+                             after={"code": code, "rate": str(rate), "source": "manual"},
                              ip=audit.client_ip(request))
-                messages.success(request, f"{row}. New quotations and invoices use it; "
-                                          "ones already written keep their own.")
+                messages.success(request, f"{row}, your own rate: the morning update leaves "
+                                          "it alone. New documents use it; ones already "
+                                          "written keep their own.")
+            return redirect("org:currencies")
+
+        if action == "use_market":
+            return _follow_market(request, code)
+
+        if action == "refresh":
+            from apps.core.currency import refresh_market_rates
+
+            try:
+                updated, skipped = refresh_market_rates(tenant)
+            except ValueError as refused:
+                messages.error(request, str(refused))
+            else:
+                messages.success(request, f"Market rates brought up to date ({updated})."
+                                 + (f" {skipped} could not be found." if skipped else ""))
             return redirect("org:currencies")
 
         if action == "remove":

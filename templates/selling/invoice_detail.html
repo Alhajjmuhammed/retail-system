@@ -34,7 +34,7 @@ month -- so the page shows both rather than folding them into one state.
       <div>
         <p class="text-xs uppercase tracking-wide text-ink-500">Total{% if invoice.is_foreign %} ({{ invoice.doc_currency }}){% endif %}</p>
         <p class="tnum text-xl font-bold text-ink-900">{{ invoice.total|floatformat:invoice.money_places|intcomma }}</p>
-        {% include "selling/_currency_note.html" with doc=invoice %}
+        {% include "selling/_currency_note.html" with doc=invoice %}{% include "selling/_currency_switch.html" with doc=invoice %}
       </div>
       <div>
         {% comment %}A proforma owes nothing and a cancelled invoice owes nothing; only an issued invoice has a balance.{% endcomment %}

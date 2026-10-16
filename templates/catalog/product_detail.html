@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize %}{% load currency %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block heading %}{{ product.name }}{% endblock %}
 
@@ -78,7 +78,7 @@ from a line on a quotation.
             <td>{% if forloop.first %}{{ v.name|default:"Standard" }}{% endif %}</td>
             <td>{{ price.price_list.name }}</td>
             <td class="tnum text-right">{{ price.min_qty|floatformat:"-3" }}</td>
-            <td class="tnum text-right font-medium">{{ price.amount|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right font-medium">{{ price.amount|floatformat:"-2"|intcomma }}{% if previews %}<span class="hint block font-normal">{% for pv in previews %}{{ pv.0 }} {{ price.amount|in_currency:pv|floatformat:"-2"|intcomma }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</span>{% endif %}</td>
             <td class="text-xs text-ink-600">{% if forloop.first %}{% for code in v.barcodes.all %}<span class="mr-2 font-mono">{{ code.code }}</span>{% empty %}&mdash;{% endfor %}{% endif %}</td>
           </tr>
           {% empty %}

@@ -194,6 +194,12 @@ class ExchangeRate(TenantModel):
     rate = models.DecimalField(
         max_digits=18, decimal_places=6,
         validators=[MinValueValidator(Decimal("0.000001"))])
+    # "market": fetched every morning from a public rates service. "manual":
+    # typed by the owner -- the rate their bank gives, say -- and left alone
+    # by the morning update until they switch it back.
+    source = models.CharField(
+        max_length=10, choices=[("market", "Market"), ("manual", "Yours")], default="market")
+    fetched_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:

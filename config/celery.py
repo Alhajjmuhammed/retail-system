@@ -51,6 +51,11 @@ app.conf.beat_schedule = {
         "task": "apps.notifications.tasks.send_queued_messages",
         "schedule": crontab(minute="*/5"),
     },
+    # Market exchange rates, before the shop opens. Typed rates are left alone.
+    "refresh-exchange-rates": {
+        "task": "apps.org.tasks.refresh_exchange_rates",
+        "schedule": crontab(hour=6, minute=0),
+    },
     "expiry-and-low-stock-alerts": {
         "task": "apps.inventory.tasks.raise_stock_alerts",
         "schedule": crontab(hour=6, minute=30),

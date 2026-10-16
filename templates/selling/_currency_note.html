@@ -6,3 +6,6 @@ to in shillings, at the rate frozen on it when it was written.
 {% if doc.is_foreign %}
 <p class="mt-0.5 text-xs text-ink-500">&asymp; {{ doc.main_currency }} {{ doc.total_main|floatformat:0|intcomma }}<span class="block">{{ doc.rate_label }}</span></p>
 {% endif %}
+{% if comparisons %}
+<p class="mt-0.5 text-xs text-ink-400" title="For comparing only. The document is charged in {{ doc.doc_currency }}.">Today: {% for code, amount in comparisons %}{{ code }} {{ amount|floatformat:"-2"|intcomma }}{% if not forloop.last %} &middot; {% endif %}{% endfor %}</p>
+{% endif %}

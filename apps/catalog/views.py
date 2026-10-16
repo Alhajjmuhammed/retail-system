@@ -125,11 +125,34 @@ def product_list(request):
             if supplier else None
         ),
         "can_see_cost": request.membership.can("product.view_cost"),
+        **_price_preview(request),
     }
 
     if request.htmx:
         return render(request, "catalog/_product_rows.html", context)
     return render(request, "catalog/product_list.html", context)
+
+
+def _rates_now():
+    from apps.core.currency import rates
+
+    return rates()
+
+
+def _price_preview(request):
+    """
+    "Show prices in": the product list's amounts in another currency the shop
+    deals in, at today's rate, for comparing. Nothing saved changes.
+    """
+    from apps.core.currency import main_currency, rates
+
+    others = rates()
+    chosen = (request.GET.get("show") or "").upper()
+    return {
+        "show_options": [main_currency(), *sorted(others)] if others else [],
+        "show": chosen if chosen in others else "",
+        "preview": (chosen, others[chosen]) if chosen in others else None,
+    }
 
 
 def _product_form(request, form, *, product=None, variant=None, saved=""):
@@ -269,6 +292,8 @@ def product_detail(request, pk):
         "movements": movements,
         "may_edit": request.membership.can("product.manage"),
         "may_see_cost": request.membership.can("product.view_cost"),
+        # Each price in the other currencies the shop deals in, at today's rate.
+        "previews": sorted(_rates_now().items()),
     })
 
 

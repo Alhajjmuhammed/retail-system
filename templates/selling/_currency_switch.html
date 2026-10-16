@@ -1,0 +1,15 @@
+{% comment %}
+Moving a document still being written into another currency. Every price
+is converted at today's rate; once sent or issued, the currency stays.
+{% endcomment %}
+{% if editable and may_change_currency and currency_options|length > 1 %}
+<form method="post" class="mt-2 flex flex-wrap items-center gap-2 text-xs"
+      x-data @submit.prevent="$store.confirm.ask($el, { title: 'Change the currency?', body: 'Every price on it is converted at today\'s rate.', label: 'Change', danger: false })">
+  {% csrf_token %}<input type="hidden" name="action" value="currency">
+  <label for="switch_currency" class="text-ink-500">Written in {{ doc.doc_currency }} &middot; change to</label>
+  <select name="currency" id="switch_currency" class="input w-auto py-1 text-xs">
+    {% for code, label in currency_options %}<option value="{{ code }}" {% if code == doc.doc_currency %}selected{% endif %}>{{ code }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">Change</button>
+</form>
+{% endif %}

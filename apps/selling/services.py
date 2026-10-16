@@ -667,6 +667,35 @@ def locked_price(variant, customer, rules=None, document=None):
     return amount
 
 
+@transaction.atomic
+def change_currency(document, code):
+    """
+    Move a document still being written into another currency, at today's
+    rate. Every line keeps its value: its price goes over through the shop's
+    own currency, so 2,500 shillings is USD 1.00 at 2,500 and back again.
+    Only while it is a draft -- once sent or issued, the currency is part of
+    what the customer was given.
+    """
+    from apps.core.currency import from_main, main_currency, rate_for
+    from apps.pos.services import price
+
+    code = (code or "").upper()
+    if document.status != "draft":
+        raise ValueError(f"{document.reference} has gone out; its currency stays as it is.")
+    if code == document.doc_currency:
+        return document
+    new_rate = rate_for(code)
+    main = main_currency()
+    for line in document.lines.all():
+        in_main = line.unit_price * document.exchange_rate
+        line.unit_price = price(in_main) if code == main else from_main(in_main, new_rate)
+        line.save(update_fields=["unit_price", "updated_at"])
+    document.currency = code
+    document.exchange_rate = new_rate
+    document.save(update_fields=["currency", "exchange_rate", "updated_at"])
+    return document
+
+
 def prices_in(customer, currency, rate):
     """
     What each product would be charged at for this customer, in ``currency``
