@@ -84,17 +84,30 @@ class Quotation(BranchModel):
     # -- currency ----------------------------------------------------------
 
     @property
+    def shop(self):
+        """
+        The document's shop, without a query when it is the one the request
+        is already about -- a list of invoices read it once per row.
+        """
+        from apps.core.context import get_current_tenant
+
+        current = get_current_tenant()
+        if current is not None and current.pk == self.tenant_id:
+            return current
+        return self.tenant
+
+    @property
     def doc_currency(self) -> str:
         """What it is written in; a document from before currencies is the shop's."""
         from apps.core.currency import main_currency
 
-        return (self.currency or main_currency(self.tenant)).upper()
+        return (self.currency or main_currency(self.shop)).upper()
 
     @property
     def main_currency(self) -> str:
         from apps.core.currency import main_currency
 
-        return main_currency(self.tenant)
+        return main_currency(self.shop)
 
     @property
     def is_foreign(self) -> bool:
@@ -118,7 +131,7 @@ class Quotation(BranchModel):
 
         if not self.is_foreign:
             return amount
-        return to_main(amount, self.exchange_rate, self.tenant)
+        return to_main(amount, self.exchange_rate, self.shop)
 
     @property
     def total_main(self) -> Decimal:
@@ -129,7 +142,7 @@ class Quotation(BranchModel):
     def rate_label(self) -> str:
         from apps.core.currency import describe_rate
 
-        return describe_rate(self.doc_currency, self.exchange_rate, self.tenant)
+        return describe_rate(self.doc_currency, self.exchange_rate, self.shop)
 
     def _money(self, amount) -> Decimal:
         from apps.core.currency import round_to
@@ -362,17 +375,30 @@ class Invoice(BranchModel):
     # -- currency ----------------------------------------------------------
 
     @property
+    def shop(self):
+        """
+        The document's shop, without a query when it is the one the request
+        is already about -- a list of invoices read it once per row.
+        """
+        from apps.core.context import get_current_tenant
+
+        current = get_current_tenant()
+        if current is not None and current.pk == self.tenant_id:
+            return current
+        return self.tenant
+
+    @property
     def doc_currency(self) -> str:
         """What it is written in; a document from before currencies is the shop's."""
         from apps.core.currency import main_currency
 
-        return (self.currency or main_currency(self.tenant)).upper()
+        return (self.currency or main_currency(self.shop)).upper()
 
     @property
     def main_currency(self) -> str:
         from apps.core.currency import main_currency
 
-        return main_currency(self.tenant)
+        return main_currency(self.shop)
 
     @property
     def is_foreign(self) -> bool:
@@ -396,7 +422,7 @@ class Invoice(BranchModel):
 
         if not self.is_foreign:
             return amount
-        return to_main(amount, self.exchange_rate, self.tenant)
+        return to_main(amount, self.exchange_rate, self.shop)
 
     @property
     def total_main(self) -> Decimal:
@@ -407,7 +433,7 @@ class Invoice(BranchModel):
     def rate_label(self) -> str:
         from apps.core.currency import describe_rate
 
-        return describe_rate(self.doc_currency, self.exchange_rate, self.tenant)
+        return describe_rate(self.doc_currency, self.exchange_rate, self.shop)
 
     def _money(self, amount) -> Decimal:
         from apps.core.currency import round_to

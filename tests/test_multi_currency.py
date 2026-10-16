@@ -325,3 +325,25 @@ def test_shilling_documents_are_unchanged(client, shop, main_branch, owner, hote
     html = client.get(reverse("selling:invoice_detail", args=[inv.pk])).content.decode()
     assert inv.reference in html
     assert "1 TZS" not in html and "&asymp;" not in html
+
+
+def test_one_shop_never_sees_another_shops_rates(shop, business_plan, usd):
+    """The rates table is a shop's own, kept apart by row-level security too."""
+    from django.db import connection
+
+    from apps.accounts.models import User
+    from apps.core.currency import rates
+    from apps.org.models import ExchangeRate
+    from apps.tenancy.services import create_tenant
+
+    other_owner = User.objects.create_user("other@shop.test", "pw", name="Other")
+    other, _ = create_tenant(name="Duka la Pili", owner=other_owner, plan=business_plan)
+    with tenant_context(other):
+        assert rates() == {}
+        assert not ExchangeRate.objects.exists()
+        # Below the application: the database itself hides the row.
+        with connection.cursor() as cur:
+            cur.execute("SELECT count(*) FROM org_exchangerate")
+            assert cur.fetchone()[0] == 0
+    with tenant_context(shop):
+        assert rates() == {"USD": RATE}

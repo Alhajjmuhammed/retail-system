@@ -13,8 +13,8 @@ what is on the shelf, and the rules it carries. A typed line has none.
       <dt>Product</dt><dd class="font-medium text-ink-900">{{ product.name }}{% if line.variant.name %} &mdash; {{ line.variant.name }}{% endif %}</dd>
       {% if product.sku or product.factory_code %}<dt>Code</dt><dd>{{ product.sku|default:product.factory_code }}</dd>{% endif %}
       {% if product.category %}<dt>Category</dt><dd>{{ product.category }}</dd>{% endif %}
-      <dt>Price today</dt><dd>{% if line.list_price is not None %}{{ line.list_price|floatformat:"-2"|intcomma }}{% else %}No price set{% endif %}</dd>
-      {% if product.min_price %}<dt>Never below</dt><dd>{{ product.min_price|floatformat:"-2"|intcomma }}</dd>{% endif %}
+      <dt>Price today</dt><dd>{% if line.list_price is not None %}{% if line.document.is_foreign %}{{ line.document.doc_currency }} {% endif %}{{ line.list_price|floatformat:"-2"|intcomma }}{% else %}No price set{% endif %}</dd>
+      {% if product.min_price %}<dt>Never below</dt><dd>{% if line.document.is_foreign %}{{ line.document.main_currency }} {% endif %}{{ product.min_price|floatformat:"-2"|intcomma }}</dd>{% endif %}
       {% if not product.discount_allowed %}<dt>Discount</dt><dd>Not allowed</dd>{% endif %}
       {% if product.track_stock and line.on_hand is not None %}<dt>In stock here</dt><dd class="{% if line.on_hand < line.qty %}font-medium text-red-700{% endif %}">{{ line.on_hand|floatformat:"-3" }}{% if line.on_hand < line.qty %} (fewer than on this line){% endif %}</dd>{% endif %}
     </dl>
