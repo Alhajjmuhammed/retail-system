@@ -643,11 +643,16 @@ def taxonomy(request, only=None):
         return redirect(_taxonomy_home(only))
 
     if only == "category":
-        from apps.catalog.services import category_forest
+        from apps.catalog.services import category_rows
 
         filed = Product.objects.filter(is_active=True, category__isnull=False).count()
+        rows = category_rows()
         return render(request, "catalog/categories.html", {
-            "shelves": category_forest(),
+            "shelves": [row for row in rows if row.depth == 0],
+            "rows": rows,
+            # A short list opens unfolded; a long one starts folded to its
+            # main categories, so the page is a list you can scan.
+            "start_open": len(rows) <= 15,
             "categories": category_tree(),
             "category_depth": CATEGORY_DEPTH,
             "filed": filed,

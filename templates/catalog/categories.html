@@ -1,144 +1,136 @@
 {% extends "base.html" %}
+{% load assets %}
+{% block page_scripts %}<script src="{% versioned_static 'js/category-tree.js' %}" defer></script>{% endblock %}
 {% block title %}Categories{% endblock %}
 {% block heading %}Categories{% endblock %}
 
 {% comment %}
-Shelves, drawn as shelves: a tinted head with the shelf's own colour, what
-is inside it as rows on the card, and the third level as chips on the row.
-Depth is read from the drawing rather than counted from an indent.
+The categories as a tree that folds and searches, one row each. Cards per
+shelf read well with seven and badly with seventy: the page grew long and
+the third level turned into a wall of chips. Rows stay one line high however
+many there are, a main category folds away what is inside it, and the search
+keeps the shelves above a match on screen around it.
 
-The plus on a row appears on hover -- there is one on every shelf and every
-sub-shelf, and always-on they were the loudest thing on a page whose job is
-to show a shape. Touch has no hover, so there they stay visible.
+Adding sits beside the tree, with the shelf it goes inside chosen from the
+whole path -- "Drinks > Soda" -- or picked by the + on a row.
 {% endcomment %}
 
 {% block content %}
-<div x-data="{ inside: '', insideName: '' }">
+<div x-data="categoryTree({{ start_open|yesno:'true,false' }})" class="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
 
-  <div class="mb-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-    <p class="section-lead max-w-xl">
-      How your products are grouped. Three deep at most &mdash; Drinks, then
-      Soda, then Bottles &mdash; and the POS turns the top two into its tabs.
-    </p>
-    {% comment %}
-    A number with a one-word label under it left an owner asking what it
-    counted -- "8 shelves" when the screen showed four cards, and "products
-    filed" in nobody's words but mine. It says the whole thing now.
-    {% endcomment %}
-    <div class="flex shrink-0 flex-wrap items-center gap-5 text-sm">
-      <p class="text-ink-600">
-        <span class="tnum font-semibold text-ink-900">{{ shelves|length }}</span> main
-        {{ shelves|length|pluralize:"category,categories" }}{% if inner %},
-        <span class="tnum font-semibold text-ink-900">{{ inner }}</span> inside them{% endif %}
-      </p>
-      <span class="h-4 w-px bg-ink-200"></span>
-      <p class="text-ink-600">
-        <span class="tnum font-semibold text-ink-900">{{ filed }}</span> of
-        <span class="tnum">{{ filed|add:unfiled }}</span> products are in one
-      </p>
+  <div class="card overflow-hidden">
+    <div class="flex flex-wrap items-center gap-2 border-b border-ink-100 p-3">
+      <div class="relative min-w-48 flex-1">
+        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-400">{% icon "search" class="h-4 w-4" %}</span>
+        <input type="search" x-model="q" placeholder="Find a category" aria-label="Find a category" class="input pl-9">
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" @click="expandAll()" x-show="!q">Expand all</button>
+      <button type="button" class="btn btn-secondary btn-sm" @click="collapseAll()" x-show="!q">Collapse all</button>
+      <button type="button" class="btn btn-primary btn-sm" @click="addInside('', '')">{% icon "plus" class="h-4 w-4" %} New category</button>
+    </div>
+
+    <div class="cat-head">
+      <span class="flex-1">Category</span>
+      <span class="w-24 text-right">Inside</span>
+      <span class="w-20 text-right">Products</span>
+      <span class="w-16"></span>
+    </div>
+
+    <div role="tree" aria-label="Categories">
+      {% for row in rows %}
+      <div role="treeitem" class="cat-row group" data-pk="{{ row.pk }}" data-search="{{ row.search }}"
+           x-show="visible('{{ row.search|escapejs }}', [{{ row.ancestor_pks|join:',' }}])"
+           {% if row.depth %}x-cloak{% endif %}
+           style="--depth: {{ row.depth }}">
+        <div class="cat-name">
+          {% if row.kids_count %}
+          <button type="button" class="cat-toggle" @click="toggle({{ row.pk }})"
+                  :aria-expanded="isOpen({{ row.pk }}) ? 'true' : 'false'"
+                  aria-label="Show or hide what is inside {{ row.name }}">
+            <span class="transition-transform" :class="isOpen({{ row.pk }}) || q ? 'rotate-90' : ''">{% icon "chevron-right" class="h-4 w-4" %}</span>
+          </button>
+          {% else %}
+          <span class="cat-toggle"></span>
+          {% endif %}
+          <span class="cat-dot dot-{{ row.tone }}{% if row.depth %} cat-dot-sub{% endif %}"></span>
+          <a href="{% url 'catalog:taxonomy_edit' 'category' row.pk %}"
+             hx-get="{% url 'catalog:taxonomy_edit' 'category' row.pk %}" hx-target="#modal"
+             class="truncate {% if row.depth == 0 %}font-semibold text-ink-900{% else %}text-ink-700{% endif %} hover:text-brand-700"
+             title="{{ row.path_label }}">{{ row.name }}</a>
+        </div>
+        <span class="w-24 shrink-0 text-right text-xs text-ink-500">{% if row.kids_count %}{{ row.kids_count }} inside{% endif %}</span>
+        <a href="{% url 'catalog:product_list' %}?category={{ row.pk }}"
+           class="tnum w-20 shrink-0 text-right text-sm {% if row.total %}font-medium text-ink-900 hover:text-brand-700{% else %}text-ink-400{% endif %}"
+           title="Open the products in {{ row.name }}">{{ row.total }}</a>
+        <span class="cat-actions">
+          {% if row.level < category_depth %}
+          <button type="button" class="btn-icon btn-icon-brand" @click="addInside('{{ row.pk }}', '{{ row.path_label|escapejs }}')"
+                  title="Add inside {{ row.name }}" aria-label="Add a category inside {{ row.name }}">{% icon "plus" class="h-4 w-4" %}</button>
+          {% endif %}
+          <a href="{% url 'catalog:taxonomy_edit' 'category' row.pk %}"
+             hx-get="{% url 'catalog:taxonomy_edit' 'category' row.pk %}" hx-target="#modal"
+             class="btn-icon btn-icon-brand" title="Edit {{ row.name }}" aria-label="Edit {{ row.name }}">{% icon "pencil" class="h-4 w-4" %}</a>
+        </span>
+      </div>
+      {% empty %}
+      <div class="px-5 py-12 text-center">
+        <p class="text-base font-medium text-ink-800">No categories yet</p>
+        <p class="mt-1 text-sm text-ink-500">Start with one like <span class="font-medium text-ink-700">Drinks</span> or <span class="font-medium text-ink-700">Food</span>.</p>
+      </div>
+      {% endfor %}
+      {% if rows %}
+      <p class="px-5 py-8 text-center text-sm text-ink-500" x-show="q && !anyMatch()" x-cloak>No category is called that.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <aside class="space-y-4 lg:sticky lg:top-4">
+    <div class="card card-body space-y-2 text-sm">
+      <p class="text-ink-600"><span class="tnum text-lg font-semibold text-ink-900">{{ shelves|length }}</span> main {{ shelves|length|pluralize:"category,categories" }}{% if inner %}, <span class="tnum font-semibold text-ink-900">{{ inner }}</span> inside them{% endif %}</p>
+      <p class="text-ink-600"><span class="tnum font-semibold text-ink-900">{{ filed }}</span> of <span class="tnum">{{ filed|add:unfiled }}</span> products are in one</p>
       {% if unfiled %}
       <a href="{% url 'catalog:product_list' %}?category=none"
-         class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-600/15 transition hover:bg-amber-100">
-        {% icon "alert" class="h-3.5 w-3.5" %}{{ unfiled }} with none &rarr;
+         class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 font-medium text-amber-800 ring-1 ring-inset ring-amber-600/15 hover:bg-amber-100">
+        {% icon "alert" class="h-3.5 w-3.5" %}{{ unfiled }} with no category &rarr;
       </a>
       {% endif %}
+      <p class="hint">Three deep at most &mdash; Drinks, then Soda, then Bottles. The POS turns the top two into its tabs.</p>
     </div>
-  </div>
 
-  <div class="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
-    {% for shelf in shelves %}
-    <section class="shelf group">
-      <header class="shelf-head tone-{{ shelf.tone }}">
-        <span class="shelf-mark">{% icon "tag" class="h-5 w-5" %}</span>
-        <a href="{% url 'catalog:taxonomy_edit' 'category' shelf.pk %}"
-           hx-get="{% url 'catalog:taxonomy_edit' 'category' shelf.pk %}" hx-target="#modal"
-           class="min-w-0 flex-1">
-          <span class="block truncate text-base font-semibold text-ink-900">{{ shelf.name }}</span>
-          {% if shelf.kids %}
-          <span class="block truncate text-xs text-ink-500">{{ shelf.kids|length }} inside</span>
-          {% endif %}
-        </a>
-        <span class="shelf-count"><b>{{ shelf.total }}</b><span>item{{ shelf.total|pluralize }}</span></span>
-      </header>
-
-      {% if shelf.kids %}
-      <div class="shelf-body">
-        {% for kid in shelf.kids %}
-        <div class="shelf-row">
-          <div class="flex items-center gap-2">
-            <a href="{% url 'catalog:taxonomy_edit' 'category' kid.pk %}"
-               hx-get="{% url 'catalog:taxonomy_edit' 'category' kid.pk %}" hx-target="#modal"
-               class="min-w-0 flex-1 truncate text-sm font-medium text-ink-800 hover:text-brand-700">{{ kid.name }}</a>
-            <span class="tnum shrink-0 text-xs font-semibold text-ink-500">{{ kid.total }}</span>
-            {% if kid.level < category_depth %}
-            <button type="button" class="shelf-add"
-                    @click="inside = '{{ kid.pk }}'; insideName = '{{ kid.name|escapejs }}'; $nextTick(() => $refs.catName.focus())"
-                    title="Add inside {{ kid.name }}" aria-label="Add a shelf inside {{ kid.name }}">
-              {% icon "plus" class="h-4 w-4" %}
-            </button>
-            {% endif %}
-          </div>
-          {% if kid.kids %}
-          <div class="mt-2 flex flex-wrap gap-1.5">
-            {% for leaf in kid.kids %}
-            <a href="{% url 'catalog:taxonomy_edit' 'category' leaf.pk %}"
-               hx-get="{% url 'catalog:taxonomy_edit' 'category' leaf.pk %}" hx-target="#modal"
-               class="shelf-chip">{{ leaf.name }}<span class="tnum text-ink-400">{{ leaf.total }}</span></a>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <button type="button" class="shelf-foot"
-              @click="inside = '{{ shelf.pk }}'; insideName = '{{ shelf.name|escapejs }}'; $nextTick(() => $refs.catName.focus())">
-        {% icon "plus" class="h-3.5 w-3.5" %} Add inside {{ shelf.name }}
-      </button>
-    </section>
-    {% empty %}
-    <div class="col-span-full rounded-2xl bg-white px-5 py-12 text-center shadow-card">
-      <p class="text-base font-medium text-ink-800">No categories yet</p>
-      <p class="mt-1 text-sm text-ink-500">Start with one like <span class="font-medium text-ink-700">Drinks</span> or <span class="font-medium text-ink-700">Food</span>.</p>
-    </div>
-    {% endfor %}
-
-    <form method="post" class="shelf-new">
+    <form method="post" class="card card-body space-y-3" id="new-category">
       {% csrf_token %}<input type="hidden" name="kind" value="category">
-      <input type="hidden" name="parent" :value="inside">
-      <label class="label flex items-center gap-1.5" for="cat_name">
-        <span x-show="!inside">New category</span>
-        <span x-show="inside" x-cloak class="flex items-center gap-1.5">
-          Inside <span x-text="insideName" class="font-semibold text-ink-800"></span>
-        </span>
-      </label>
-      <div class="mt-1.5 flex gap-2">
+      <h2 class="card-title">Add a category</h2>
+      <div>
+        <label class="label" for="cat_name">Name</label>
         <input name="name" id="cat_name" x-ref="catName" class="input" placeholder="Drinks" maxlength="80" required>
-        <button type="submit" class="btn btn-primary shrink-0">Add</button>
       </div>
-      <button type="button" x-show="inside" x-cloak @click="inside = ''; insideName = ''"
-              class="mt-2 self-start text-xs font-medium text-ink-500 hover:text-ink-800">
-        &larr; make it a main category instead
-      </button>
+      <div>
+        <label class="label" for="cat_parent">Inside</label>
+        <select name="parent" id="cat_parent" x-model="inside" class="input">
+          <option value="">&mdash; nothing: a main category</option>
+          {% for row in rows %}{% if row.level < category_depth %}<option value="{{ row.pk }}">{{ row.path_label }}</option>{% endif %}{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary w-full">{% icon "plus" class="h-4 w-4" %} Add</button>
     </form>
-  </div>
 
-  {% if retired.0.2 %}
-  <details class="card mt-6 max-w-2xl">
-    <summary class="card-head cursor-pointer"><span class="card-title">Switched off</span><span class="hint">Retired because products used them.</span></summary>
-    <div class="divide-y divide-ink-100">
-      {% for kind, label, rows in retired %}{% for obj in rows %}
-      <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-        <span class="text-ink-700">{{ obj.name }}</span>
-        <form method="post">{% csrf_token %}
-          <input type="hidden" name="action" value="restore"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="pk" value="{{ obj.pk }}">
-          <button type="submit" class="btn btn-secondary btn-sm">{% icon "restore" class="h-4 w-4" %} Switch on</button>
-        </form>
+    {% if retired.0.2 %}
+    <details class="card">
+      <summary class="card-head cursor-pointer"><span class="card-title">Switched off</span><span class="hint">{{ retired.0.2|length }}</span></summary>
+      <div class="divide-y divide-ink-100">
+        {% for kind, label, objs in retired %}{% for obj in objs %}
+        <div class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+          <span class="truncate text-ink-700">{{ obj.name }}</span>
+          <form method="post">{% csrf_token %}
+            <input type="hidden" name="action" value="restore"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="pk" value="{{ obj.pk }}">
+            <button type="submit" class="btn btn-secondary btn-sm">{% icon "restore" class="h-4 w-4" %} Switch on</button>
+          </form>
+        </div>
+        {% endfor %}{% endfor %}
       </div>
-      {% endfor %}{% endfor %}
-    </div>
-  </details>
-  {% endif %}
+    </details>
+    {% endif %}
+  </aside>
 </div>
 {% endblock %}
+

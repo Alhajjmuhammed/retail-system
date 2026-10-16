@@ -256,6 +256,38 @@ def category_forest():
     return top
 
 
+def category_rows():
+    """
+    The shelves as one list in reading order -- a top shelf, then what is in
+    it, then what is in those -- for a page that draws them as a tree it can
+    fold and search. Each row knows its depth, the shelves above it (so it
+    can hide with them), how many shelves are inside it, and a search text
+    of its own name, its parents' and everything beneath it: a search for
+    "bottles" keeps Drinks and Soda on screen around it.
+    """
+    out = []
+
+    def names_below(row):
+        found = [row.name]
+        for kid in row.kids:
+            found.extend(names_below(kid))
+        return found
+
+    def walk(row, ancestors, tone):
+        row.tone = tone
+        row.ancestor_pks = [a.pk for a in ancestors]
+        row.depth = len(ancestors)
+        row.kids_count = len(row.kids)
+        row.search = " ".join([*(a.name for a in ancestors), *names_below(row)]).lower()
+        out.append(row)
+        for kid in row.kids:
+            walk(kid, [*ancestors, row], tone)
+
+    for top in category_forest():
+        walk(top, [], top.tone)
+    return out
+
+
 def category_family(category_id, include_inactive=True):
     """
     A category and everything filed inside it, as ids.

@@ -697,6 +697,37 @@
   .tone-6 { @apply bg-teal-50; }
   .tone-6 .shelf-mark { @apply bg-teal-100 text-teal-700; }
 
+  /* The categories tree: one line per shelf, indented by its depth, the
+     add and edit buttons showing on hover (always on touch, which has none),
+     and a dot in the main shelf's colour so a long list keeps its grouping. */
+  .cat-head {
+    @apply flex items-center gap-3 border-b border-ink-100 bg-ink-50 px-4 py-2
+           text-xs font-medium uppercase tracking-wide text-ink-500;
+  }
+  .cat-row {
+    @apply flex items-center gap-3 border-b border-ink-100 px-4 py-1.5 text-sm
+           transition-colors last:border-b-0 hover:bg-ink-50;
+  }
+  .cat-name {
+    @apply flex min-w-0 flex-1 items-center gap-2;
+    padding-left: calc(var(--depth, 0) * 1.5rem);
+  }
+  .cat-toggle {
+    @apply flex h-6 w-6 shrink-0 items-center justify-center rounded text-ink-400
+           hover:bg-ink-100 hover:text-ink-700;
+  }
+  .cat-dot { @apply h-2.5 w-2.5 shrink-0 rounded-full; }
+  .cat-dot-sub { @apply h-1.5 w-1.5 opacity-60; }
+  .cat-actions { @apply flex w-16 shrink-0 justify-end gap-0.5 opacity-0 transition-opacity; }
+  .cat-row:hover .cat-actions, .cat-row:focus-within .cat-actions { @apply opacity-100; }
+  @media (hover: none) { .cat-actions { @apply opacity-100; } }
+  .dot-1 { @apply bg-emerald-500; }
+  .dot-2 { @apply bg-sky-500; }
+  .dot-3 { @apply bg-amber-500; }
+  .dot-4 { @apply bg-violet-500; }
+  .dot-5 { @apply bg-rose-500; }
+  .dot-6 { @apply bg-teal-500; }
+
   /* The packages on the signup page. A radio wearing a card: the whole
      thing is a label, so a tap anywhere on it picks that package, and it
      still works with JavaScript off. */
