@@ -155,8 +155,8 @@
         </p>
       </div>
       <div class="w-24"><label class="label" for="qty">Qty</label><input type="number" :step="step" :min="step" name="qty" id="qty" value="1" class="input" x-model="qty" required></div>
-      <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="1" min="0" name="unit_price" id="unit_price" class="input" x-model="price" required></div>
-      <div class="w-20"><label class="label" for="discount_percent">Off %</label><input type="number" step="1" min="0" max="100" name="discount_percent" id="discount_percent" value="0" class="input" x-model="off"></div>
+      <div class="w-32"><label class="label" for="unit_price">Price</label><input type="number" step="any" min="0" name="unit_price" id="unit_price" class="input" x-model="price" required></div>
+      <div class="w-20"><label class="label" for="discount_percent">Off %</label><input type="number" step="any" min="0" max="100" name="discount_percent" id="discount_percent" value="0" class="input" x-model="off"></div>
       <div class="w-36">
         <label class="label" for="tax_rate">VAT</label>
         <select name="tax_rate" id="tax_rate" class="input" x-ref="tax">
@@ -182,7 +182,7 @@
       </div>
       <div>
         <label class="label" for="doc_discount">Off the whole quotation %</label>
-        <input type="number" step="1" min="0" max="100" name="discount_percent" id="doc_discount"
+        <input type="number" step="any" min="0" max="100" name="discount_percent" id="doc_discount"
                value="{{ quotation.discount_percent|floatformat:'-2' }}" class="input">
         <p class="hint">On top of anything taken off a line.</p>
       </div>

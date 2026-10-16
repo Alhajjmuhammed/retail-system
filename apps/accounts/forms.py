@@ -13,6 +13,10 @@ class TailwindMixin:
     # money here is whole shillings -- Django's own step of 0.01 turned one
     # click of the arrow into 3,000.01.
     keeps_decimals = ("rate", "percent", "weight", "factor")
+    # A price is kept to the cent (pos.services.price): a shop that buys at
+    # 2,170.60 means it. step="any" lets that be typed while the arrows still
+    # move in whole shillings; step="1" made the browser refuse the cents.
+    is_price = ("price", "cost")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,7 +29,8 @@ class TailwindMixin:
 
             if isinstance(field, forms.DecimalField) and field.decimal_places == 2 \
                     and not any(word in name for word in self.keeps_decimals):
-                widget.attrs["step"] = "1"
+                widget.attrs["step"] = "any" if any(
+                    word in name for word in self.is_price) else "1"
 
 
 class SignupForm(TailwindMixin, forms.Form):

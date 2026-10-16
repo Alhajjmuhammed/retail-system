@@ -75,7 +75,7 @@ forms inside forms are ignored by browsers.
       {% for row in other_lists %}
       <div>
         <label class="label" for="{{ row.field }}">{{ row.list.name }} <span class="hint">({{ row.list.get_kind_display|lower }})</span></label>
-        <input type="number" step="1" min="0" name="{{ row.field }}" id="{{ row.field }}" value="{{ row.value }}" class="input">
+        <input type="number" step="any" min="0" name="{{ row.field }}" id="{{ row.field }}" value="{{ row.value }}" class="input">
         {% if row.error %}<p class="hint text-red-600">{{ row.error }}</p>{% endif %}
       </div>
       {% endfor %}

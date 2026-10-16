@@ -49,7 +49,7 @@
     {% csrf_token %}<input type="hidden" name="action" value="add_line">
     <div class="min-w-56 flex-1"><label class="label" for="variant">Product</label>{% include "partials/variant_select.html" %}</div>
     <div class="w-28"><label class="label" for="qty">Qty</label><input type="number" step="0.001" name="qty" id="qty" class="input" min="0.001" required></div>
-    <div class="w-32"><label class="label" for="unit_cost">Unit cost</label><input type="number" step="1" name="unit_cost" id="unit_cost" class="input" min="0" required></div>
+    <div class="w-32"><label class="label" for="unit_cost">Unit cost</label><input type="number" step="any" name="unit_cost" id="unit_cost" class="input" min="0" required></div>
     <button type="submit" class="btn btn-secondary">{% icon "plus" class="h-4 w-4" %} Add</button>
   </form>
   {% if order.lines.all %}

@@ -153,7 +153,7 @@ def _act_on(request, quotation):
         try:
             quotation.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
-                minimum=0, maximum=100)
+                minimum=0, maximum=100, places=2)
         except BadInput as bad:
             messages.error(request, str(bad))
             return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -241,9 +241,9 @@ def _add_line(request, quotation):
 
     try:
         qty = parse_decimal(request.POST.get("qty"), "Quantity", positive=True)
-        price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0)
+        price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0, places=2)
         off = parse_decimal(request.POST.get("discount_percent") or 0,
-                            "Discount", minimum=0, maximum=100)
+                            "Discount", minimum=0, maximum=100, places=2)
     except BadInput as bad:
         messages.error(request, str(bad))
         return redirect("selling:quotation_detail", pk=quotation.pk)
@@ -469,7 +469,7 @@ def _act_on_invoice(request, invoice):
         try:
             invoice.discount_percent = parse_decimal(
                 request.POST.get("discount_percent") or 0, "Discount",
-                minimum=0, maximum=100)
+                minimum=0, maximum=100, places=2)
         except BadInput as bad:
             messages.error(request, str(bad))
             return redirect("selling:invoice_detail", pk=invoice.pk)
@@ -591,9 +591,9 @@ def _add_invoice_line(request, invoice):
 
     try:
         qty = parse_decimal(request.POST.get("qty"), "Quantity", positive=True)
-        price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0)
+        price = parse_decimal(request.POST.get("unit_price"), "Price", minimum=0, places=2)
         off = parse_decimal(request.POST.get("discount_percent") or 0,
-                            "Discount", minimum=0, maximum=100)
+                            "Discount", minimum=0, maximum=100, places=2)
     except BadInput as bad:
         messages.error(request, str(bad))
         return redirect("selling:invoice_detail", pk=invoice.pk)
