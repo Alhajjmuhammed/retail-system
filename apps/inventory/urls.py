@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.stock_list, name="stock_list"),
     path("movements/", views.movements, name="movements"),
     path("<int:pk>/adjust/", views.stock_adjust, name="stock_adjust"),
+    path("product/<int:variant_pk>/adjust/", views.stock_adjust_product, name="stock_adjust_product"),
     path("transfers/", views.transfer_list, name="transfer_list"),
     path("transfers/new/", views.transfer_create, name="transfer_create"),
     path("transfers/<int:pk>/", views.transfer_detail, name="transfer_detail"),

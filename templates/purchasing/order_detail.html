@@ -70,7 +70,7 @@
 
   {% if receipts %}
   <div class="card">
-    <div class="card-head"><h2 class="card-title">Deliveries against it</h2></div>
+    <div class="card-head"><h2 class="card-title">Goods received against it</h2></div>
     <div class="divide-y divide-ink-100">
       {% for r in receipts %}
       <a href="{% url 'purchasing:receipt_detail' r.pk %}" class="flex items-center justify-between px-5 py-2.5 text-sm hover:bg-ink-50">

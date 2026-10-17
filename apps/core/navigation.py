@@ -74,7 +74,7 @@ SECTIONS: list[tuple[str, tuple[Entry, ...]]] = [
               optional=True, use_key="batches"),
     )),
     ("Buying", (
-        Entry("deliveries", "Deliveries", "Deliveries that have arrived", "layers",
+        Entry("deliveries", "Goods received", "Goods that have arrived from suppliers", "layers",
               "purchasing:receipt_list", needs="stock.receive",
               here_app="purchasing", here=("receipt_list", "receipt_detail", "receipt_create"),
               optional=True, use_key="receipts"),

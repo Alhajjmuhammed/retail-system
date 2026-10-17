@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Deliveries{% endblock %}
-{% block heading %}Deliveries{% endblock %}
+{% block title %}Goods received{% endblock %}
+{% block heading %}Goods received{% endblock %}
 {% block content %}
 <div class="space-y-4">
   <div class="card">
     <div class="card-head flex-wrap gap-3">
-      <form method="get"><input type="search" name="q" value="{{ q }}" placeholder="Reference, supplier or their note" aria-label="Find a delivery" class="input w-full sm:w-72"></form>
+      <form method="get"><input type="search" name="q" value="{{ q }}" placeholder="Reference, supplier or their note" aria-label="Find goods received" class="input w-full sm:w-72"></form>
       <a href="{% url 'purchasing:receipt_create' %}" hx-get="{% url 'purchasing:receipt_create' %}" hx-target="#modal" class="btn btn-primary shrink-0">{% icon "plus" %} Receive goods</a>
     </div>
     <div class="table-wrap rounded-none border-0 shadow-none">

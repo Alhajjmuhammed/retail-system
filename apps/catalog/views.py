@@ -292,6 +292,7 @@ def product_detail(request, pk):
         "movements": movements,
         "may_edit": request.membership.can("product.manage"),
         "may_see_cost": request.membership.can("product.view_cost"),
+        "may_adjust": request.membership.can("stock.adjust"),
         # Each price in the other currencies the shop deals in, at today's rate.
         "previews": sorted(_rates_now().items()),
     })

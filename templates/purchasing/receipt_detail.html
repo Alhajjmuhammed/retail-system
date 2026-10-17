@@ -58,7 +58,7 @@
           x-data
               @submit.prevent="$store.confirm.ask($el, { title: 'Delete {{ receipt.reference|escapejs }}?', body: 'Nothing has gone into stock yet, so nothing else changes.', label: 'Delete', danger: true })">
       {% csrf_token %}
-      <button type="submit" class="btn btn-secondary">Delete this delivery</button>
+      <button type="submit" class="btn btn-secondary">Delete this receipt</button>
     </form>
   </div>
   <p class="hint">Putting it into stock raises quantities and re-bases cost price. It can only be done once, and afterwards the delivery cannot be deleted.</p>

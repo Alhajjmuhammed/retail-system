@@ -51,6 +51,11 @@ def stock_list(request):
         messages.info(request, "Choose a branch to see its stock.")
         return redirect("core:dashboard")
 
+    # Every product that keeps count is listed, at nothing if it has none
+    # here yet, so each has its Adjust button.
+    from apps.inventory.services import ensure_stock_items
+
+    ensure_stock_items(request.branch)
     items = (
         StockItem.objects.select_related(
             "variant__product", "variant__product__base_unit", "branch"
@@ -128,6 +133,18 @@ def movements(request):
     return render(request, "inventory/movements.html", context)
 
 
+def _new_quantity(post, item):
+    """
+    What the shelf should say after this: either counted ("there are 40") or
+    a change ("24 more came", "3 broke"). One figure either way, so every
+    check and limit after this sees the same thing.
+    """
+    if post.get("mode") == "change":
+        change = decimal_or_none(post.get("change_by"))
+        return None if change is None else item.qty_on_hand + change
+    return decimal_or_none(post.get("new_qty"))
+
+
 def _adjust_code(request, **kwargs):
     # Writing stock off is its own permission with its own ceiling; it used
     # to be ignored entirely, so a write-off only needed "adjust".
@@ -141,10 +158,28 @@ def _adjust_value(request, **kwargs):
     if request.method != "POST":
         return None
     item = StockItem.objects.select_related("variant").filter(pk=kwargs.get("pk")).first()
-    new_qty = decimal_or_none(request.POST.get("new_qty"))
+    new_qty = _new_quantity(request.POST, item) if item is not None else None
     if item is None or new_qty is None:
         return None
     return limit_value(item.variant, new_qty - item.qty_on_hand, item.avg_cost)
+
+
+@login_required
+@requires("stock.adjust")
+def stock_adjust_product(request, variant_pk):
+    """
+    "Adjust stock" from a product's own page: the product's stock line at the
+    branch this person is in, made if it has never had one, then its form.
+    """
+    from apps.catalog.models import Variant
+    from apps.inventory.services import get_stock_item
+
+    variant = get_object_or_404(Variant, pk=variant_pk, product__track_stock=True)
+    if request.branch is None:
+        messages.info(request, "Choose a branch first: stock is kept per branch.")
+        return redirect("catalog:product_detail", pk=variant.product_id)
+    item = get_stock_item(variant, request.branch)
+    return redirect("inventory:stock_adjust", pk=item.pk)
 
 
 @login_required
@@ -156,10 +191,16 @@ def stock_adjust(request, pk):
 
     if request.method == "POST":
         reason_text = request.POST.get("reason", "").strip()
-        new_qty = decimal_or_none(request.POST.get("new_qty"))
+        new_qty = _new_quantity(request.POST, item)
         error = ""
-        if new_qty is None or new_qty < 0:
-            error = "Enter the quantity actually on the shelf: zero or more."
+        changing = request.POST.get("mode") == "change"
+        if new_qty is None:
+            error = ("Type how many more, or less with a minus: 24 or -3." if changing
+                     else "Enter the quantity actually on the shelf: zero or more.")
+        elif new_qty < 0:
+            error = (f"That would leave less than nothing: there are only "
+                     f"{item.qty_on_hand.normalize():f} here." if changing
+                     else "Enter the quantity actually on the shelf: zero or more.")
         elif not reason_text:
             error = "A reason is required for every adjustment."
         elif new_qty == item.qty_on_hand:

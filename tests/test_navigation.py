@@ -32,7 +32,7 @@ PAGES = [
     ("inventory:transfer_list", "Move stock between branches"),
     ("inventory:count_list", "Count the shelves"),
     ("inventory:batch_list", "What is going off"),
-    ("purchasing:receipt_list", "Deliveries that have arrived"),
+    ("purchasing:receipt_list", "Goods that have arrived from suppliers"),
     ("purchasing:order_list", "Orders to suppliers"),
     ("purchasing:supplier_list", "Who you buy from"),
     ("customers:customer_list", "Customers"),
@@ -116,7 +116,7 @@ def test_a_new_shop_is_not_shown_what_it_has_never_done(client, ready, owner):
     shown, folded = _shown(page), _folded(page)
 
     # One branch, no deliveries, no orders, no expenses, no cash-ups.
-    for waiting in ("Move stock", "Deliveries", "Supplier orders", "Expenses", "End of day"):
+    for waiting in ("Move stock", "Goods received", "Supplier orders", "Expenses", "End of day"):
         assert waiting in folded and waiting not in shown, waiting
     # The things it does every day are there.
     for daily in ("Dashboard", "POS", "Sales", "Products", "Stock"):

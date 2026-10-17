@@ -42,6 +42,26 @@ def get_stock_item(variant, branch=None, *, create=True) -> StockItem | None:
     return StockItem.objects.filter(branch=branch, variant=variant).first()
 
 
+def ensure_stock_items(branch) -> int:
+    """
+    A stock line at ``branch`` for every product that keeps count, at nothing
+    if it has never had any. Without one a product was missing from the stock
+    page altogether -- so it had no Adjust button and no way in -- which was
+    every product at a second branch, and every product added without an
+    opening quantity. Returns how many lines were added.
+    """
+    from apps.catalog.models import Variant
+
+    have = set(StockItem.objects.filter(branch=branch).values_list("variant_id", flat=True))
+    wanted = Variant.objects.filter(
+        is_active=True, product__is_active=True, product__track_stock=True,
+    ).exclude(pk__in=have).values_list("pk", flat=True)
+    missing = [StockItem(tenant=branch.tenant, branch=branch, variant_id=pk) for pk in wanted]
+    if missing:
+        StockItem.objects.bulk_create(missing, ignore_conflicts=True)
+    return len(missing)
+
+
 def quantity_of(variant, branch=None) -> Decimal:
     item = get_stock_item(variant, branch, create=False)
     return item.qty_on_hand if item else ZERO

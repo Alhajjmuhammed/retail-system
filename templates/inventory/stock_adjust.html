@@ -2,24 +2,56 @@
 {% block title %}Adjust stock{% endblock %}
 {% block heading %}Adjust {{ item.variant }}{% endblock %}
 
+{% comment %}
+Two ways to say the same thing, because shops think in both: "there are 40
+on the shelf" after a count, and "24 more came" or "3 broke" when something
+happens. Either way the server works out one new quantity, and every check
+and limit sees that figure.
+
+The quantity the person was looking at goes back with the form, so a sale
+made while they were typing is not silently overwritten.
+{% endcomment %}
+
 {% block content %}
-<form method="post" class="mx-auto max-w-sm space-y-4">
+{% with step=item.variant.product.base_unit.allows_decimal|yesno:"0.001,1" %}
+<form method="post" class="mx-auto max-w-md space-y-4"
+      x-data="{ mode: '{{ values.mode|default:'count' }}', change: '{{ values.change_by|default:'' }}', now: {{ item.qty_on_hand|stringformat:'s' }} }">
   {% csrf_token %}
+  <input type="hidden" name="seen_qty" value="{{ item.qty_on_hand|stringformat:'s' }}">
+  <input type="hidden" name="mode" :value="mode">
   <div class="card card-body space-y-4">
     {% if error %}<div class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-600/15">{{ error }}</div>{% endif %}
+
     <div class="flex items-baseline justify-between rounded-lg bg-ink-50 px-4 py-3">
-      <span class="text-sm text-ink-600">System says</span>
-      <span class="text-xl font-semibold text-ink-900">{{ item.qty_on_hand|floatformat:"-3" }}</span>
+      <span class="text-sm text-ink-600">Now at {{ item.branch.name }}</span>
+      <span class="text-xl font-semibold text-ink-900">{{ item.qty_on_hand|floatformat:"-3" }} <span class="text-sm font-normal text-ink-500">{{ item.variant.product.base_unit.code }}</span></span>
     </div>
-    <div>
+
+    <div class="grid grid-cols-2 gap-1 rounded-lg bg-ink-100 p-1 text-sm" role="tablist">
+      <button type="button" role="tab" @click="mode = 'count'" :aria-selected="mode === 'count'"
+              class="rounded-md px-3 py-1.5 font-medium" :class="mode === 'count' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-600'">Count: set what is there</button>
+      <button type="button" role="tab" @click="mode = 'change'" :aria-selected="mode === 'change'"
+              class="rounded-md px-3 py-1.5 font-medium" :class="mode === 'change' ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-600'">Add or remove</button>
+    </div>
+
+    <div x-show="mode === 'count'">
       <label class="label" for="new_qty">Count it and type what is actually there</label>
-      <input type="number" step="{% if item.variant.product.base_unit.allows_decimal %}0.001{% else %}1{% endif %}" min="0" name="new_qty" id="new_qty" value="{{ values.new_qty }}" class="input py-3 text-lg" required autofocus>
+      <input type="number" step="{{ step }}" min="0" name="new_qty" id="new_qty" value="{{ values.new_qty }}"
+             class="input py-3 text-lg" :required="mode === 'count'" :disabled="mode !== 'count'" autofocus>
     </div>
+
+    <div x-show="mode === 'change'" x-cloak>
+      <label class="label" for="change_by">How many more, or less (use a minus: &minus;3)</label>
+      <input type="number" step="{{ step }}" name="change_by" id="change_by" x-model="change"
+             class="input py-3 text-lg" placeholder="24 or -3" :required="mode === 'change'" :disabled="mode !== 'change'">
+      <p class="hint" x-show="change !== '' && !isNaN(Number(change))">It will then be <strong x-text="(now + Number(change)).toLocaleString()"></strong>.</p>
+    </div>
+
     <div>
-      <label class="label" for="reason">Why the difference</label>
+      <label class="label" for="reason">Why</label>
       <input type="text" name="reason" id="reason" value="{{ values.reason }}" maxlength="200" class="input" required
-             placeholder="Broken, stolen, miscounted on delivery">
-      <p class="hint">Recorded against your name. This is the trail an owner reads later.</p>
+             placeholder="Counted the shelf, 24 arrived, 3 broken, stolen">
+      <p class="hint">Recorded against your name. This is the trail an owner reads later. Goods from a supplier are better recorded under Buying &rarr; Goods received, which keeps what they cost.</p>
     </div>
     <label class="flex items-center gap-2.5 text-sm text-ink-700">
       <input type="checkbox" name="wastage" class="checkbox" {% if values.wastage %}checked{% endif %}>
@@ -31,4 +63,5 @@
     </div>
   </div>
 </form>
+{% endwith %}
 {% endblock %}
