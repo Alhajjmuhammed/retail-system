@@ -693,6 +693,16 @@
         );
       },
 
+      // A price per item, as it was set: 6.80 stays 6.80, 2000 stays 2,000.
+      // Only an amount handed over rounds to a coin -- see money().
+      price(value) {
+        const n = Number(value || 0);
+        const whole = Math.abs(n - Math.round(n)) < 0.005;
+        return new Intl.NumberFormat("en-US", {
+          minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2,
+        }).format(n);
+      },
+
       // ---- completing -------------------------------------------------
 
       async pay() {

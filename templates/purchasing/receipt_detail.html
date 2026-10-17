@@ -23,7 +23,7 @@
             <button type="submit" class="btn-icon btn-icon-danger ml-1 h-7 w-7 align-middle" title="Remove {{ line.variant }}" aria-label="Remove {{ line.variant }}">{% icon "trash" class="h-3.5 w-3.5" %}</button>
           </form>
           {% endif %}
-        </td><td class="font-mono text-xs text-ink-600">{{ line.batch_no|default:"—" }}</td><td class="text-ink-600">{{ line.expiry_date|date:"j M Y"|default:"—" }}</td><td class="text-right">{{ line.qty|floatformat:"-3" }}</td><td class="text-right">{{ line.unit_cost|floatformat:0|intcomma }}</td><td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td></tr>
+        </td><td class="font-mono text-xs text-ink-600">{{ line.batch_no|default:"—" }}</td><td class="text-ink-600">{{ line.expiry_date|date:"j M Y"|default:"—" }}</td><td class="text-right">{{ line.qty|floatformat:"-3" }}</td><td class="text-right">{{ line.unit_cost|floatformat:"-2"|intcomma }}</td><td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td></tr>
         {% empty %}<tr><td colspan="7" class="py-8 text-center text-sm text-ink-500">Nothing added yet.</td></tr>{% endfor %}
       </tbody>
     </table>

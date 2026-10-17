@@ -72,7 +72,7 @@ forms inside forms are ignored by browsers.
       {% elif avg_cost is not None %}
       <div>
         <p class="label">Average cost here</p>
-        <p class="input flex items-center bg-ink-50 text-ink-600">{{ avg_cost|floatformat:0|intcomma }}</p>
+        <p class="input flex items-center bg-ink-50 text-ink-600">{{ avg_cost|floatformat:"-2"|intcomma }}</p>
         <p class="hint">Set by what you receive. Change stock from Stock, not here.</p>
       </div>
       {% endif %}

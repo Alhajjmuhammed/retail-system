@@ -73,7 +73,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
                   <span class="text-xs text-ink-500" x-text="variant.sku || ''"></span>
                 </span>
               </span>
-              <span class="tnum shrink-0 text-sm font-semibold text-ink-900" x-text="money(priceFor(variant))"></span>
+              <span class="tnum shrink-0 text-sm font-semibold text-ink-900" x-text="price(priceFor(variant))"></span>
             </button>
           </template>
         </div>
@@ -142,7 +142,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
             <span class="tile-head">
               <span class="tile-name">{{ key.variant }}</span>
               <span class="tile-price"
-                    x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:0 }}{% endif %}{% endwith %}</span>
+                    x-text="tilePrice({{ key.variant_id }}, '{% with p=key.variant.price_for %}{% if p is not None %}{{ p }}{% endif %}{% endwith %}')">{% with p=key.variant.price_for %}{% if p is None %}&mdash;{% else %}{{ p|floatformat:"-2" }}{% endif %}{% endwith %}</span>
             </span>
           </button>
           <div class="tile-actions">
@@ -273,7 +273,7 @@ largest possible targets and nothing to mis-tap while a queue forms.
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-semibold leading-snug text-ink-900" x-text="line.description"></p>
                 <p class="tnum mt-0.5 text-xs text-ink-500">
-                  <span x-text="money(line.unit_price)"></span> each
+                  <span x-text="price(line.unit_price)"></span> each
                 </p>
               </div>
               <button type="button" @click="removeLine(index)"

@@ -30,8 +30,8 @@
           {% for b in variant.barcodes.all %}{{ b.code }}{% if b.pack_quantity != 1 %} <span class="text-ink-400">(x{{ b.pack_quantity|floatformat:"-3" }})</span>{% endif %}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-ink-400">&mdash;</span>{% endfor %}
         </td>
         <td class="text-ink-600">{{ product.base_unit.code }}</td>
-        <td class="tnum text-right font-medium text-ink-900">{% with p=variant.price_for %}{% if p is None %}<span class="text-ink-400">&mdash;</span>{% elif preview %}<span class="text-xs text-ink-500">{{ show }}</span> {{ p|in_currency:preview|floatformat:"-2"|intcomma }}{% else %}{{ p|floatformat:0|intcomma }}{% endif %}{% endwith %}</td>
-        {% if can_see_cost %}<td class="tnum text-right text-ink-500">{% if product.branch_cost is None %}&mdash;{% elif preview %}{{ product.branch_cost|in_currency:preview|floatformat:"-2"|intcomma }}{% else %}{{ product.branch_cost|floatformat:0|intcomma }}{% endif %}</td>{% endif %}
+        <td class="tnum text-right font-medium text-ink-900">{% with p=variant.price_for %}{% if p is None %}<span class="text-ink-400">&mdash;</span>{% elif preview %}<span class="text-xs text-ink-500">{{ show }}</span> {{ p|in_currency:preview|floatformat:"-2"|intcomma }}{% else %}{{ p|floatformat:"-2"|intcomma }}{% endif %}{% endwith %}</td>
+        {% if can_see_cost %}<td class="tnum text-right text-ink-500">{% if product.branch_cost is None %}&mdash;{% elif preview %}{{ product.branch_cost|in_currency:preview|floatformat:"-2"|intcomma }}{% else %}{{ product.branch_cost|floatformat:"-2"|intcomma }}{% endif %}</td>{% endif %}
         <td class="whitespace-nowrap text-right">
           <a href="{% url 'catalog:product_detail' product.pk %}" class="btn-icon btn-icon-brand" title="View {{ product.name }}" aria-label="View {{ product.name }}">{% icon "eye" class="h-4 w-4" %}</a>
           {% if may_manage %}

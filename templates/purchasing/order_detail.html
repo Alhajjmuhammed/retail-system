@@ -27,7 +27,7 @@
           <td class="text-ink-800">{{ line.variant }}</td>
           <td class="tnum text-right">{{ line.qty_ordered|floatformat:"-3" }}</td>
           <td class="tnum text-right {% if line.qty_outstanding > 0 and order.status != 'draft' %}text-amber-700{% else %}text-ink-500{% endif %}">{{ line.qty_received|floatformat:"-3" }}</td>
-          <td class="tnum text-right">{{ line.unit_cost|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right">{{ line.unit_cost|floatformat:"-2"|intcomma }}</td>
           <td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td>
           <td class="text-right">
             {% if order.status == "draft" and not line.qty_received %}

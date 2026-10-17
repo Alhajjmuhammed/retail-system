@@ -113,7 +113,7 @@ month -- so the page shows both rather than folding them into one state.
               </td>
               <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
               <td class="text-right {% if line.qty_outstanding > 0 %}text-amber-700{% else %}text-ink-400{% endif %}">{{ line.qty_delivered|floatformat:"-3" }}</td>
-              <td class="text-right">{{ line.unit_price|floatformat:invoice.money_places|intcomma }}</td>
+              <td class="text-right">{{ line.unit_price|floatformat:"-2"|intcomma }}</td>
               <td class="text-right">
                 {% if line.discount_percent %}
                 <span class="block text-xs text-ink-400 line-through">{{ line.gross_total|floatformat:invoice.money_places|intcomma }}</span>

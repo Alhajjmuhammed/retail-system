@@ -33,7 +33,7 @@ screen shows a tool rather than a page that failed to load.
             <button type="button" @click="add(item); results = []; query = ''"
                     class="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left hover:bg-ink-50">
               <span class="text-sm text-ink-900" x-text="item.name"></span>
-              <span class="tnum shrink-0 text-sm font-medium text-ink-700" x-text="money(item.price)"></span>
+              <span class="tnum shrink-0 text-sm font-medium text-ink-700" x-text="price(item.price)"></span>
             </button>
           </template>
         </div>
@@ -100,7 +100,7 @@ screen shows a tool rather than a page that failed to load.
       <div class="flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 shadow-sm ring-1 ring-ink-100">
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-medium text-ink-900" x-text="line.name"></p>
-          <p class="tnum text-xs text-ink-500" x-text="money(line.price) + ' each'"></p>
+          <p class="tnum text-xs text-ink-500" x-text="price(line.price) + ' each'"></p>
         </div>
         <div class="flex items-center gap-1">
           <button type="button" @click="change(line, -1)" class="btn-icon" aria-label="One less">&minus;</button>

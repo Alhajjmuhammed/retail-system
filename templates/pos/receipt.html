@@ -42,7 +42,7 @@
     <span class="truncate pr-2">{{ line.description }}</span>
     <span>{{ line.line_total|floatformat:0|intcomma }}</span>
   </div>
-  <div class="pl-2 text-ink-500">{{ line.qty|floatformat:"-3" }} x {{ line.unit_price|floatformat:0|intcomma }}{% if line.discount %} &minus;{{ line.discount|floatformat:0|intcomma }} off{% endif %}</div>
+  <div class="pl-2 text-ink-500">{{ line.qty|floatformat:"-3" }} x {{ line.unit_price|floatformat:"-2"|intcomma }}{% if line.discount %} &minus;{{ line.discount|floatformat:0|intcomma }} off{% endif %}</div>
   {% endfor %}
 
   <hr class="my-2 border-dashed border-ink-400">

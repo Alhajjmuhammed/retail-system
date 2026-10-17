@@ -22,7 +22,7 @@
         </td>
         <td class="text-right text-ink-500">{{ item.reorder_level|floatformat:"-3"|default:"—" }}</td>
         {% if can_see_cost %}
-        <td class="text-right text-ink-500">{{ item.avg_cost|floatformat:0|intcomma }}</td>
+        <td class="text-right text-ink-500">{{ item.avg_cost|floatformat:"-2"|intcomma }}</td>
         <td class="text-right text-ink-700">{{ item.stock_value|floatformat:0|intcomma }}</td>
         {% endif %}
         <td class="text-right">

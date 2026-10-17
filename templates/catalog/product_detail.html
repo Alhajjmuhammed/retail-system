@@ -55,7 +55,7 @@ from a line on a quotation.
       <div class="px-5 pt-4"><p class="tnum text-2xl font-bold text-ink-900">{{ on_hand|floatformat:"-3"|intcomma }} <span class="text-sm font-normal text-ink-500">{{ product.base_unit.code }}</span></p><p class="hint">Across the branches you work at</p></div>
       <div class="divide-y divide-ink-100 text-sm">
         {% for row in stock %}
-        <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ row.branch.name }}{% if row.variant.name %} &middot; {{ row.variant.name }}{% endif %}</span><span class="tnum font-medium">{{ row.qty_on_hand|floatformat:"-3"|intcomma }}{% if may_see_cost %} <span class="hint">@ {{ row.avg_cost|floatformat:0|intcomma }}</span>{% endif %}</span></div>
+        <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ row.branch.name }}{% if row.variant.name %} &middot; {{ row.variant.name }}{% endif %}</span><span class="tnum font-medium">{{ row.qty_on_hand|floatformat:"-3"|intcomma }}{% if may_see_cost %} <span class="hint">@ {{ row.avg_cost|floatformat:"-2"|intcomma }}</span>{% endif %}</span></div>
         {% empty %}
         <p class="px-5 py-3 text-ink-500">Nothing recorded yet.</p>
         {% endfor %}

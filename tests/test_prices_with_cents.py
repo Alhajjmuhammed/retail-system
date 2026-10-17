@@ -102,3 +102,26 @@ def test_more_than_two_decimals_is_refused_not_rounded(client, shop, main_branch
     assert "at most 2 decimal places" in page.content.decode()
     with tenant_context(shop, branch=main_branch):
         assert not quotation.lines.exists()
+
+
+def test_a_price_shows_as_it_was_set_not_rounded(client, shop, owner, stocked):
+    """6.80 was shown as 7 on the product list; it is shown as set."""
+    from apps.catalog.models import Price
+
+    with tenant_context(shop):
+        Price.objects.filter(variant=stocked["Mkate"]).update(amount=Decimal("6.80"))
+    client.force_login(owner)
+    html = client.get(reverse("catalog:product_list")).content.decode()
+    assert "6.80" in html
+    # A whole price stays without noise: 3,000 not 3,000.00.
+    assert "3,000" in html and "3,000.00" not in html
+
+
+def test_the_till_and_phone_have_a_price_formatter():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    for js, page in [("static/js/till.js", "templates/pos/till.html"),
+                     ("static/js/phone.js", "templates/pos/phone.html")]:
+        assert "price(value)" in (root / js).read_text(encoding="utf-8")
+        assert 'x-text="price(' in (root / page).read_text(encoding="utf-8")

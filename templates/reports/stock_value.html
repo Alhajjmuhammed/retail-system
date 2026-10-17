@@ -22,7 +22,7 @@
       <thead><tr><th class="w-12 text-right">SN</th><th>Item</th>{% if all_branches|length > 1 %}<th>Branch</th>{% endif %}<th class="text-right">On hand</th>{% if can_see_cost %}<th class="text-right">Unit cost</th><th class="text-right">Value</th>{% endif %}</tr></thead>
       <tbody>
         {% for item in page %}
-        <tr><td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td><td class="text-ink-800">{{ item.variant }}</td>{% if all_branches|length > 1 %}<td class="text-ink-600">{{ item.branch.name }}</td>{% endif %}<td class="tnum text-right">{{ item.qty_on_hand|floatformat:"-3" }}</td>{% if can_see_cost %}<td class="tnum text-right {% if not item.avg_cost %}text-amber-700{% else %}text-ink-500{% endif %}">{{ item.avg_cost|floatformat:0|intcomma }}</td><td class="tnum text-right font-medium">{{ item.value|floatformat:0|intcomma }}</td>{% endif %}</tr>
+        <tr><td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td><td class="text-ink-800">{{ item.variant }}</td>{% if all_branches|length > 1 %}<td class="text-ink-600">{{ item.branch.name }}</td>{% endif %}<td class="tnum text-right">{{ item.qty_on_hand|floatformat:"-3" }}</td>{% if can_see_cost %}<td class="tnum text-right {% if not item.avg_cost %}text-amber-700{% else %}text-ink-500{% endif %}">{{ item.avg_cost|floatformat:"-2"|intcomma }}</td><td class="tnum text-right font-medium">{{ item.value|floatformat:0|intcomma }}</td>{% endif %}</tr>
         {% empty %}<tr><td colspan="6">{% include "partials/empty.html" with icon="box" title="No stock on hand" text="Receive goods to see what your shelves are worth." %}</td></tr>{% endfor %}
       </tbody>
     </table>
