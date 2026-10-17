@@ -29,7 +29,8 @@ from apps.catalog.services import attach_barcode, set_price
 from apps.core.context import get_current_branch, get_current_tenant
 from apps.core.features import LimitExceeded
 
-COLUMNS = ["name", "sku", "barcode", "category", "unit", "price", "cost", "qty"]
+COLUMNS = ["name", "sku", "barcode", "category", "unit", "price", "cost", "qty",
+           "old_code", "description"]
 
 
 @dataclass
@@ -127,6 +128,13 @@ def import_products(file_obj, *, update_existing=True, branch=None,
 
 def _import_row(row, name, tenant, branch, default_unit, default_tax,
                 update_existing, result, *, may_price=True, may_stock=True):
+    limit = Product._meta.get_field("name").max_length
+    if len(name) > limit:
+        # A whole specification typed as the name. The name keeps what fits;
+        # nothing is lost, because the full text goes in the description.
+        if not row.get("description"):
+            row["description"] = name
+        name = name[:limit].rstrip()
     sku = row.get("sku", "")
     barcode_value = row.get("barcode", "")
 
@@ -137,7 +145,10 @@ def _import_row(row, name, tenant, branch, default_unit, default_tax,
         existing = Barcode.objects.filter(code=barcode_value).first()
         if existing is not None:
             product = existing.variant.product
-    if product is None:
+    # The name only stands in when the row gives no code. Two items can share
+    # a name -- "SOAP - 20g" as C-119 and C-120 -- and matching a new code to
+    # the old product by its name merged them into one, quantities and all.
+    if product is None and not sku and not barcode_value:
         product = Product.objects.filter(name__iexact=name).first()
 
     if product is not None and not update_existing:
@@ -165,6 +176,10 @@ def _import_row(row, name, tenant, branch, default_unit, default_tax,
         "category": category,
         "base_unit": unit,
         "tax_rate": tax,
+        # What it was called on the old system, and the full specification
+        # that does not fit in a name: a machine's model, voltage and size.
+        "old_code": row.get("old_code", "")[:40],
+        "description": row.get("description", ""),
     }
 
     created = product is None
@@ -286,6 +301,8 @@ def export_products(branch=None) -> str:
             # A spreadsheet runs a cell starting with = + - @ as a formula.
             "name": safe_cell(product.name),
             "sku": safe_cell(product.sku),
+            "old_code": safe_cell(product.old_code),
+            "description": safe_cell(product.description),
             "barcode": safe_cell(barcode.code if barcode else ""),
             "category": safe_cell(paths.get(product.category_id, "")),
             "unit": product.base_unit.code,

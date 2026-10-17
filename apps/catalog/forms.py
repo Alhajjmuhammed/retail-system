@@ -210,7 +210,8 @@ class ImportForm(TailwindMixin, forms.Form):
 
     file = forms.FileField(
         label="CSV file",
-        help_text="Columns: name, sku, barcode, category, unit, price, cost, qty. "
+        help_text="Columns: name, sku, barcode, category, unit, price, cost, qty, "
+                  "old_code, description. "
                   "A category can be a path: Drinks > Soda > Bottles.",
     )
     update_existing = forms.BooleanField(
