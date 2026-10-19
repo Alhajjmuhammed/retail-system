@@ -173,7 +173,7 @@ def dashboard(request):
             .annotate(day=TruncDate("created_at")).values_list("day")
             .annotate(n=Count("id"))
         )
-        money_rows = [{"label": d.strftime("%a %-d %b"), "short": d.strftime("%-d %b"),
+        money_rows = [{"label": f"{d:%a} {d.day} {d:%b}", "short": f"{d.day} {d:%b}",
                        "value": paid_by_day.get(d, Decimal("0"))} for d in span]
 
         took = collected(period["start"], period["end"])

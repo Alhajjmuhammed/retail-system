@@ -142,8 +142,8 @@ def by_day(branches, start, end) -> list:
         row = took.get(day)
         value = (row["value"] if row else ZERO) - (back.get(day) or ZERO)
         out.append({
-            "key": day, "day": day, "label": day.strftime("%a %-d %b"),
-            "short": day.strftime("%-d %b"),
+            "key": day, "day": day, "label": f"{day:%a} {day.day} {day:%b}",
+            "short": f"{day.day} {day:%b}",
             "value": value, "count": row["count"] if row else 0,
         })
         day += timedelta(days=1)

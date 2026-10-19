@@ -149,10 +149,10 @@ def index(request):
     # as thirty bars was a page of scrolling before the first number.
     from apps.core import charts
 
+    # The day built by hand: "%-d" drops the leading zero on Linux only.
     shape = charts.curve([
-        {"label": row["day"].strftime("%a %-d %b"),
-         "short": row["day"].strftime("%-d %b"), "value": row["net"]}
-        for row in daily
+        {"label": f"{d:%a} {d.day} {d:%b}", "short": f"{d.day} {d:%b}", "value": row["net"]}
+        for row in daily for d in [row["day"]]
     ])
     return render(
         request,
