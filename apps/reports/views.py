@@ -362,3 +362,181 @@ def _cell(text):
     from apps.catalog.imports import safe_cell
 
     return safe_cell(text)
+
+
+# -- the money reports -------------------------------------------------------
+#
+# The figures are worked out in apps.reports.finance; these only pick the
+# period and the branches, and decide who sees the shop-wide ones. A
+# customer's account and a supplier's bills belong to the whole shop, not to
+# a branch, so they are shown only to somebody who covers every branch --
+# otherwise a branch manager would read the takings of branches they do not
+# run.
+
+def _whole_shop(request):
+    m = request.membership
+    return m.role.is_owner_role or m.all_branches
+
+
+REPORTS = [
+    # (url name, title, what it answers, permission)
+    ("index", "Sales", "What was sold, day by day, and how it was paid.", "report.sales"),
+    ("money_in", "Money in", "Every payment received: the till, accounts and invoices.",
+     "report.sales"),
+    ("receivables", "Owed to you", "Who owes you, how much and for how long; late invoices.",
+     "report.sales"),
+    ("payables", "Owed to suppliers", "What you owe each supplier, and which bills are late.",
+     "report.margin"),
+    ("paperwork", "Invoices and quotations",
+     "What was billed, paid and still owed; proformas waiting; quotations won.",
+     "report.sales"),
+    ("pnl", "Profit and loss", "Sales less what the goods cost, less expenses, month by month.",
+     "report.margin"),
+    ("margin", "Profit by product", "What each product made you.", "report.margin"),
+    ("balance", "Balance sheet", "What the business has, what it owes, and what it is worth.",
+     "report.margin"),
+    ("vat", "VAT", "The VAT inside what you sold, by rate.", "report.sales"),
+    ("best", "Best sellers", "What sold most: by money, quantity, profit or receipts.",
+     "report.sales"),
+    ("purchases", "Goods bought", "What came in from each supplier, at what it cost.",
+     "report.stock"),
+    ("stock_value", "Stock value", "What is on the shelves, at what it cost.", "report.stock"),
+    ("staff", "Who sold what", "Each cashier's sales, and who was short.", "report.staff"),
+]
+
+
+@login_required
+@requires("report.sales")
+def hub(request):
+    can = request.membership.can
+    reports = [{"url": f"reports:{name}", "title": title, "text": text}
+               for name, title, text, need in REPORTS if can(need)]
+    return render(request, "reports/hub.html", {"reports": reports})
+
+
+@login_required
+@requires("report.sales")
+def money_in(request):
+    from apps.reports import finance
+
+    start, end = _range(request)
+    data = finance.money_in(_branches(request), start, end, whole_shop=_whole_shop(request))
+    for day in data["days"]:
+        day["pct"] = int(day["total"] / data["peak"] * 100) if data["peak"] > 0 else 0
+    return render(request, "reports/money_in.html",
+                  _context(request, start, end, no_export=True, **data))
+
+
+@login_required
+@requires("report.sales")
+def receivables(request):
+    from apps.reports import finance
+
+    whole = _whole_shop(request)
+    data = finance.receivables(timezone.localdate()) if whole else {}
+    if data:
+        # In column order: a template cannot look a dict up by a variable.
+        keys = [key for key, _ in finance.BUCKETS]
+        data["columns"] = [{"label": label, "total": data["totals"][key], "late": key == "90_plus"}
+                           for key, label in finance.BUCKETS]
+        for row in data["rows"]:
+            row["cells"] = [{"value": row["aged"][key], "late": key == "90_plus"} for key in keys]
+        for row in data["in_credit"]:
+            row["held"] = -row["b"]
+    return render(request, "reports/receivables.html",
+                  {"whole_shop": whole, "buckets": finance.BUCKETS, **data})
+
+
+@login_required
+@requires("report.margin")
+def payables(request):
+    from apps.reports import finance
+
+    whole = _whole_shop(request)
+    data = finance.payables(timezone.localdate()) if whole else {}
+    return render(request, "reports/payables.html", {"whole_shop": whole, **data})
+
+
+@login_required
+@requires("report.sales")
+def paperwork(request):
+    from apps.reports import finance
+
+    start, end = _range(request)
+    data = finance.paperwork(_branches(request), start, end, timezone.localdate())
+    return render(request, "reports/paperwork.html",
+                  _context(request, start, end, no_export=True, **data))
+
+
+@login_required
+@requires("report.margin")
+def pnl(request):
+    from apps.reports import finance
+
+    start, end = _range(request)
+    if "preset" not in request.GET and "from" not in request.GET:
+        # A profit and loss is read by the month: this year so far.
+        start = timezone.localdate().replace(month=1, day=1)
+        floor = request.tenant.history_start()
+        if floor and start < floor:
+            start = min(floor, end)
+    data = finance.profit_and_loss(_branches(request), start, end)
+    # One row per expense category, a cell per month.
+    data["expense_rows"] = [
+        (name, {"months": [m["by_category"].get(name, Decimal("0")) for m in data["months"]],
+                "total": data["total"]["by_category"].get(name, Decimal("0"))})
+        for name in data["categories"]
+    ]
+    return render(request, "reports/pnl.html",
+                  _context(request, start, end, no_export=True, **data))
+
+
+@login_required
+@requires("report.margin")
+def balance(request):
+    from apps.reports import finance
+
+    today = timezone.localdate()
+    data = finance.balance_sheet(_branches(request), whole_shop=_whole_shop(request))
+    return render(request, "reports/balance.html",
+                  _context(request, today, today, hide_dates=True, no_presets=True, **data))
+
+
+@login_required
+@requires("report.sales")
+def vat(request):
+    from apps.reports import finance
+
+    start, end = _range(request)
+    data = finance.vat_summary(_branches(request), start, end)
+    return render(request, "reports/vat.html",
+                  _context(request, start, end, no_export=True, **data))
+
+
+@login_required
+@requires("report.sales")
+def best(request):
+    from apps.reports import finance
+    from apps.reports.services import TOP_BY
+
+    start, end = _range(request)
+    choices = [(k, v) for k, v in TOP_BY if k != "profit" or request.membership.can("report.margin")]
+    by = request.GET.get("by", "money")
+    if by not in dict(choices):
+        by = "money"
+    rows = finance.best_sellers(_branches(request), start, end, by=by)
+    ctx = _context(request, start, end, no_export=True, rows=rows, choices=choices, by=by,
+                   by_label=dict(choices)[by])
+    ctx["keep_by"] = f"{ctx['keep']}&by={by}"
+    return render(request, "reports/best.html", ctx)
+
+
+@login_required
+@requires("report.stock")
+def purchases(request):
+    from apps.reports import finance
+
+    start, end = _range(request)
+    data = finance.purchases(_branches(request), start, end)
+    return render(request, "reports/purchases.html",
+                  _context(request, start, end, no_export=True, **data))

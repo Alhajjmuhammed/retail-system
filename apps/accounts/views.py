@@ -1077,7 +1077,7 @@ def staff_create(request):
 
         audit.record("staff.added", obj=membership, ip=audit.client_ip(request))
         messages.success(request, f"{user.name} added as {data['role'].name}.")
-        return redirect("accounts:staff_edit", pk=membership.pk)
+        return redirect("accounts:staff")
 
     return render(request, "accounts/staff_form.html", {"form": form})
 
@@ -1114,13 +1114,14 @@ def staff_edit(request, pk):
                     + ", ".join(sorted(refused)) + ".",
                 )
             messages.success(request, f"Exceptions for {membership.user.name} saved.")
+            return redirect("accounts:staff")
         else:
             form = StaffForm(request.POST, tenant=request.tenant, instance=membership,
                              actor=request.membership)
             if not form.is_valid():
                 # Used to redirect here, silently throwing the errors away.
                 return render(request, "accounts/staff_form.html", {
-                    "membership": membership, "form": form,
+                    "person": membership, "form": form,
                     "groups": permission_groups(
                         request.tenant, role=membership.role, membership=membership
                     ),
@@ -1171,7 +1172,7 @@ def staff_edit(request, pk):
             audit.record("staff.updated", obj=membership, ip=audit.client_ip(request),
                          after={"role": data["role"].name})
             messages.success(request, f"{membership.user.name} updated.")
-            return redirect("accounts:staff_edit", pk=membership.pk)
+            return redirect("accounts:staff")
         return redirect("accounts:staff_edit", pk=membership.pk)
 
     form = StaffForm(
@@ -1191,7 +1192,7 @@ def staff_edit(request, pk):
         request,
         "accounts/staff_form.html",
         {
-            "membership": membership,
+            "person": membership,
             "form": form,
             "groups": permission_groups(
                 request.tenant, role=membership.role, membership=membership

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Owed to you{% endblock %}
+{% block heading %}Owed to you{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% if not whole_shop %}{% include "reports/_whole_shop.html" %}{% else %}
+  <p class="text-sm text-ink-600">
+    What customers owe today, from their accounts. How old a debt is comes from the sales
+    and invoices behind it, the oldest counted as paid first. Amounts are in your own currency.
+  </p>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+    <div class="stat col-span-2 lg:col-span-1"><p class="stat-label">Owed to you</p><p class="stat-value text-amber-700">{{ total|floatformat:0|intcomma }}</p></div>
+    {% for c in columns %}
+    <div class="stat"><p class="stat-label">{{ c.label }}</p><p class="stat-value {% if c.late and c.total %}text-red-600{% endif %}">{{ c.total|floatformat:0|intcomma }}</p></div>
+    {% endfor %}
+    <div class="stat"><p class="stat-label">Invoices past due</p><p class="stat-value {% if overdue_total %}text-red-600{% endif %}">{{ overdue_total|floatformat:0|intcomma }}</p></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Customers who owe</h2><a href="{% url 'customers:statements' %}" class="text-xs font-semibold text-brand-700 hover:underline">Collect payments</a></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th>Customer</th><th class="text-right">Owes</th>{% for c in columns %}<th class="text-right">{{ c.label }}</th>{% endfor %}<th class="text-right">Credit limit</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="font-medium text-ink-900">{% if row.customer %}<a href="{% url 'customers:customer_detail' row.customer.pk %}" class="hover:underline">{{ row.customer.name }}</a>{% endif %}</td>
+            <td class="tnum text-right font-semibold">{{ row.balance|floatformat:0|intcomma }}</td>
+            {% for cell in row.cells %}<td class="tnum text-right {% if cell.late %}text-red-600{% else %}text-ink-600{% endif %}">{% if cell.value %}{{ cell.value|floatformat:0|intcomma }}{% else %}&ndash;{% endif %}</td>{% endfor %}
+            <td class="tnum text-right text-ink-500">{% if row.limit %}{{ row.limit|floatformat:0|intcomma }}{% if row.balance > row.limit %} <span class="badge badge-warn">over</span>{% endif %}{% else %}&ndash;{% endif %}</td>
+          </tr>
+          {% empty %}<tr><td colspan="7" class="py-8 text-center text-sm text-ink-500">Nobody owes you anything.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Invoices past their due date</h2></div>
+    <div class="table-wrap rounded-none border-0 shadow-none">
+      <table class="table">
+        <thead><tr><th>Invoice</th><th>Customer</th><th>Was due</th><th class="text-right">Days late</th><th class="text-right">Still to pay</th></tr></thead>
+        <tbody>
+          {% for o in overdue %}
+          <tr>
+            <td class="font-medium"><a href="{% url 'selling:invoice_detail' o.invoice.pk %}" class="text-brand-700 hover:underline">{{ o.invoice.number }}</a></td>
+            <td>{{ o.invoice.customer.name }}</td>
+            <td class="whitespace-nowrap text-ink-500">{{ o.invoice.due_on|date:"j M Y" }}</td>
+            <td class="tnum text-right {% if o.days > 30 %}text-red-600{% endif %}">{{ o.days }}</td>
+            <td class="tnum text-right font-semibold">{% if o.invoice.is_foreign %}{{ o.invoice.doc_currency }} {{ o.balance|floatformat:"-2"|intcomma }} <span class="hint block font-normal">{{ o.balance_main|floatformat:0|intcomma }}</span>{% else %}{{ o.balance_main|floatformat:0|intcomma }}{% endif %}</td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="py-8 text-center text-sm text-ink-500">No invoice is late.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if in_credit %}
+  <div class="card">
+    <div class="card-head"><h2 class="card-title">Customers you hold money for</h2><span class="hint">paid in advance &middot; {{ in_credit_total|floatformat:0|intcomma }}</span></div>
+    <div class="divide-y divide-ink-100 text-sm">
+      {% for r in in_credit %}<div class="flex justify-between px-5 py-2.5"><span>{{ r.customer__name }}</span><span class="tnum font-medium text-emerald-700">{{ r.held|floatformat:0|intcomma }}</span></div>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

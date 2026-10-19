@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Goods bought{% endblock %}
+{% block heading %}Goods bought{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">Goods received from each supplier in the period, at what they cost you.</p>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="stat"><p class="stat-label">Goods received</p><p class="stat-value">{{ total|floatformat:0|intcomma }}</p></div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Supplier</th><th class="text-right">Deliveries</th><th class="text-right">Lines</th><th class="text-right">Cost</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="font-medium text-ink-900">{{ r.receipt__supplier__name }}</td>
+          <td class="tnum text-right text-ink-600">{{ r.receipts }}</td>
+          <td class="tnum text-right text-ink-600">{{ r.items }}</td>
+          <td class="tnum text-right font-semibold">{{ r.value|floatformat:0|intcomma }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="py-8 text-center text-sm text-ink-500">Nothing received in this period.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

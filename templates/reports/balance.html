@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Balance sheet{% endblock %}
+{% block heading %}Balance sheet{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">
+    What the business has and what it owes, as of {{ end|date:"j F Y" }}, from what this system records.
+  </p>
+  <div class="grid items-start gap-4 lg:grid-cols-2">
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">What you have</h2></div>
+      <div class="divide-y divide-ink-100 text-sm">
+        {% for label, value in assets %}<div class="flex justify-between px-5 py-2.5"><span>{{ label }}</span><span class="tnum font-medium">{{ value|floatformat:0|intcomma }}</span></div>{% endfor %}
+        <div class="flex justify-between bg-ink-50 px-5 py-2.5 font-semibold"><span>Total</span><span class="tnum">{{ total_assets|floatformat:0|intcomma }}</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">What you owe</h2></div>
+      <div class="divide-y divide-ink-100 text-sm">
+        {% for label, value in liabilities %}<div class="flex justify-between px-5 py-2.5"><span>{{ label }}</span><span class="tnum font-medium">{{ value|floatformat:0|intcomma }}</span></div>{% endfor %}
+        <div class="flex justify-between bg-ink-50 px-5 py-2.5 font-semibold"><span>Total</span><span class="tnum">{{ total_liabilities|floatformat:0|intcomma }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="stat"><p class="stat-label">What the business is worth: what you have, less what you owe</p><p class="stat-value {% if net_worth < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net_worth|floatformat:0|intcomma }}</p></div>
+  {% if not whole_shop %}<p class="hint">Customers' accounts and suppliers' bills belong to the whole shop, so for you this counts only the stock and drawers of your branches.</p>{% endif %}
+  <div class="card card-body text-sm text-ink-600">
+    <p class="font-medium text-ink-800">Not in it, because the system does not record them</p>
+    <p class="mt-1">Money in the bank and on mobile money accounts, cash kept outside the drawers, equipment,
+      furniture and vehicles, loans, and what the owner put in or took out. Add these yourself for a full balance sheet.</p>
+  </div>
+</div>
+{% endblock %}

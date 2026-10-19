@@ -94,10 +94,16 @@ def gross_profit(branches, start, end) -> dict:
     }
 
 
-def top_products(branches, start, end, limit=5) -> list:
+TOP_BY = [("money", "by money"), ("qty", "by quantity"), ("profit", "by profit"),
+          ("sales", "by number of sales"), ("least", "selling least")]
+
+
+def top_products(branches, start, end, limit=5, by="money") -> list:
     """
-    What sold best, by money rather than by count: two hundred sweets are not
-    a better day than four sacks of cement.
+    What sold best -- by money unless asked otherwise: two hundred sweets are
+    not a better day than four sacks of cement. ``by`` may also be ``qty``,
+    ``profit`` (what was kept after the goods' cost), ``sales`` (on how many
+    receipts) or ``least`` (what sold, but least, by money).
 
     Grouped by product, not by the words printed on the receipt -- two
     products sharing a name used to merge into one row.
@@ -108,13 +114,24 @@ def top_products(branches, start, end, limit=5) -> list:
             item=Max("description"),
             qty_sold=Sum("kept"),
             value=Sum(F("line_total") * F("kept") / F("qty"), output_field=DecimalField()),
+            profit=Sum((F("line_total") - F("tax_amount")) * F("kept") / F("qty")
+                       - F("kept") * F("unit_cost"), output_field=DecimalField()),
+            receipts=Count("sale", distinct=True),
         )
-        .filter(value__gt=0).order_by("-value")[:limit]
+        .filter(qty_sold__gt=0)
     )
-    rows = list(rows)
-    peak = max((r["value"] or ZERO for r in rows), default=ZERO)
+    measure = {"qty": "qty_sold", "profit": "profit", "sales": "receipts"}.get(by, "value")
+    if by == "least":
+        rows = rows.filter(value__gt=0).order_by("value")
+    elif by == "profit":
+        rows = rows.filter(profit__gt=0).order_by("-profit")
+    else:
+        rows = rows.filter(**{f"{measure}__gt": 0}).order_by(f"-{measure}")
+    rows = list(rows[:limit])
+    peak = max((r[measure] or ZERO for r in rows), default=ZERO)
     for row in rows:
-        row["pct"] = int((row["value"] or ZERO) / peak * 100) if peak else 0
+        row["shown"] = row[measure] or ZERO
+        row["pct"] = int(row["shown"] / peak * 100) if peak else 0
     return rows
 
 

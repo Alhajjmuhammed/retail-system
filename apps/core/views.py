@@ -104,11 +104,20 @@ def dashboard(request):
         for row in paid:
             row["pct"] = int((row["total"] or 0) / paid_peak * 100) if paid_peak else 0
 
+        # The best-sellers card can rank another way. Profit needs the cost
+        # prices, so it is offered only to whoever may see the profit report.
+        top_by = [(k, v) for k, v in figures.TOP_BY
+                  if k != "profit" or can("report.margin")]
+        by = request.GET.get("top", "money")
+        if by not in dict(top_by):
+            by = "money"
+
         context.update({
             "cards": cards,
+            "top_by": top_by, "top_key": by, "top_label": dict(top_by)[by],
             "chart": charts.curve(rows),
             "chart_rows": rows,
-            "top": figures.top_products(branches, start, end),
+            "top": figures.top_products(branches, start, end, by=by),
             "by_method": paid,
             "recent": sales.select_related("customer", "branch").order_by("-sold_at")[:10],
         })

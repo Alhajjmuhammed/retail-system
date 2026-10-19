@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Profit and loss{% endblock %}
+{% block heading %}Profit and loss{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">
+    Sales with VAT and refunds taken off, less what those goods cost you on the day, less your
+    expenses. Wages and rent count only if they were recorded as expenses.
+  </p>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="stat"><p class="stat-label">Sales, VAT taken off</p><p class="stat-value">{{ total.revenue|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Profit on goods</p><p class="stat-value">{{ total.gross|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value">{{ total.expenses|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Net profit</p><p class="stat-value {% if total.net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ total.net|floatformat:0|intcomma }}</p><p class="hint">{% if total.revenue %}{{ total.margin|floatformat:0 }} kept from every 100{% endif %}</p></div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th></th>{% for m in months %}<th class="text-right whitespace-nowrap">{{ m.start|date:"M Y" }}</th>{% endfor %}<th class="text-right">Total</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="font-medium">Sales</td>{% for m in months %}<td class="tnum text-right">{{ m.revenue|floatformat:0|intcomma }}</td>{% endfor %}<td class="tnum text-right font-semibold">{{ total.revenue|floatformat:0|intcomma }}</td></tr>
+        <tr><td class="text-ink-600">Less: what the goods cost</td>{% for m in months %}<td class="tnum text-right text-ink-600">{{ m.cost|floatformat:0|intcomma }}</td>{% endfor %}<td class="tnum text-right text-ink-600">{{ total.cost|floatformat:0|intcomma }}</td></tr>
+        <tr class="bg-ink-50"><td class="font-semibold">Profit on goods</td>{% for m in months %}<td class="tnum text-right font-semibold">{{ m.gross|floatformat:0|intcomma }}</td>{% endfor %}<td class="tnum text-right font-semibold">{{ total.gross|floatformat:0|intcomma }}</td></tr>
+        {% for name, value in expense_rows %}
+        <tr><td class="pl-8 text-ink-600">{{ name|default:"Other" }}</td>{% for v in value.months %}<td class="tnum text-right text-ink-600">{% if v %}{{ v|floatformat:0|intcomma }}{% else %}&ndash;{% endif %}</td>{% endfor %}<td class="tnum text-right text-ink-600">{{ value.total|floatformat:0|intcomma }}</td></tr>
+        {% endfor %}
+        <tr><td class="text-ink-600">Less: expenses</td>{% for m in months %}<td class="tnum text-right text-ink-600">{{ m.expenses|floatformat:0|intcomma }}</td>{% endfor %}<td class="tnum text-right text-ink-600">{{ total.expenses|floatformat:0|intcomma }}</td></tr>
+        <tr class="bg-ink-50"><td class="font-bold">Net profit</td>{% for m in months %}<td class="tnum text-right font-bold {% if m.net < 0 %}text-red-600{% endif %}">{{ m.net|floatformat:0|intcomma }}</td>{% endfor %}<td class="tnum text-right font-bold {% if total.net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ total.net|floatformat:0|intcomma }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

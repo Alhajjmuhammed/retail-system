@@ -39,7 +39,7 @@ PAGES = [
     ("finance:expense_list", "Expenses"),
     ("finance:cashups", "Counting the drawer at the end of a shift"),
     ("reports:index", "Sales report"),
-    ("reports:margin", "Profit"),
+    ("reports:margin", "Profit by product"),
     ("reports:stock_value", "Stock value"),
     ("reports:staff", "Who sold what, and who was short"),
     ("accounts:audit_log", "Activity"),

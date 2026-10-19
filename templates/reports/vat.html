@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}VAT{% endblock %}
+{% block heading %}VAT on sales{% endblock %}
+{% block content %}
+<div class="space-y-4">
+  {% include "reports/_range.html" %}
+  <p class="text-sm text-ink-600">
+    The VAT inside what stayed sold in the period, by rate. Refunded goods are taken off.
+    This is the sales side of a VAT return; VAT you paid on purchases is not recorded here.
+  </p>
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+    <div class="stat"><p class="stat-label">Sales, VAT included</p><p class="stat-value">{{ gross|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Sales before VAT</p><p class="stat-value">{{ net|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">VAT collected</p><p class="stat-value text-amber-700">{{ vat|floatformat:0|intcomma }}</p></div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Rate</th><th class="text-right">Lines</th><th class="text-right">Sales, VAT included</th><th class="text-right">Before VAT</th><th class="text-right">VAT</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="font-medium">{{ r.rate|floatformat:"-2" }}%{% if not r.rate %} <span class="hint">no VAT</span>{% endif %}</td>
+          <td class="tnum text-right text-ink-500">{{ r.lines }}</td>
+          <td class="tnum text-right">{{ r.gross|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right">{{ r.net|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right font-semibold">{{ r.vat|floatformat:0|intcomma }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="py-8 text-center text-sm text-ink-500">No sales in this period.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

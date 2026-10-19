@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{% if membership %}{{ membership.user.name }}{% else %}Add staff{% endif %}{% endblock %}
-{% block heading %}{% if membership %}{{ membership.user.name }}{% else %}Add staff{% endif %}{% endblock %}
+{% block title %}{% if person %}{{ person.user.name }}{% else %}Add staff{% endif %}{% endblock %}
+{% block heading %}{% if person %}{{ person.user.name }}{% else %}Add staff{% endif %}{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-4xl space-y-6">
@@ -23,19 +23,19 @@
       </div>
       {% endfor %}
       <div class="flex gap-3 pt-1">
-        <button type="submit" class="btn btn-primary">{% if membership %}Save{% else %}Add{% endif %}</button>
+        <button type="submit" class="btn btn-primary">{% if person %}Save{% else %}Add{% endif %}</button>
         <a href="{% url 'accounts:staff' %}" class="btn btn-secondary">Cancel</a>
       </div>
     </div>
   </form>
 
-  {% if membership and groups %}
+  {% if person and groups %}
   <form method="post" class="space-y-5">
     {% csrf_token %}
     <input type="hidden" name="action" value="overrides">
 
     <div>
-      <h2 class="text-base font-semibold text-ink-900">Exceptions for {{ membership.user.name }}</h2>
+      <h2 class="text-base font-semibold text-ink-900">Exceptions for {{ person.user.name }}</h2>
       <p class="mt-1 text-sm text-ink-600">
         Their role decides the rest. Use this only where this one person should
         differ. <strong>Withheld always wins</strong>, even if the role allows it.

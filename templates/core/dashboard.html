@@ -106,7 +106,7 @@
     </div>
     <div class="range-set">
       {% for key, label in periods %}
-      <a href="?range={{ key }}" class="range-link {% if key == period.key %}range-on{% else %}range-off{% endif %}">{{ label }}</a>
+      <a href="?range={{ key }}{% if top_key and top_key != 'money' %}&amp;top={{ top_key }}{% endif %}" class="range-link {% if key == period.key %}range-on{% else %}range-off{% endif %}">{{ label }}</a>
       {% endfor %}
     </div>
   </div>
@@ -185,14 +185,20 @@
     <div class="card">
       <div class="card-head">
         <h2 class="card-title"><span class="card-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Selling best</h2>
-        <span class="hint">by money</span>
+        <form method="get" x-data @change="$el.submit()">
+          <input type="hidden" name="range" value="{{ period.key }}">
+          <select name="top" aria-label="Rank the best sellers" class="input w-auto py-1 pl-2 text-xs">
+            {% for key, label in top_by %}<option value="{{ key }}" {% if key == top_key %}selected{% endif %}>{{ label|capfirst }}</option>{% endfor %}
+          </select>
+          <noscript><button class="btn btn-secondary btn-sm">Show</button></noscript>
+        </form>
       </div>
       <div class="space-y-1 p-3">
         {% for row in top %}
         <div class="rank">
           <span class="rank-fill" style="width: {{ row.pct }}%"></span>
-          <span class="rank-name">{{ row.item }} <span class="text-ink-400">&times; {{ row.qty_sold|floatformat:"-3" }}</span></span>
-          <span class="rank-value">{{ row.value|floatformat:0|intcomma }}</span>
+          <span class="rank-name">{{ row.item }} <span class="text-ink-400">{% if top_key == "sales" %}on {{ row.receipts }} sale{{ row.receipts|pluralize }}{% else %}&times; {{ row.qty_sold|floatformat:"-3" }}{% endif %}</span></span>
+          <span class="rank-value">{% if top_key == "qty" %}{{ row.qty_sold|floatformat:"-3"|intcomma }}{% elif top_key == "sales" %}{{ row.receipts }}{% elif top_key == "profit" %}{{ row.profit|floatformat:0|intcomma }}{% else %}{{ row.value|floatformat:0|intcomma }}{% endif %}</span>
         </div>
         {% empty %}
         <p class="px-2 py-8 text-center text-sm text-ink-500">Nothing sold in this period.</p>
