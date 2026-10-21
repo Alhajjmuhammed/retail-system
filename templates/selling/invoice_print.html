@@ -126,7 +126,7 @@ A draft prints as a proforma: nobody owes anything on it and it says so.
     {% endif %}
 
     <p class="mt-3 text-xs text-ink-500">
-      Payment due {{ invoice.due_on|date:"j M Y" }}. Prices include VAT.
+      Payment due {{ invoice.due_on|date:"j M Y" }}. {% if invoice.adds_vat %}VAT is added on top of the prices.{% else %}Prices include VAT.{% endif %}
       {% if invoice.quotation %}Against quotation {{ invoice.quotation.reference }}.{% endif %}
     </p>
 

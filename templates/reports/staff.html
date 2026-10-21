@@ -17,9 +17,9 @@
           <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
           <td class="font-medium text-ink-900">{{ row.user__name }}</td>
           <td class="text-right text-ink-600">{{ row.count }}</td>
-          <td class="tnum text-right font-medium">{{ row.value|floatformat:0|intcomma }}{% if row.refunded %}<p class="hint">{{ row.refunded|floatformat:0|intcomma }} refunded</p>{% endif %}</td>
+          <td class="tnum text-right font-medium">{{ row.value|floatformat:"-2"|intcomma }}{% if row.refunded %}<p class="hint">{{ row.refunded|floatformat:"-2"|intcomma }} refunded</p>{% endif %}</td>
           <td class="text-right text-ink-500">{{ row.shifts }}</td>
-          <td class="text-right font-semibold {% if row.variance < 0 %}text-red-600{% elif row.variance > 0 %}text-amber-600{% endif %}">{% if row.shifts %}{{ row.variance|default:0|floatformat:0|intcomma }}{% else %}<span class="font-normal text-ink-400">no shifts</span>{% endif %}</td>
+          <td class="text-right font-semibold {% if row.variance < 0 %}text-red-600{% elif row.variance > 0 %}text-amber-600{% endif %}">{% if row.shifts %}{{ row.variance|default:0|floatformat:"-2"|intcomma }}{% else %}<span class="font-normal text-ink-400">no shifts</span>{% endif %}</td>
         </tr>
         {% empty %}<tr><td colspan="6" class="py-10 text-center text-sm text-ink-500">No sales in this period.</td></tr>{% endfor %}
       </tbody>

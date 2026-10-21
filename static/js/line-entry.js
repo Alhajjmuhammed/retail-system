@@ -64,7 +64,8 @@ window.lineEntry = function (locked) {
       var gross = qty * price;
       var total = gross - (gross * off) / 100;
       if (!total) return "—";
-      return Math.round(total).toLocaleString();
+      // To the cent: 10 at 3.65 is 36.50, as the saved line will be.
+      return total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
   };
 };

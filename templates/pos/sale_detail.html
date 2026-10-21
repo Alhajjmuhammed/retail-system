@@ -23,7 +23,7 @@
       {% endif %}
     </div>
     <div class="text-right">
-      <p class="text-2xl font-bold text-ink-900">{{ sale.total|floatformat:0|intcomma }}</p>
+      <p class="text-2xl font-bold text-ink-900">{{ sale.total|floatformat:"-2"|intcomma }}</p>
       <span class="badge {% if sale.status == 'completed' %}badge-ok{% else %}badge-warn{% endif %}">{{ sale.get_status_display }}</span>
     </div>
   </div>
@@ -39,7 +39,7 @@
           <td class="text-right">{{ line.qty|floatformat:"-3" }}</td>
           <td class="text-right">{{ line.unit_price|floatformat:"-2"|intcomma }}</td>
           {% if can_see_cost %}<td class="text-right text-ink-500">{{ line.unit_cost|floatformat:"-2" }}</td>{% endif %}
-          <td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right font-medium">{{ line.line_total|floatformat:"-2"|intcomma }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -50,14 +50,14 @@
     <div class="card card-body space-y-1.5 text-sm">
       <h3 class="font-semibold text-ink-900">Paid</h3>
       {% for p in sale.payments.all %}
-      <div class="flex justify-between"><span class="text-ink-600">{{ p.get_method_display }}{% if p.reference %} <span class="font-mono text-xs">{{ p.reference }}</span>{% endif %}</span><span>{{ p.amount|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between"><span class="text-ink-600">{{ p.get_method_display }}{% if p.reference %} <span class="font-mono text-xs">{{ p.reference }}</span>{% endif %}</span><span>{{ p.amount|floatformat:"-2"|intcomma }}</span></div>
       {% endfor %}
     </div>
     <div class="card card-body space-y-1.5 text-sm">
       <h3 class="font-semibold text-ink-900">Totals</h3>
-      <div class="flex justify-between"><span class="text-ink-600">Subtotal</span><span>{{ sale.subtotal|floatformat:0|intcomma }}</span></div>
-      {% if sale.discount_total %}<div class="flex justify-between"><span class="text-ink-600">Discount</span><span>&minus;{{ sale.discount_total|floatformat:0|intcomma }}</span></div>{% endif %}
-      <div class="flex justify-between"><span class="text-ink-600">VAT included</span><span>{{ sale.tax_total|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between"><span class="text-ink-600">Subtotal</span><span>{{ sale.subtotal|floatformat:"-2"|intcomma }}</span></div>
+      {% if sale.discount_total %}<div class="flex justify-between"><span class="text-ink-600">Discount</span><span>&minus;{{ sale.discount_total|floatformat:"-2"|intcomma }}</span></div>{% endif %}
+      <div class="flex justify-between"><span class="text-ink-600">VAT included</span><span>{{ sale.tax_total|floatformat:"-2"|intcomma }}</span></div>
       {% if can_see_cost %}<div class="flex justify-between border-t border-ink-100 pt-1.5"><span class="text-ink-600">Profit on this sale</span><span class="font-medium">{{ sale.margin|floatformat:0 }}</span></div>{% endif %}
     </div>
   </div>
@@ -77,8 +77,8 @@
             <td class="text-sm text-ink-600">{{ r.user.name }}</td>
             <td class="text-sm text-ink-600">{% for l in r.lines.all %}{{ l.qty|floatformat:"-3" }} &times; {{ l.sale_line.description }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if not r.restock %} <span class="badge badge-muted">not restocked</span>{% endif %}</td>
             <td class="tnum text-right text-sm">
-              {{ r.total|floatformat:0|intcomma }}
-              <p class="hint">{% if r.cash_amount %}{{ r.cash_amount|floatformat:0|intcomma }} cash {% endif %}{% if r.credit_amount %}{{ r.credit_amount|floatformat:0|intcomma }} off account {% endif %}{% if r.other_amount %}{{ r.other_amount|floatformat:0|intcomma }} mobile/card{% endif %}</p>
+              {{ r.total|floatformat:"-2"|intcomma }}
+              <p class="hint">{% if r.cash_amount %}{{ r.cash_amount|floatformat:"-2"|intcomma }} cash {% endif %}{% if r.credit_amount %}{{ r.credit_amount|floatformat:"-2"|intcomma }} off account {% endif %}{% if r.other_amount %}{{ r.other_amount|floatformat:"-2"|intcomma }} mobile/card{% endif %}</p>
             </td>
           </tr>
           {% endfor %}

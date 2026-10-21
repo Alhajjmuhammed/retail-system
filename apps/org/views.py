@@ -151,7 +151,7 @@ def business(request):
     switches = ["negative_stock_allowed", "low_stock_alerts", "show_tin_on_receipt",
                 "show_product_images", "show_terms_on_invoice",
                 "show_amount_in_words", "show_bank_details",
-                "lock_document_prices"]
+                "lock_document_prices", "prices_include_tax", "stock_out_on_invoice"]
     return render(
         request,
         "org/business.html",

@@ -606,7 +606,7 @@ def count_detail(request, pk):
                 decision = request.membership.check_permission(
                     "stock.wastage", branch=count.branch, value=losses)
             if not decision.allowed:
-                messages.error(request, f"The differences are worth {worth:,.0f}. "
+                messages.error(request, f"The differences are worth {worth:,.2f}. "
                                         f"{decision.reason} Your counts are saved; ask a "
                                         "manager to apply them.")
                 return redirect("inventory:count_detail", pk=pk)

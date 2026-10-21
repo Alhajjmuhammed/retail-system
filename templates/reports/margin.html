@@ -10,10 +10,10 @@
   </p>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="stat"><p class="stat-label">Sales, VAT taken off</p><p class="stat-value">{{ revenue|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Profit on goods</p><p class="stat-value">{{ gross|floatformat:0|intcomma }}</p><p class="hint">{% if revenue %}{% widthratio gross revenue 100 %} kept from every 100{% endif %}</p></div>
-    <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value">{{ expenses|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Left after expenses</p><p class="stat-value {% if net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Sales, VAT taken off</p><p class="stat-value">{{ revenue|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Profit on goods</p><p class="stat-value">{{ gross|floatformat:"-2"|intcomma }}</p><p class="hint">{% if revenue %}{% widthratio gross revenue 100 %} kept from every 100{% endif %}</p></div>
+    <div class="stat"><p class="stat-label">Expenses</p><p class="stat-value">{{ expenses|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Left after expenses</p><p class="stat-value {% if net < 0 %}text-red-600{% else %}text-emerald-700{% endif %}">{{ net|floatformat:"-2"|intcomma }}</p></div>
   </div>
   {% if product_count > 100 %}<p class="hint">The table shows your top 100 of {{ product_count }} products by sales; the totals above cover all of them.</p>{% endif %}
 
@@ -26,9 +26,9 @@
           <td class="tnum w-12 text-right text-xs text-ink-400">{{ forloop.counter }}</td>
           <td class="text-ink-800">{{ row.item|default:"Items without a product" }}</td>
           <td class="text-right text-ink-500">{{ row.qty_sold|floatformat:"-3" }}</td>
-          <td class="text-right">{{ row.revenue|floatformat:0|intcomma }}</td>
-          <td class="text-right text-ink-500">{{ row.cost|floatformat:0|intcomma }}</td>
-          <td class="text-right font-medium {% if row.profit < 0 %}text-red-600{% endif %}">{{ row.profit|floatformat:0|intcomma }}</td>
+          <td class="text-right">{{ row.revenue|floatformat:"-2"|intcomma }}</td>
+          <td class="text-right text-ink-500">{{ row.cost|floatformat:"-2"|intcomma }}</td>
+          <td class="text-right font-medium {% if row.profit < 0 %}text-red-600{% endif %}">{{ row.profit|floatformat:"-2"|intcomma }}</td>
           <td class="text-right text-ink-600">{{ row.pct|floatformat:1 }}</td>
         </tr>
         {% empty %}<tr><td colspan="7" class="py-10 text-center text-sm text-ink-500">No sales in this period.</td></tr>{% endfor %}

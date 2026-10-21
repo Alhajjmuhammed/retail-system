@@ -8,12 +8,12 @@
 
 <div class="space-y-4 p-5">
   <div class="grid grid-cols-3 gap-3">
-    <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Total</p><p class="tnum mt-0.5 font-semibold text-ink-900">{{ invoice.total|floatformat:0|intcomma }} <span class="text-xs font-normal text-ink-500">{{ invoice.currency }}</span></p></div>
+    <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Total</p><p class="tnum mt-0.5 font-semibold text-ink-900">{{ invoice.total|floatformat:"-2"|intcomma }} <span class="text-xs font-normal text-ink-500">{{ invoice.currency }}</span></p></div>
     <div class="rounded-xl bg-ink-50 px-3 py-2.5"><p class="text-xs text-ink-500">Status</p>
       <p class="mt-0.5 font-semibold {% if invoice.status == 'paid' %}text-emerald-700{% elif invoice.status == 'void' %}text-ink-500{% elif invoice.due_date and invoice.due_date < today %}text-red-700{% else %}text-amber-700{% endif %}">
         {% if invoice.status == "open" and invoice.due_date and invoice.due_date < today %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}
       </p></div>
-    <div class="rounded-xl px-3 py-2.5 {% if invoice.outstanding > 0 and invoice.status != 'void' %}bg-amber-50{% else %}bg-ink-50{% endif %}"><p class="text-xs text-ink-500">Left to pay</p><p class="tnum mt-0.5 font-semibold text-ink-900">{% if invoice.status == "void" %}—{% else %}{{ invoice.outstanding|floatformat:0|intcomma }}{% endif %}</p></div>
+    <div class="rounded-xl px-3 py-2.5 {% if invoice.outstanding > 0 and invoice.status != 'void' %}bg-amber-50{% else %}bg-ink-50{% endif %}"><p class="text-xs text-ink-500">Left to pay</p><p class="tnum mt-0.5 font-semibold text-ink-900">{% if invoice.status == "void" %}—{% else %}{{ invoice.outstanding|floatformat:"-2"|intcomma }}{% endif %}</p></div>
   </div>
   <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
     <dt class="text-ink-500">Period</dt><dd class="text-ink-800">{{ invoice.period_start|date:"j M Y" }} &ndash; {{ invoice.period_end|date:"j M Y" }}</dd>
@@ -28,7 +28,7 @@
       {% for p in payments %}
       <div class="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
         <div class="min-w-0">
-          <p class="text-sm font-medium {% if p.status == 'refunded' %}text-ink-400 line-through{% else %}text-ink-900{% endif %}">{{ p.amount|floatformat:0|intcomma }} &middot; {{ p.get_method_display }}</p>
+          <p class="text-sm font-medium {% if p.status == 'refunded' %}text-ink-400 line-through{% else %}text-ink-900{% endif %}">{{ p.amount|floatformat:"-2"|intcomma }} &middot; {{ p.get_method_display }}</p>
           <p class="hint">{{ p.created_at|date:"j M Y H:i" }}{% if p.provider_ref %} &middot; <span class="font-mono">{{ p.provider_ref }}</span>{% endif %}{% if p.status == "refunded" %} &middot; reversed{% if p.raw_payload.reversed_because %}: {{ p.raw_payload.reversed_because }}{% endif %}{% endif %}</p>
         </div>
         {% if "invoices.manage" in pp and p.status == "succeeded" %}

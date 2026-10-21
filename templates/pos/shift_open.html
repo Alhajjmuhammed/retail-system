@@ -56,8 +56,8 @@ unanswerable from this screen, which is how two people ended up on one POS.
         </div>
         <div>
           <label class="label" for="opening_float">Cash in the drawer now</label>
-          <input type="number" step="1" min="0" name="opening_float" id="opening_float"
-                 value="{{ suggested|floatformat:0 }}"
+          <input type="number" step="0.01" min="0" name="opening_float" id="opening_float"
+                 value="{{ suggested|floatformat:"-2" }}"
                  inputmode="numeric" class="input py-3 text-lg" required>
           <p class="hint">Count it before you start. This is what the end-of-day figure is measured against.</p>
         </div>
@@ -96,7 +96,7 @@ unanswerable from this screen, which is how two people ended up on one POS.
           {% if till.last and not till.running %}
           <span class="text-right">
             <span class="block text-xs text-ink-500">left in drawer</span>
-            <span class="tnum block text-sm font-semibold text-ink-900">{{ till.last.counted_cash|floatformat:0|intcomma }}</span>
+            <span class="tnum block text-sm font-semibold text-ink-900">{{ till.last.counted_cash|floatformat:"-2"|intcomma }}</span>
           </span>
           {% endif %}
           {% if till.running %}

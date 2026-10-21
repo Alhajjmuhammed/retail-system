@@ -27,6 +27,17 @@ from apps.selling.models import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _goods_leave_on_a_delivery_note(shop):
+    """These tests are about delivery notes, so issuing must not send the goods."""
+    from apps.org.models import TenantSettings
+
+    with tenant_context(shop):
+        row, _ = TenantSettings.objects.get_or_create(tenant=shop)
+        row.stock_out_on_invoice = False
+        row.save()
+
+
 @pytest.fixture
 def buyer(shop):
     from apps.customers.models import Customer

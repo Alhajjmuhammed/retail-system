@@ -255,7 +255,7 @@ def checkout(request):
     if on_account and not customer.can_take_credit(total):
         # Online, with the goods still in hand: refused, not merely flagged.
         return JsonResponse({"error": f"{customer.name} has only "
-                                      f"{customer.credit_available:,.0f} of credit left. "
+                                      f"{customer.credit_available:,.2f} of credit left. "
                                       "Take payment another way."}, status=400)
     if not on_account and method not in allowed_methods(membership):
         return JsonResponse({"error": "That payment method is not allowed on a phone. Send it to a POS."},

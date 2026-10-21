@@ -55,7 +55,7 @@
     </div>
     <div>
       <label class="label" for="amount">Amount</label>
-      <input type="number" step="1" min="0" name="amount" id="amount" x-ref="amount" class="input" {% if locked %}disabled{% endif %}
+      <input type="number" step="0.01" min="0" name="amount" id="amount" x-ref="amount" class="input" {% if locked %}disabled{% endif %}
              {% if invoice %}required{% endif %}
              value="{% if values %}{{ values.amount }}{% else %}{{ invoice.amount|default_if_none:'' }}{% endif %}">
       {% if not invoice %}<p class="hint">Empty: the plan price per branch in use.</p>{% endif %}

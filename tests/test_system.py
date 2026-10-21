@@ -835,7 +835,9 @@ def test_vat_comes_out_of_the_price_and_nothing_offers_otherwise():
                  "apps/catalog/forms.py", "apps/org/forms.py"):
         source = Path(name).read_text()
         assert "is_inclusive" not in source, name
-        assert "prices_include_tax" not in source, name
+    # "Prices include VAT" came back as a real setting: it now changes what
+    # the paperwork charges (tests/test_vat_cents_and_stock_on_issue.py),
+    # rather than being a switch that did nothing.
 
     for name in ("templates/catalog/taxonomy.html",
                  "templates/catalog/categories.html",

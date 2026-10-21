@@ -131,6 +131,13 @@ class TenantSettings(TenantModel):
     # Amount are always there: a line with no words or no money is not a
     # line anybody can act on.
     print_columns = models.JSONField(default=default_print_columns, blank=True)
+    # Whether prices include VAT (how most shops here quote) or are before
+    # it, with VAT added on top on the paperwork. Each quotation and invoice
+    # keeps the choice it was started with.
+    prices_include_tax = models.BooleanField(default=True)
+    # Whether issuing an invoice takes its goods out of stock and records
+    # the sale at once. Off, they leave only on a delivery note.
+    stock_out_on_invoice = models.BooleanField(default=True)
     max_document_discount = models.DecimalField(
         max_digits=5, decimal_places=2, default=100,
         validators=[MinValueValidator(0), MaxValueValidator(100)])

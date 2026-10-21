@@ -9,9 +9,9 @@
     are not counted as billed. Amounts are in your own currency.
   </p>
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="stat"><p class="stat-label">Billed</p><p class="stat-value">{{ billed|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Paid so far</p><p class="stat-value text-emerald-700">{{ collected|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Still owed</p><p class="stat-value text-amber-700">{{ outstanding|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Billed</p><p class="stat-value">{{ billed|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Paid so far</p><p class="stat-value text-emerald-700">{{ collected|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Still owed</p><p class="stat-value text-amber-700">{{ outstanding|floatformat:"-2"|intcomma }}</p></div>
     <div class="stat"><p class="stat-label">Quotations won</p><p class="stat-value">{% if win_rate is not None %}{{ win_rate|floatformat:0 }} in 100{% else %}&mdash;{% endif %}</p><p class="hint">of those decided</p></div>
   </div>
 
@@ -20,7 +20,7 @@
       <div class="card-head"><h2 class="card-title">Invoices</h2><a href="{% url 'selling:invoice_list' %}" class="text-xs font-semibold text-brand-700 hover:underline">See all</a></div>
       <div class="divide-y divide-ink-100 text-sm">
         {% for key, s in states.items %}
-        <div class="flex justify-between px-5 py-2.5"><span class="{% if key == 'overdue' and s.count %}text-red-600{% endif %}">{{ s.label }} <span class="hint">&times; {{ s.count }}</span></span><span class="tnum font-medium">{{ s.total|floatformat:0|intcomma }}</span></div>
+        <div class="flex justify-between px-5 py-2.5"><span class="{% if key == 'overdue' and s.count %}text-red-600{% endif %}">{{ s.label }} <span class="hint">&times; {{ s.count }}</span></span><span class="tnum font-medium">{{ s.total|floatformat:"-2"|intcomma }}</span></div>
         {% endfor %}
       </div>
     </div>
@@ -28,7 +28,7 @@
       <div class="card-head"><h2 class="card-title">Quotations</h2><a href="{% url 'selling:quotation_list' %}" class="text-xs font-semibold text-brand-700 hover:underline">See all</a></div>
       <div class="divide-y divide-ink-100 text-sm">
         {% for key, s in q_states.items %}
-        <div class="flex justify-between px-5 py-2.5"><span>{{ s.label }} <span class="hint">&times; {{ s.count }}</span></span><span class="tnum font-medium">{{ s.total|floatformat:0|intcomma }}</span></div>
+        <div class="flex justify-between px-5 py-2.5"><span>{{ s.label }} <span class="hint">&times; {{ s.count }}</span></span><span class="tnum font-medium">{{ s.total|floatformat:"-2"|intcomma }}</span></div>
         {% endfor %}
       </div>
     </div>
@@ -44,9 +44,9 @@
           <tr>
             <td class="font-medium text-ink-900">{{ c.name }}</td>
             <td class="tnum text-right text-ink-500">{{ c.count }}</td>
-            <td class="tnum text-right">{{ c.billed|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right text-emerald-700">{{ c.paid|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right font-semibold">{{ c.owed|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right">{{ c.billed|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right text-emerald-700">{{ c.paid|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right font-semibold">{{ c.owed|floatformat:"-2"|intcomma }}</td>
           </tr>
           {% empty %}<tr><td colspan="5" class="py-8 text-center text-sm text-ink-500">No invoices issued in this period.</td></tr>{% endfor %}
         </tbody>

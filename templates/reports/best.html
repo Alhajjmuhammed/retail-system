@@ -17,8 +17,8 @@
           <td class="text-ink-800">{{ row.item|default:"Items without a product" }}</td>
           <td class="tnum text-right {% if by == 'qty' %}font-semibold{% else %}text-ink-600{% endif %}">{{ row.qty_sold|floatformat:"-3"|intcomma }}</td>
           <td class="tnum text-right {% if by == 'sales' %}font-semibold{% else %}text-ink-600{% endif %}">{{ row.receipts }}</td>
-          <td class="tnum text-right {% if by == 'money' or by == 'least' %}font-semibold{% endif %}">{{ row.value|floatformat:0|intcomma }}</td>
-          {% if by == "profit" %}<td class="tnum text-right font-semibold">{{ row.profit|floatformat:0|intcomma }}</td>{% endif %}
+          <td class="tnum text-right {% if by == 'money' or by == 'least' %}font-semibold{% endif %}">{{ row.value|floatformat:"-2"|intcomma }}</td>
+          {% if by == "profit" %}<td class="tnum text-right font-semibold">{{ row.profit|floatformat:"-2"|intcomma }}</td>{% endif %}
         </tr>
         {% empty %}<tr><td colspan="6" class="py-10 text-center text-sm text-ink-500">Nothing sold in this period.</td></tr>{% endfor %}
       </tbody>

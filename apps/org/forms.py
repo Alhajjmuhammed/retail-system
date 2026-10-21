@@ -92,6 +92,7 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "show_product_images", "invoice_terms", "show_terms_on_invoice",
             "show_amount_in_words", "show_bank_details",
             "lock_document_prices", "max_document_discount",
+            "prices_include_tax", "stock_out_on_invoice",
             "fiscal_provider",
         ]
         widgets = {
@@ -151,6 +152,19 @@ class BusinessForm(TailwindMixin, forms.ModelForm):
             "On: a product goes in at its price from the price list and cannot be "
             "typed over. Lines you type yourself, like delivery or labour, are "
             "still priced by hand. Off: the price is a suggestion anyone can change.",
+        ),
+        "prices_include_tax": (
+            "Prices include VAT",
+            "On: a price of 118 is 100 plus 18 VAT. Off: prices are before VAT, "
+            "and quotations and invoices add the VAT on top. Paperwork already "
+            "written keeps the way it was made. The POS always charges prices "
+            "with VAT included.",
+        ),
+        "stock_out_on_invoice": (
+            "Take goods out of stock when an invoice is issued",
+            "On: issuing an invoice sends everything on it at once and records the "
+            "sale, so stock and the Sales report follow the invoice. Off: goods "
+            "leave only on a delivery note. A proforma never touches stock.",
         ),
         "max_document_discount": (
             "Largest discount on a quotation or invoice (%)",

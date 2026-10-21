@@ -63,6 +63,11 @@ class Quotation(BranchModel):
     # not rewrite an offer already in the customer's hands.
     currency = models.CharField(max_length=3, blank=True)
     exchange_rate = models.DecimalField(max_digits=18, decimal_places=6, default=1)
+    # Whether its prices are before VAT, with VAT added on top. Taken from
+    # the shop's setting when the document is started and kept: switching
+    # the setting later must not change what an issued invoice comes to.
+    # Empty on documents from before the setting -- those included VAT.
+    vat_on_top = models.BooleanField(null=True, default=None)
 
     sent_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -115,23 +120,38 @@ class Quotation(BranchModel):
 
     @property
     def money_step(self) -> str:
-        """The step for an amount box in this document's currency."""
-        from apps.core.currency import quantum
-
-        return "1" if quantum(self.doc_currency) == 1 else "0.01"
+        """The step for an amount box: to the cent, in every currency."""
+        return "0.01"
 
     @property
     def money_places(self) -> int:
-        """Decimals to show: none for shillings, two for dollars."""
-        return 0 if self.money_step == "1" else 2
+        """
+        Two decimals, shillings included. Paperwork is not cash: 10 at 3.65
+        is 36.50, and an invoice that printed 37 was simply wrong. Only the
+        till rounds to a coin somebody can hand over.
+        """
+        return 2
+
+    @property
+    def adds_vat(self) -> bool:
+        """Prices before VAT, VAT added on top."""
+        return bool(self.vat_on_top)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.vat_on_top is None:
+            from apps.selling.services import paperwork_rules
+
+            self.vat_on_top = not paperwork_rules().prices_include_tax
+        super().save(*args, **kwargs)
 
     def to_main(self, amount) -> Decimal:
         """An amount on this document, in the shop's own currency."""
-        from apps.core.currency import to_main
+        from apps.core.currency import round_to
 
         if not self.is_foreign:
             return amount
-        return to_main(amount, self.exchange_rate, self.shop)
+        # To the cent: the paperwork keeps its cents in every currency.
+        return round_to(Decimal(str(amount)) * Decimal(self.exchange_rate), "USD")
 
     @property
     def total_main(self) -> Decimal:
@@ -145,9 +165,10 @@ class Quotation(BranchModel):
         return describe_rate(self.doc_currency, self.exchange_rate, self.shop)
 
     def _money(self, amount) -> Decimal:
-        from apps.core.currency import round_to
+        """To the cent, whatever the currency (see money_places)."""
+        from decimal import ROUND_HALF_UP
 
-        return round_to(amount, self.doc_currency)
+        return Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @property
     def before_discount(self) -> Decimal:
@@ -214,7 +235,12 @@ class Quotation(BranchModel):
 
     @property
     def total(self) -> Decimal:
-        """Prices include VAT, so the total is the sum of the lines."""
+        """
+        What the customer pays. With prices that include VAT, the sum of the
+        lines; with VAT on top, the lines and then the VAT.
+        """
+        if self.adds_vat:
+            return self._money(self.net + self.tax)
         return self.net
 
     @property
@@ -306,6 +332,12 @@ class QuotationLine(TenantModel):
 
         if not self.tax_rate:
             return ZERO
+        if self.document.adds_vat:
+            # On top of the line, not inside it: 18% on 100 is 18.
+            from decimal import ROUND_HALF_UP
+
+            return (self.line_total * Decimal(str(self.tax_rate)) / Decimal("100")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP)
         return _tax_for(self, self.document.doc_currency)
 
 
@@ -330,8 +362,10 @@ class Invoice(BranchModel):
     balance and one statement rather than two halves that have to be added up
     by hand.
 
-    It does not move stock. Goods leave on a delivery note, and that is where
-    the sale lands in the reports.
+    Whether issuing it also moves stock is the shop's choice: by default the
+    goods leave at once, on a delivery note made for everything on it, and
+    the sale lands in the reports then. Switched off, they leave only when
+    somebody writes a delivery note.
     """
 
     reference = models.CharField(max_length=30)
@@ -355,6 +389,11 @@ class Invoice(BranchModel):
     # not rewrite an offer already in the customer's hands.
     currency = models.CharField(max_length=3, blank=True)
     exchange_rate = models.DecimalField(max_digits=18, decimal_places=6, default=1)
+    # Whether its prices are before VAT, with VAT added on top. Taken from
+    # the shop's setting when the document is started and kept: switching
+    # the setting later must not change what an issued invoice comes to.
+    # Empty on documents from before the setting -- those included VAT.
+    vat_on_top = models.BooleanField(null=True, default=None)
     # The number it carried as a proforma. Kept after issuing, so the
     # sequence never hands the same proforma number to two customers.
     proforma_reference = models.CharField(max_length=30, blank=True, db_index=True)
@@ -406,23 +445,38 @@ class Invoice(BranchModel):
 
     @property
     def money_step(self) -> str:
-        """The step for an amount box in this document's currency."""
-        from apps.core.currency import quantum
-
-        return "1" if quantum(self.doc_currency) == 1 else "0.01"
+        """The step for an amount box: to the cent, in every currency."""
+        return "0.01"
 
     @property
     def money_places(self) -> int:
-        """Decimals to show: none for shillings, two for dollars."""
-        return 0 if self.money_step == "1" else 2
+        """
+        Two decimals, shillings included. Paperwork is not cash: 10 at 3.65
+        is 36.50, and an invoice that printed 37 was simply wrong. Only the
+        till rounds to a coin somebody can hand over.
+        """
+        return 2
+
+    @property
+    def adds_vat(self) -> bool:
+        """Prices before VAT, VAT added on top."""
+        return bool(self.vat_on_top)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.vat_on_top is None:
+            from apps.selling.services import paperwork_rules
+
+            self.vat_on_top = not paperwork_rules().prices_include_tax
+        super().save(*args, **kwargs)
 
     def to_main(self, amount) -> Decimal:
         """An amount on this document, in the shop's own currency."""
-        from apps.core.currency import to_main
+        from apps.core.currency import round_to
 
         if not self.is_foreign:
             return amount
-        return to_main(amount, self.exchange_rate, self.shop)
+        # To the cent: the paperwork keeps its cents in every currency.
+        return round_to(Decimal(str(amount)) * Decimal(self.exchange_rate), "USD")
 
     @property
     def total_main(self) -> Decimal:
@@ -436,9 +490,10 @@ class Invoice(BranchModel):
         return describe_rate(self.doc_currency, self.exchange_rate, self.shop)
 
     def _money(self, amount) -> Decimal:
-        from apps.core.currency import round_to
+        """To the cent, whatever the currency (see money_places)."""
+        from decimal import ROUND_HALF_UP
 
-        return round_to(amount, self.doc_currency)
+        return Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @property
     def before_discount(self) -> Decimal:
@@ -505,7 +560,12 @@ class Invoice(BranchModel):
 
     @property
     def total(self) -> Decimal:
-        """Prices include VAT, so the total is the sum of the lines."""
+        """
+        What the customer pays. With prices that include VAT, the sum of the
+        lines; with VAT on top, the lines and then the VAT.
+        """
+        if self.adds_vat:
+            return self._money(self.net + self.tax)
         return self.net
 
     @property
@@ -653,6 +713,12 @@ class InvoiceLine(TenantModel):
 
         if not self.tax_rate:
             return ZERO
+        if self.document.adds_vat:
+            # On top of the line, not inside it: 18% on 100 is 18.
+            from decimal import ROUND_HALF_UP
+
+            return (self.line_total * Decimal(str(self.tax_rate)) / Decimal("100")).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP)
         return _tax_for(self, self.document.doc_currency)
 
     @property
@@ -742,7 +808,12 @@ class DeliveryLine(TenantModel):
     def line_total(self) -> Decimal:
         """This delivery's share of what the invoice actually charges."""
         source = self.invoice_line
-        return source.invoice._money(self.qty * source.unit_price * source.charged_share)
+        share = source.charged_share
+        if source.invoice.adds_vat:
+            # The customer pays the VAT on top, so the goods leaving are
+            # worth that much more.
+            share *= 1 + Decimal(str(source.tax_rate)) / Decimal("100")
+        return source.invoice._money(self.qty * source.unit_price * share)
 
     @property
     def line_total_main(self) -> Decimal:

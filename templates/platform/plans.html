@@ -30,9 +30,9 @@
           </div>
           {% if plan.description %}<p class="hint mt-0.5">{{ plan.description }}</p>{% endif %}
           <p class="tnum mt-2 text-xl font-bold text-ink-900">
-            {% if plan.price_monthly %}{{ plan.price_monthly|floatformat:0|intcomma }}<span class="text-xs font-normal text-ink-500"> {{ plan.currency }} / branch / month</span>{% else %}Free{% endif %}
+            {% if plan.price_monthly %}{{ plan.price_monthly|floatformat:"-2"|intcomma }}<span class="text-xs font-normal text-ink-500"> {{ plan.currency }} / branch / month</span>{% else %}Free{% endif %}
           </p>
-          {% if plan.price_annual %}<p class="hint">{{ plan.price_annual|floatformat:0|intcomma }} {{ plan.currency }} / branch / year</p>{% endif %}
+          {% if plan.price_annual %}<p class="hint">{{ plan.price_annual|floatformat:"-2"|intcomma }} {{ plan.currency }} / branch / year</p>{% endif %}
           <p class="hint mt-1">
             {% if plan.subscribers and "shops.view" in pp %}
               <a href="{% url 'platform:tenant_list' %}?plan={{ plan.code }}" class="font-medium text-brand-700 hover:underline">{{ plan.subscribers }} shop{{ plan.subscribers|pluralize }}</a>

@@ -260,7 +260,7 @@ def customer_payment(request, pk):
             Customer.objects.select_for_update().filter(pk=customer.pk).first()
             owed = customer.balance
             if amount > owed:
-                messages.error(request, f"{customer.name} owes {max(owed, 0):,.0f}. "
+                messages.error(request, f"{customer.name} owes {max(owed, 0):,.2f}. "
                                         "Record no more than that.")
                 return redirect("customers:customer_detail", pk=pk)
             # Money for a particular invoice says so, or the invoice went on
@@ -275,7 +275,7 @@ def customer_payment(request, pk):
                 # The account is in the shop's own currency; so is this
                 # payment. A dollar invoice is held to its balance in shillings.
                 if amount > invoice.balance_main:
-                    messages.error(request, f"{invoice.reference} has {invoice.balance_main:,.0f} "
+                    messages.error(request, f"{invoice.reference} has {invoice.balance_main:,.2f} "
                                             "left on it. Record no more than that against it.")
                     return redirect("customers:customer_detail", pk=pk)
             entry = CreditTransaction.objects.create(
@@ -311,7 +311,7 @@ def customer_payment(request, pk):
         audit.record("credit.collected", obj=entry, ip=audit.client_ip(request))
         messages.success(
             request,
-            f"{amount:,.0f} received from {customer.name}."
+            f"{amount:,.2f} received from {customer.name}."
             + (" Added to your POS drawer." if drawer is not None else
                " No POS is open, so it is not in any drawer count." if method == "cash" else ""),
         )
@@ -355,7 +355,7 @@ def customer_payment_reverse(request, pk):
         undo = CreditTransaction.objects.create(
             customer=customer, kind=CreditKind.ADJUSTMENT, amount=back,
             balance_after=customer.balance + back, reference=f"undo:{entry.pk}",
-            note=f"Undoes payment of {back:,.0f} on {entry.created_at:%d %b}",
+            note=f"Undoes payment of {back:,.2f} on {entry.created_at:%d %b}",
             # Against the same invoice, so it shows as owed again there too.
             invoice_id=entry.invoice_id,
             doc_amount=-entry.doc_amount if entry.doc_amount is not None else None,
@@ -377,7 +377,7 @@ def customer_payment_reverse(request, pk):
         elif movement is not None:
             till_note = " Its POS is already counted; check that cash-up."
     audit.record("credit.payment_undone", obj=undo, ip=audit.client_ip(request))
-    messages.success(request, f"Payment of {back:,.0f} undone.{till_note}")
+    messages.success(request, f"Payment of {back:,.2f} undone.{till_note}")
     return redirect("customers:customer_detail", pk=customer.pk)
 
 
@@ -408,8 +408,8 @@ def customer_delete(request, pk):
 
     balance = customer.balance
     blockers = (
-        (lambda: balance > 0, f"{name} still owes {balance:,.0f}. Settle the account first."),
-        (lambda: balance < 0, f"You owe {name} {-balance:,.0f}. Settle it before removing them."),
+        (lambda: balance > 0, f"{name} still owes {balance:,.2f}. Settle the account first."),
+        (lambda: balance < 0, f"You owe {name} {-balance:,.2f}. Settle it before removing them."),
     )
     if customer.sales.exists() or customer.credit_transactions.exists() \
             or customer.loyalty_transactions.exists():

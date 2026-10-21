@@ -7,21 +7,21 @@
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
     <a href="?" class="stat transition hover:border-brand-300 {% if not view %}border-brand-300{% endif %}">
       <p class="stat-label">Billed</p>
-      <p class="stat-value">{{ totals.billed|floatformat:0|intcomma }}</p>
+      <p class="stat-value">{{ totals.billed|floatformat:"-2"|intcomma }}</p>
       <p class="hint">Void invoices not counted</p>
     </a>
     <a href="?view=paid" class="stat transition hover:border-brand-300 {% if view == 'paid' %}border-brand-300{% endif %}">
       <p class="stat-label">Collected</p>
-      <p class="stat-value text-emerald-700">{{ totals.collected|floatformat:0|intcomma }}</p>
+      <p class="stat-value text-emerald-700">{{ totals.collected|floatformat:"-2"|intcomma }}</p>
     </a>
     <a href="?view=open" class="stat transition hover:border-brand-300 {% if view == 'open' %}border-brand-300{% endif %}">
       <p class="stat-label">Still to come in</p>
-      <p class="stat-value {% if totals.outstanding %}text-amber-600{% endif %}">{{ totals.outstanding|floatformat:0|intcomma }}</p>
+      <p class="stat-value {% if totals.outstanding %}text-amber-600{% endif %}">{{ totals.outstanding|floatformat:"-2"|intcomma }}</p>
     </a>
     <a href="?view=overdue" class="stat transition hover:border-brand-300 {% if view == 'overdue' %}border-brand-300{% endif %}">
       <p class="stat-label">Overdue</p>
       <p class="stat-value {% if totals.overdue %}text-red-600{% endif %}">{{ totals.overdue }}</p>
-      {% if totals.overdue %}<p class="hint">{{ totals.overdue_value|floatformat:0|intcomma }} late</p>{% endif %}
+      {% if totals.overdue %}<p class="hint">{{ totals.overdue_value|floatformat:"-2"|intcomma }} late</p>{% endif %}
     </a>
   </div>
 
@@ -88,10 +88,10 @@
                 {% endif %}
               {% else %}<span class="text-ink-400">—</span>{% endif %}
             </td>
-            <td class="tnum text-right">{{ inv.total|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right text-ink-600">{{ inv.paid|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right">{{ inv.total|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right text-ink-600">{{ inv.paid|floatformat:"-2"|intcomma }}</td>
             <td class="tnum text-right {% if inv.left > 0 and inv.status != 'void' %}font-medium text-amber-700{% else %}text-ink-400{% endif %}">
-              {% if inv.status == "void" %}—{% else %}{{ inv.left|floatformat:0|intcomma }}{% endif %}
+              {% if inv.status == "void" %}—{% else %}{{ inv.left|floatformat:"-2"|intcomma }}{% endif %}
             </td>
             <td class="whitespace-nowrap">
               <span class="flex items-center gap-1.5 text-sm text-ink-700">

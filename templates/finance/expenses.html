@@ -9,9 +9,9 @@
   </div>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "calendar" class="h-3.5 w-3.5" %}</span>This month</p><p class="stat-value">{{ month_total|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "calendar" class="h-3.5 w-3.5" %}</span>This month</p><p class="stat-value">{{ month_total|floatformat:"-2"|intcomma }}</p></div>
     <a href="?state=waiting" class="stat transition hover:border-brand-300 {% if f.state == 'waiting' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "clock" class="h-3.5 w-3.5" %}</span>Waiting for approval</p><p class="stat-value {% if waiting %}text-amber-700{% endif %}">{{ waiting }}</p></a>
-    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Shown below</p><p class="stat-value">{{ shown_total|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Shown below</p><p class="stat-value">{{ shown_total|floatformat:"-2"|intcomma }}</p></div>
   </div>
 
   {% comment %}
@@ -41,13 +41,13 @@
           <td class="text-ink-800">{{ e.category.name }}<p class="hint">{% if e.method == "mpesa" %}Mobile money{% else %}{{ e.method|capfirst }}{% endif %}{% if e.reference %} &middot; {{ e.reference }}{% endif %}</p></td>
           <td class="max-w-xs break-words text-ink-600">{{ e.description|default:"—" }}{% if e.attachment %} <a href="{% url 'finance:expense_attachment' e.pk %}" target="_blank" class="row-link text-brand-700 hover:underline">receipt</a>{% endif %}</td>
           <td class="text-ink-500">{{ e.created_by.name|default:"—" }}</td>
-          <td class="tnum text-right font-medium">{{ e.amount|floatformat:0|intcomma }}
+          <td class="tnum text-right font-medium">{{ e.amount|floatformat:"-2"|intcomma }}
             {% if e.approved_by_id %}<p class="hint text-emerald-700">approved by {{ e.approved_by.name }}</p>{% else %}<p class="hint text-amber-700">waiting</p>{% endif %}
           </td>
           <td class="whitespace-nowrap text-right">
             {% if may_approve and not e.approved_by_id and e.created_by_id != request.user.pk %}
             <form method="post" action="{% url 'finance:expense_approve' e.pk %}" class="inline" x-data
-                  @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ e.amount|floatformat:0|intcomma }} for {{ e.category.name|escapejs }}?', body: 'An approved expense can no longer be edited.', label: 'Approve', danger: false })">
+                  @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ e.amount|floatformat:"-2"|intcomma }} for {{ e.category.name|escapejs }}?', body: 'An approved expense can no longer be edited.', label: 'Approve', danger: false })">
               {% csrf_token %}
               <button type="submit" class="btn-icon btn-icon-brand" title="Approve" aria-label="Approve">{% icon "check" class="h-4 w-4" %}</button>
             </form>

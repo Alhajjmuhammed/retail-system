@@ -284,7 +284,7 @@ class RolePermission(models.Model):
         unique_together = [("role", "permission")]
 
     def __str__(self):
-        ceiling = f" up to {self.limit_value:,.0f}" if self.limit_value else ""
+        ceiling = f" up to {self.limit_value:,.2f}" if self.limit_value else ""
         return f"{self.role}: {self.permission}{ceiling}"
 
 

@@ -83,7 +83,7 @@ month -- so the page shows both rather than folding them into one state.
       <div class="card">
         <div class="card-head">
           <h2 class="card-title">What is being charged for</h2>
-          <span class="hint">Prices include VAT</span>
+          <span class="hint">{% if invoice.adds_vat %}Prices before VAT; VAT added on top{% else %}Prices include VAT{% endif %}</span>
         </div>
         <table class="table">
           <thead><tr>
@@ -217,7 +217,7 @@ month -- so the page shows both rather than folding them into one state.
         <p class="hint">It comes off {{ invoice.customer.name }}'s account as well, so the statement stays right.</p>
         <div>
           <label class="label" for="amount">Amount{% if invoice.is_foreign %} ({{ invoice.doc_currency }}){% endif %}</label>
-          <input type="number" step="{{ invoice.money_step }}" min="{{ invoice.money_step }}" max="{{ invoice.balance|floatformat:2 }}" name="amount" id="amount" class="input" placeholder="{{ invoice.balance|floatformat:0 }}" required>
+          <input type="number" step="{{ invoice.money_step }}" min="{{ invoice.money_step }}" max="{{ invoice.balance|floatformat:2 }}" name="amount" id="amount" class="input" placeholder="{{ invoice.balance|floatformat:2 }}" required>
         </div>
         <div>
           <label class="label" for="method">How</label>
@@ -241,7 +241,7 @@ month -- so the page shows both rather than folding them into one state.
           <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Discount {{ invoice.discount_percent|floatformat:"-2" }}%</span><span class="tnum text-emerald-700">&minus;{{ invoice.order_discount|floatformat:invoice.money_places|intcomma }}</span></div>
           {% endif %}
           <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{% if invoice.status == "draft" %}Proforma total{% else %}Invoiced{% endif %}</span><span class="tnum font-medium">{{ invoice.total|floatformat:invoice.money_places|intcomma }}</span></div>
-          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">VAT inside it</span><span class="tnum">{{ invoice.tax|floatformat:invoice.money_places|intcomma }}</span></div>
+          <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{% if invoice.adds_vat %}VAT added{% else %}VAT inside it{% endif %}</span><span class="tnum">{{ invoice.tax|floatformat:invoice.money_places|intcomma }}</span></div>
           {% if invoice.status == "draft" %}
           <div class="bg-ink-50 px-5 py-2.5 text-ink-600">Nothing is owed yet. It goes on {{ invoice.customer.name }}'s account when you issue it.</div>
           {% elif invoice.status == "void" %}

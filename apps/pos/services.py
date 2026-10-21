@@ -54,10 +54,12 @@ MONEY = Decimal("0.01")
 # or give change for: the receipt said 313, the till expected 312.50, and
 # every cash-up carried the difference as a variance nobody could explain.
 # Selling a quarter kilo of sugar at 1,250 is how a duka trades all day.
-WHOLE_UNIT_CURRENCIES = {
-    "TZS", "UGX", "RWF", "BIF", "KMF", "DJF", "GNF", "MGA", "XAF", "XOF",
-    "XPF", "JPY", "KRW", "VND", "CLP", "ISK", "PYG",
-}
+#
+# No longer applied. The shops asked for amounts exactly as they are -- 10
+# at 3.65 is 36.50, not 37 -- so every currency is kept to the cent, at the
+# till as on paper. Left empty rather than removed, so the one place that
+# asks the question still has an answer.
+WHOLE_UNIT_CURRENCIES: frozenset = frozenset()
 
 
 def quantum(currency=None) -> Decimal:
@@ -666,7 +668,7 @@ def create_return(sale, quantities: dict, *, reason, method=PaymentMethod.CASH,
     if require_drawer and doc.cash_amount > ZERO and shift is None:
         # Part of this comes back in cash even if another way was chosen --
         # cash is what is left once the other routes are used up.
-        raise ValueError(f"{doc.cash_amount:,.0f} of this refund is paid in cash, which comes out "
+        raise ValueError(f"{doc.cash_amount:,.2f} of this refund is paid in cash, which comes out "
                          "of a drawer. Open your till first.")
     doc.save(update_fields=["total", "cash_amount", "credit_amount", "other_amount",
                             "updated_at"])

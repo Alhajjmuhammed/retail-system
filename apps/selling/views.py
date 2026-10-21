@@ -644,7 +644,7 @@ def _act_on_invoice(request, invoice):
             limit = request.membership.check_permission("invoice.manage").limit or 0
             messages.error(
                 request,
-                f"You may issue invoices up to {limit:,.0f}. This one is {total:,.0f}: "
+                f"You may issue invoices up to {limit:,.2f}. This one is {total:,.2f}: "
                 "ask the owner or a manager to issue it.",
             )
             return redirect("selling:invoice_detail", pk=invoice.pk)
@@ -658,7 +658,8 @@ def _act_on_invoice(request, invoice):
         messages.success(
             request,
             f"{invoice.reference} issued. {invoice.customer.name} owes "
-            f"{total:,.0f}, due {invoice.due_on.day} {invoice.due_on:%b}.",
+            f"{total:,.2f}, due {invoice.due_on.day} {invoice.due_on:%b}."
+            + (" The goods have come out of stock." if invoice.has_deliveries else ""),
         )
         return redirect("selling:invoice_detail", pk=invoice.pk)
 
@@ -694,7 +695,7 @@ def _act_on_invoice(request, invoice):
                      ip=audit.client_ip(request))
         messages.success(
             request,
-            f"{amount:,.0f} received against {invoice.reference}."
+            f"{amount:,.2f} received against {invoice.reference}."
             + (" Added to your POS drawer." if movement is not None else
                " No POS is open, so it is not in any drawer count." if method == "cash"
                else ""),

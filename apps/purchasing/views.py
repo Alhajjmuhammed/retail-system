@@ -228,7 +228,7 @@ def supplier_pay(request, pk):
             if amount > invoice.outstanding:
                 messages.error(
                     request,
-                    f"{invoice.number} only has {invoice.outstanding:,.0f} left to pay.",
+                    f"{invoice.number} only has {invoice.outstanding:,.2f} left to pay.",
                 )
                 return redirect("purchasing:supplier_detail", pk=pk)
 
@@ -252,7 +252,7 @@ def supplier_pay(request, pk):
             if invoice is not None:
                 if amount > invoice.outstanding:
                     messages.error(request, f"{invoice.number} only has "
-                                            f"{invoice.outstanding:,.0f} left to pay.")
+                                            f"{invoice.outstanding:,.2f} left to pay.")
                     return redirect("purchasing:supplier_detail", pk=pk)
                 parts = [(invoice, amount)]
             else:
@@ -285,7 +285,7 @@ def supplier_pay(request, pk):
                     return redirect("purchasing:supplier_detail", pk=pk)
                 if amount > drawer.compute_expected_cash():
                     messages.error(request, "Your drawer should only hold "
-                                            f"{drawer.compute_expected_cash():,.0f}.")
+                                            f"{drawer.compute_expected_cash():,.2f}.")
                     return redirect("purchasing:supplier_detail", pk=pk)
                 common["cash_movement"] = record_cash_movement(
                     drawer, kind=CashMovementKind.PAY_OUT, amount=-amount,
@@ -297,7 +297,7 @@ def supplier_pay(request, pk):
         settled = [p.invoice.number for p in payments if p.invoice]
         messages.success(
             request,
-            f"{amount:,.0f} paid to {supplier.name}"
+            f"{amount:,.2f} paid to {supplier.name}"
             + (f" — settles {', '.join(settled)}" if settled else "")
             + (" (part in advance)" if any(p.invoice is None for p in payments) else "") + ".",
         )
@@ -343,7 +343,7 @@ def supplier_bill(request, pk):
 
     apply_advances(supplier)  # money already paid ahead settles it
     audit.record("supplier.billed", obj=bill, ip=audit.client_ip(request))
-    messages.success(request, f"Bill {bill.number} for {amount:,.0f} recorded.")
+    messages.success(request, f"Bill {bill.number} for {amount:,.2f} recorded.")
     return redirect("purchasing:supplier_detail", pk=pk)
 
 
@@ -751,10 +751,10 @@ def supplier_delete(request, pk):
     if owed > 0:
         # Archiving hid the debt: an unpaid supplier vanished from the list
         # and from every "owed" figure.
-        messages.error(request, f"You still owe {name} {owed:,.0f}. Settle it before removing them.")
+        messages.error(request, f"You still owe {name} {owed:,.2f}. Settle it before removing them.")
         return redirect("purchasing:supplier_list")
     if owed < 0:
-        messages.error(request, f"{name} holds {-owed:,.0f} you paid ahead. "
+        messages.error(request, f"{name} holds {-owed:,.2f} you paid ahead. "
                                 "Use it or get it back before removing them.")
         return redirect("purchasing:supplier_list")
     outcome = remove_or_archive(supplier, label=name)
@@ -835,7 +835,7 @@ def supplier_payment_reverse(request, pk):
         elif movement is not None:
             till_note = " It came out of a POS that is already counted; check that cash-up."
         SupplierPayment.objects.filter(pk__in=[p.pk for p in group]).delete()
-    messages.success(request, f"Payment of {total:,.0f} taken back.{till_note}")
+    messages.success(request, f"Payment of {total:,.2f} taken back.{till_note}")
     return redirect("purchasing:supplier_detail", pk=supplier.pk)
 
 

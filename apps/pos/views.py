@@ -268,7 +268,7 @@ def shift_force_close(request, pk):
                  after={"cashier": shift.user.email, "counted": str(counted),
                         "variance": str(shift.variance)},
                  ip=audit.client_ip(request))
-    messages.success(request, f"{shift.register} is free again. Variance {shift.variance:,.0f}.")
+    messages.success(request, f"{shift.register} is free again. Variance {shift.variance:,.2f}.")
     return redirect("pos:shift_report", pk=shift.pk)
 
 
@@ -355,12 +355,12 @@ def cash_movement(request):
         # More than the drawer should hold: the count would go negative and
         # a real shortfall would be hidden behind it.
         messages.error(request, f"Your drawer should only hold "
-                                f"{shift.compute_expected_cash():,.0f}.")
+                                f"{shift.compute_expected_cash():,.2f}.")
         return redirect("pos:shift_close")
 
     movement = record_cash_movement(shift, kind=kind, amount=amount, reason=reason)
     audit.record("cash.moved", obj=movement, ip=audit.client_ip(request))
-    messages.success(request, f"{movement.get_kind_display()}: {abs(amount):,.0f} recorded.")
+    messages.success(request, f"{movement.get_kind_display()}: {abs(amount):,.2f} recorded.")
     return redirect("pos:shift_close")
 
 

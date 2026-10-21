@@ -13,7 +13,7 @@
     </select>
     <input name="category_name" maxlength="80" class="input" placeholder="Rent, transport, wages" x-show="newCat" x-cloak :disabled="!newCat" value="{{ v.category_name|default:'' }}">
   </div>
-  <div><label class="label" for="amount">Amount</label><input type="number" step="1" min="1" name="amount" id="amount" value="{% if v %}{{ v.amount }}{% else %}{{ expense.amount|floatformat:'-2'|default:'' }}{% endif %}" class="input" required autofocus></div>
+  <div><label class="label" for="amount">Amount</label><input type="number" step="0.01" min="0.01" name="amount" id="amount" value="{% if v %}{{ v.amount }}{% else %}{{ expense.amount|floatformat:'-2'|default:'' }}{% endif %}" class="input" required autofocus></div>
   <div><label class="label" for="spent_at">When</label><input type="date" name="spent_at" id="spent_at" max="{{ today|date:'Y-m-d' }}" value="{% if v %}{{ v.spent_at }}{% elif expense %}{{ expense.spent_at|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" class="input" required></div>
   <div><label class="label" for="method">Paid by</label>
     <select name="method" id="method" class="input" x-model="method">

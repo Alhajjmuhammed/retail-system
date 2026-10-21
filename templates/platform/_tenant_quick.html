@@ -33,12 +33,12 @@
     </div>
     <div class="rounded-xl bg-ink-50 px-3 py-2.5">
       <p class="text-xs text-ink-500">Turnover</p>
-      <p class="tnum mt-0.5 text-lg font-semibold text-ink-900">{{ sales_value|floatformat:0|intcomma }}</p>
+      <p class="tnum mt-0.5 text-lg font-semibold text-ink-900">{{ sales_value|floatformat:"-2"|intcomma }}</p>
     </div>
     <div class="rounded-xl px-3 py-2.5 {% if outstanding %}bg-amber-50{% else %}bg-ink-50{% endif %}">
       <p class="text-xs {% if outstanding %}text-amber-700{% else %}text-ink-500{% endif %}">Owes you</p>
       <p class="tnum mt-0.5 text-lg font-semibold {% if outstanding %}text-amber-800{% else %}text-ink-900{% endif %}">
-        {{ outstanding|floatformat:0|intcomma }}
+        {{ outstanding|floatformat:"-2"|intcomma }}
       </p>
     </div>
   </div>

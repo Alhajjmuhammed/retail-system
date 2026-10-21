@@ -47,15 +47,15 @@
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
     <div class="stat">
       <p class="stat-label"><span class="stat-icon">{% icon "clipboard" class="h-3.5 w-3.5" %}</span>Should be there</p>
-      <p class="stat-value">{{ totals.expected|default:0|floatformat:0|intcomma }}</p>
+      <p class="stat-value">{{ totals.expected|default:0|floatformat:"-2"|intcomma }}</p>
     </div>
     <div class="stat">
       <p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Counted</p>
-      <p class="stat-value">{{ totals.counted|default:0|floatformat:0|intcomma }}</p>
+      <p class="stat-value">{{ totals.counted|default:0|floatformat:"-2"|intcomma }}</p>
     </div>
     <div class="stat col-span-2 sm:col-span-1">
       <p class="stat-label"><span class="stat-icon">{% icon "trending" class="h-3.5 w-3.5" %}</span>Short by</p>
-      <p class="stat-value {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:0|intcomma }}</p>
+      <p class="stat-value {% if totals.variance < 0 %}text-red-600{% elif totals.variance > 0 %}text-amber-600{% endif %}">{{ totals.variance|default:0|floatformat:"-2"|intcomma }}</p>
     </div>
   </div>
 
@@ -69,9 +69,9 @@
           <td class="whitespace-nowrap text-ink-500">{{ s.closed_at|date:"j M H:i" }}{% if branches|length > 1 %}<p class="hint">{{ s.branch.name }}</p>{% endif %}</td>
           <td class="font-medium text-ink-900">{{ s.user.name }}</td>
           <td class="text-ink-600">{{ s.register.name }}</td>
-          <td class="text-right text-ink-500">{{ s.expected_cash|floatformat:0|intcomma }}</td>
-          <td class="text-right">{{ s.counted_cash|floatformat:0|intcomma }}</td>
-          <td class="text-right font-semibold {% if s.variance < 0 %}text-red-600{% elif s.variance > 0 %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ s.variance|floatformat:0|intcomma }}</td>
+          <td class="text-right text-ink-500">{{ s.expected_cash|floatformat:"-2"|intcomma }}</td>
+          <td class="text-right">{{ s.counted_cash|floatformat:"-2"|intcomma }}</td>
+          <td class="text-right font-semibold {% if s.variance < 0 %}text-red-600{% elif s.variance > 0 %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ s.variance|floatformat:"-2"|intcomma }}</td>
           <td class="max-w-xs break-words text-ink-500">{{ s.variance_note|default:"" }}</td>
           <td class="text-right">
             <div class="flex items-center justify-end gap-1">
@@ -79,7 +79,7 @@
               <span class="text-xs text-emerald-700">{{ s.approved_by.name }}</span>
             {% elif s.user_id != request.user.pk %}
               <form method="post" action="{% url 'finance:cashup_approve' s.pk %}" x-data
-                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s count?', body: 'Difference of {{ s.variance|floatformat:0 }} is accepted as recorded.', label: 'Approve' })">
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s count?', body: 'Difference of {{ s.variance|floatformat:"-2" }} is accepted as recorded.', label: 'Approve' })">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-secondary btn-sm">Approve</button>
               </form>

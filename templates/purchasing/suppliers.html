@@ -5,7 +5,7 @@
 <div class="space-y-4">
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
     <a href="?view=active" class="stat transition hover:border-brand-300 {% if view == 'active' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "truck" class="h-3.5 w-3.5" %}</span>Suppliers</p><p class="stat-value">{{ summary.count }}</p></a>
-    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:0|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
+    <a href="?view=owing" class="stat transition hover:border-brand-300 {% if view == 'owing' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>You owe</p><p class="stat-value {% if summary.owed %}text-amber-700{% endif %}">{{ summary.owed|floatformat:"-2"|intcomma }}</p><p class="hint">{{ summary.owing }} supplier{{ summary.owing|pluralize }}</p></a>
     <a href="?view=archived" class="stat transition hover:border-brand-300 {% if view == 'archived' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "trash" class="h-3.5 w-3.5" %}</span>Removed</p><p class="stat-value">{{ summary.archived }}</p></a>
   </div>
 
@@ -35,7 +35,7 @@
           <td><a href="{% url 'purchasing:supplier_detail' s.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ s.name }}</a>{% if not s.is_active %} <span class="badge badge-muted">removed</span>{% endif %}{% if s.tin %}<p class="hint">TIN {{ s.tin }}</p>{% endif %}</td>
           <td class="text-ink-600">{{ s.contact_name|default:"—" }}{% if s.phone %}<p class="hint">{{ s.phone }}</p>{% endif %}</td>
           <td class="text-ink-600">{% if s.payment_terms_days %}{{ s.payment_terms_days }} days{% else %}On delivery{% endif %}</td>
-          <td class="tnum text-right font-medium {% if s.owed > 0 %}text-amber-700{% elif s.owed < 0 %}text-emerald-700{% endif %}">{{ s.owed|floatformat:0|intcomma }}{% if s.owed < 0 %}<p class="hint">paid ahead</p>{% endif %}</td>
+          <td class="tnum text-right font-medium {% if s.owed > 0 %}text-amber-700{% elif s.owed < 0 %}text-emerald-700{% endif %}">{{ s.owed|floatformat:"-2"|intcomma }}{% if s.owed < 0 %}<p class="hint">paid ahead</p>{% endif %}</td>
           <td class="whitespace-nowrap text-right">
             <a href="{% url 'purchasing:supplier_detail' s.pk %}" class="btn-icon btn-icon-brand" title="Open {{ s.name }}" aria-label="Open {{ s.name }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
             <a href="{% url 'purchasing:supplier_edit' s.pk %}" hx-get="{% url 'purchasing:supplier_edit' s.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit {{ s.name }}" aria-label="Edit {{ s.name }}">{% icon "pencil" class="h-4 w-4" %}</a>

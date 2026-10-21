@@ -175,7 +175,7 @@ def resolve(membership, code: str, branch=None, value=None) -> Decision:
     if limit is not None and value is not None and Decimal(str(value)) > limit:
         return Decision(
             allowed=False,
-            reason=f"{spec.label} is limited to {limit:,.0f} for this user.",
+            reason=f"{spec.label} is limited to {limit:,.2f} for this user.",
             limit=limit,
             can_override=spec.is_dangerous,
         )

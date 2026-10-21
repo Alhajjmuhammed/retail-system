@@ -6,7 +6,7 @@
 <div class="space-y-4">
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     {% if can_see_cost %}
-    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:0|intcomma }}</p></a>
+    <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "wallet" class="h-3.5 w-3.5" %}</span>Stock value</p><p class="stat-value">{{ totals.value|default:0|floatformat:"-2"|intcomma }}</p></a>
     {% else %}
     <a href="?view=all" class="stat transition hover:border-brand-300 {% if view == 'all' %}ring-2 ring-brand-400{% endif %}"><p class="stat-label"><span class="stat-icon">{% icon "box" class="h-3.5 w-3.5" %}</span>Everything</p><p class="stat-value">{{ page.paginator.count }}</p></a>
     {% endif %}

@@ -12,7 +12,7 @@
     </div>
     <div class="text-right">
       <span class="badge {% if order.status == 'received' %}badge-ok{% elif order.status == 'draft' or order.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ order.get_status_display }}</span>
-      <p class="mt-1 text-xl font-bold">{{ order.total|floatformat:0|intcomma }}</p>
+      <p class="mt-1 text-xl font-bold">{{ order.total|floatformat:"-2"|intcomma }}</p>
       {% if order.status != "draft" and order.status != "cancelled" %}<a href="{% url 'purchasing:order_print' order.pk %}" target="_blank" class="btn btn-secondary btn-sm mt-2">{% icon "download" class="h-4 w-4" %} Print / PDF</a>{% endif %}
     </div>
   </div>
@@ -28,7 +28,7 @@
           <td class="tnum text-right">{{ line.qty_ordered|floatformat:"-3" }}</td>
           <td class="tnum text-right {% if line.qty_outstanding > 0 and order.status != 'draft' %}text-amber-700{% else %}text-ink-500{% endif %}">{{ line.qty_received|floatformat:"-3" }}</td>
           <td class="tnum text-right">{{ line.unit_cost|floatformat:"-2"|intcomma }}</td>
-          <td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right font-medium">{{ line.line_total|floatformat:"-2"|intcomma }}</td>
           <td class="text-right">
             {% if order.status == "draft" and not line.qty_received %}
             <form method="post" action="{% url 'purchasing:order_line_delete' line.pk %}" class="inline" x-data
@@ -55,7 +55,7 @@
   {% if order.lines.all %}
     {% if may_approve %}
     <form method="post" x-data
-          @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ order.reference|escapejs }}?', body: 'Commits you to {{ order.total|floatformat:0|intcomma }} with {{ order.supplier.name|escapejs }}. Lines cannot be changed afterwards.', label: 'Approve', danger: false })">
+          @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ order.reference|escapejs }}?', body: 'Commits you to {{ order.total|floatformat:"-2"|intcomma }} with {{ order.supplier.name|escapejs }}. Lines cannot be changed afterwards.', label: 'Approve', danger: false })">
       {% csrf_token %}<input type="hidden" name="action" value="approve">
       <button type="submit" class="btn btn-primary">{% icon "check" class="h-4 w-4" %} Approve order</button>
     </form>

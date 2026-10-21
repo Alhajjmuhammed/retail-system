@@ -32,7 +32,7 @@
             {% include "catalog/_thumb.html" with product=tile.variant.product size="h-11 w-11" %}
             <span class="min-w-0 flex-1">
               <span class="block truncate text-sm font-medium text-ink-800">{{ tile.variant }}</span>
-              <span class="tnum block text-sm font-bold text-brand-700">{{ tile.variant.price_for|default:0|floatformat:0|intcomma }}</span>
+              <span class="tnum block text-sm font-bold text-brand-700">{{ tile.variant.price_for|default:0|floatformat:"-2"|intcomma }}</span>
               <span class="hint block truncate">{% if tile.branch %}{{ tile.branch.name }} only{% else %}Every branch{% endif %}{% if tile.plu_code %} &middot; code {{ tile.plu_code }}{% endif %}</span>
             </span>
           </div>

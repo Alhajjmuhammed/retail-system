@@ -68,10 +68,11 @@ def test_a_sale_of_fractions_still_adds_up(shop, main_branch, odd_priced, owner)
     # Every payable amount is a whole shilling -- the smallest thing the
     # drawer holds -- and the lines add up to the total exactly.
     for line in lines:
-        assert line.line_total == line.line_total.to_integral_value(), line.line_total
+        # To the cent, as charged: amounts are kept as they are.
+        assert line.line_total == line.line_total.quantize(Decimal("0.01")), line.line_total
     assert sum((line.line_total for line in lines), Decimal("0")) == sale.subtotal
     assert sale.subtotal - sale.discount_total == sale.total
-    assert sale.total == sale.total.to_integral_value()
+    assert sale.total == sale.total.quantize(Decimal("0.01"))
 
     # VAT is worked out of those prices and kept to the cent: it is declared,
     # not handed over.
@@ -100,7 +101,7 @@ def test_half_a_line_brought_back_is_half_the_money(shop, main_branch, odd_price
     # Half of the line, to the nearest shilling the drawer can give back.
     assert abs(doc.total - (line.line_total / 2)) <= Decimal("0.5"), (
         f"{doc.total} vs {line.line_total / 2}")
-    assert doc.total == doc.total.to_integral_value(), doc.total
+    assert doc.total == doc.total.quantize(Decimal("0.01")), doc.total
 
 
 def test_the_figures_do_not_drift_on_fractions(shop, main_branch, odd_priced, owner):
@@ -136,7 +137,7 @@ def test_a_receipt_shows_what_was_actually_charged(client, shop, main_branch,
     # What is printed is what was charged and what the drawer holds. The
     # receipt used to say 313 for a sale the system recorded as 312.50.
     assert f"{sale.total:.0f}" in body.replace(",", ""), body[:400]
-    assert sale.total == sale.total.to_integral_value()
+    assert sale.total == sale.total.quantize(Decimal("0.01"))
 
 
 def test_the_till_the_check_and_the_sale_agree_to_the_shilling(client, shop, main_branch,
@@ -163,9 +164,9 @@ def test_the_till_the_check_and_the_sale_agree_to_the_shilling(client, shop, mai
         {"variant_id": unga.pk, "qty": "0.333", "unit_price": "3333.33"},
         {"variant_id": mafuta.pk, "qty": "0.777", "unit_price": "7777.77"},
     ]
-    # What the till shows: each line to the nearest shilling, then added up.
+    # What the till shows: each line to the cent, then added up.
     expected = sum(
-        (Decimal(line["qty"]) * Decimal(line["unit_price"])).quantize(Decimal("1"))
+        (Decimal(line["qty"]) * Decimal(line["unit_price"])).quantize(Decimal("0.01"))
         for line in lines
     )
 

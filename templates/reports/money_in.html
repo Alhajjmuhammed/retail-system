@@ -9,11 +9,11 @@
     money in until the customer pays, so it is left out; refunds paid back are taken off.
   </p>
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-    <div class="stat col-span-2 lg:col-span-1"><p class="stat-label">Money in</p><p class="stat-value text-emerald-700">{{ total|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">At the till</p><p class="stat-value">{{ sources.pos|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Paid on accounts</p><p class="stat-value">{% if whole_shop %}{{ sources.accounts|floatformat:0|intcomma }}{% else %}&mdash;{% endif %}</p></div>
-    <div class="stat"><p class="stat-label">Paid on invoices</p><p class="stat-value">{% if whole_shop %}{{ sources.invoices|floatformat:0|intcomma }}{% else %}&mdash;{% endif %}</p></div>
-    <div class="stat"><p class="stat-label">Refunds paid back</p><p class="stat-value {% if sources.refunds %}text-red-600{% endif %}">{{ sources.refunds|floatformat:0|intcomma }}</p></div>
+    <div class="stat col-span-2 lg:col-span-1"><p class="stat-label">Money in</p><p class="stat-value text-emerald-700">{{ total|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">At the till</p><p class="stat-value">{{ sources.pos|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Paid on accounts</p><p class="stat-value">{% if whole_shop %}{{ sources.accounts|floatformat:"-2"|intcomma }}{% else %}&mdash;{% endif %}</p></div>
+    <div class="stat"><p class="stat-label">Paid on invoices</p><p class="stat-value">{% if whole_shop %}{{ sources.invoices|floatformat:"-2"|intcomma }}{% else %}&mdash;{% endif %}</p></div>
+    <div class="stat"><p class="stat-label">Refunds paid back</p><p class="stat-value {% if sources.refunds %}text-red-600{% endif %}">{{ sources.refunds|floatformat:"-2"|intcomma }}</p></div>
   </div>
   {% if not whole_shop %}<p class="hint">Payments on customers' accounts and invoices belong to the whole shop, so only the till is counted for you.</p>{% endif %}
 
@@ -22,7 +22,7 @@
       <div class="card-head"><h2 class="card-title">How it was paid</h2></div>
       <div class="divide-y divide-ink-100 text-sm">
         {% for m in methods %}
-        <div class="flex justify-between px-5 py-2.5"><span>{{ m.label }}</span><span class="tnum font-medium {% if m.total < 0 %}text-red-600{% endif %}">{{ m.total|floatformat:0|intcomma }}</span></div>
+        <div class="flex justify-between px-5 py-2.5"><span>{{ m.label }}</span><span class="tnum font-medium {% if m.total < 0 %}text-red-600{% endif %}">{{ m.total|floatformat:"-2"|intcomma }}</span></div>
         {% empty %}<p class="px-5 py-6 text-center text-ink-500">Nothing received in this period.</p>{% endfor %}
       </div>
     </div>
@@ -33,7 +33,7 @@
         <div class="rank">
           <span class="rank-fill" style="width: {{ d.pct }}%"></span>
           <span class="rank-name">{{ d.day|date:"D j M" }}</span>
-          <span class="rank-value {% if d.total < 0 %}text-red-600{% endif %}">{{ d.total|floatformat:0|intcomma }}</span>
+          <span class="rank-value {% if d.total < 0 %}text-red-600{% endif %}">{{ d.total|floatformat:"-2"|intcomma }}</span>
         </div>
         {% endfor %}
       </div>

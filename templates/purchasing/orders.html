@@ -25,7 +25,7 @@
           <td class="text-ink-600">{{ o.supplier.name }}</td>
           <td class="text-ink-600">{{ o.expected_date|date:"j M"|default:"—" }}</td>
           <td><span class="badge {% if o.status == 'received' %}badge-ok{% elif o.status == 'draft' or o.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ o.get_status_display }}</span></td>
-          <td class="tnum text-right">{{ o.total|floatformat:0|intcomma }}</td>
+          <td class="tnum text-right">{{ o.total|floatformat:"-2"|intcomma }}</td>
           <td class="whitespace-nowrap text-right">
             <a href="{% url 'purchasing:order_detail' o.pk %}" class="btn-icon btn-icon-brand" title="Open {{ o.reference }}" aria-label="Open {{ o.reference }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
             {% if o.status != "draft" and o.status != "cancelled" %}<a href="{% url 'purchasing:order_print' o.pk %}" target="_blank" class="btn-icon btn-icon-brand" title="Print {{ o.reference }}" aria-label="Print {{ o.reference }}">{% icon "download" class="h-4 w-4" %}</a>{% endif %}

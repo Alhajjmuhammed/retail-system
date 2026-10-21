@@ -211,6 +211,8 @@ def invoice_from_quotation(quotation, *, terms_days=14):
             # customer who accepted USD 176.50 is billed USD 176.50.
             currency=quotation.doc_currency,
             exchange_rate=quotation.exchange_rate,
+            # What the customer accepted: VAT inside or on top, as quoted.
+            vat_on_top=quotation.adds_vat,
         ),
     )
     for line in quotation.lines.all():
@@ -270,8 +272,8 @@ def issue(invoice):
     balance = customer.balance
     if customer.credit_limit > 0 and balance + total > customer.credit_limit:
         raise ValueError(
-            f"{customer.name} already owes {balance:,.0f} and may owe up to "
-            f"{customer.credit_limit:,.0f}. This invoice of {total:,.0f} would take "
+            f"{customer.name} already owes {balance:,.2f} and may owe up to "
+            f"{customer.credit_limit:,.2f}. This invoice of {total:,.2f} would take "
             "them over. Raise their limit on the customer page, or take a payment first."
         )
 
@@ -310,7 +312,41 @@ def issue(invoice):
         note="Invoice" + (f" {invoice.doc_currency} {invoice.total:,.2f} at "
                           f"{invoice.rate_label}" if invoice.is_foreign else ""),
     )
+    if paperwork_rules().stock_out_on_invoice:
+        # The shop counts an invoice as the sale: the goods leave now, on a
+        # delivery note made for everything on it. Short of stock (when the
+        # shop does not sell below zero) refuses the whole issue -- this runs
+        # inside the same transaction.
+        send_everything(invoice)
     return invoice
+
+
+def send_everything(invoice, *, user=None):
+    """A delivery note for all that is still to go out, sent now."""
+    from apps.accounts.models import Membership
+    from apps.core.numbering import save_with_number
+    from apps.selling.models import DeliveryNote
+
+    wanted = [line for line in invoice.lines.all() if line.qty_outstanding > 0]
+    if not wanted:
+        return None
+    # The sale is somebody's. Issued from a page, it is whoever issued it;
+    # from a script with nobody signed in, the shop's owner.
+    user = user or get_current_user()
+    if user is None:
+        owner = (Membership.objects.filter(role__is_owner_role=True, is_active=True)
+                 .select_related("user").order_by("created_at").first())
+        user = owner.user if owner else None
+    note = save_with_number(
+        DeliveryNote(branch=invoice.branch, invoice=invoice,
+                     delivered_on=timezone.localdate(),
+                     note="Sent when the invoice was issued."),
+        field="reference",
+        generate=lambda: next_reference(DeliveryNote, "DN"),
+    )
+    for line in wanted:
+        note.lines.create(invoice_line=line, qty=line.qty_outstanding)
+    return deliver(note, user=user)
 
 
 @transaction.atomic
@@ -426,10 +462,18 @@ def void_invoice(invoice, *, user=None):
     invoice = _locked(invoice)
     if invoice.status == InvoiceStatus.VOID:
         return invoice
-    if invoice.has_deliveries or invoice.paid > 0:
-        raise ValueError(
-            "Something has already been delivered or paid against this invoice."
-        )
+    if invoice.paid > 0:
+        raise ValueError("Something has already been paid against this invoice.")
+    if invoice.has_deliveries:
+        if not paperwork_rules().stock_out_on_invoice:
+            raise ValueError(
+                "Something has already been delivered against this invoice."
+            )
+        # Where issuing sent the goods, cancelling brings them back: each
+        # delivery is cancelled, so the stock returns and the sale comes
+        # off the day's figures.
+        for note in invoice.deliveries.filter(voided_at__isnull=True):
+            cancel_delivery(note, reason=f"Invoice {invoice.reference} cancelled", user=user)
 
     if invoice.status == InvoiceStatus.OPEN:
         customer = invoice.customer
@@ -508,6 +552,9 @@ def deliver(note, *, user=None):
         # was written in: the price goes over at the invoice's frozen rate.
         unit_price = price(source.unit_price * invoice.exchange_rate) if invoice.is_foreign \
             else price(source.unit_price)
+        if invoice.adds_vat:
+            # The till's prices include VAT; this one had it added on top.
+            unit_price = price(unit_price * (1 + source.tax_rate / Decimal("100")))
         gross = money(row.qty * unit_price)
         CartLine.objects.create(
             tenant=cart.tenant, cart=cart, variant=source.variant,

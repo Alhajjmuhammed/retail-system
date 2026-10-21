@@ -190,7 +190,7 @@ def dashboard(request):
             {"label": "Monthly recurring", "value": mrr, "money": True,
              "change": None, "standing": True,
              "hint": f"from {counts['paying']} paying shop{'' if counts['paying'] == 1 else 's'}"
-                     + (f" · {trial_value:,.0f} more on trial" if trial_value else ""),
+                     + (f" · {trial_value:,.2f} more on trial" if trial_value else ""),
              "url": reverse("platform:tenant_list")},
             {"label": "New shops", "value": new_shops, "money": False,
              "change": charts.change(new_shops, new_before),
@@ -2124,7 +2124,7 @@ def invoice_create(request):
             audit.record_platform(request, "platform.invoice_raised", invoice.number,
                                   shop=tenant.name, total=str(invoice.total))
             messages.success(request, f"{invoice.number} raised for {tenant.name}: "
-                                      f"{invoice.total:,.0f} {invoice.currency}.")
+                                      f"{invoice.total:,.2f} {invoice.currency}.")
             return _close_modal_url(request, back)
 
     suggestions = {}
@@ -2241,7 +2241,7 @@ def invoice_pay(request, pk):
             invoice.tenant.subscription.refresh_from_db()
             if was != invoice.tenant.subscription.status:
                 note = f" {invoice.tenant.name} is now {invoice.tenant.subscription.get_status_display().lower()}."
-            messages.success(request, f"{amount:,.0f} recorded against {invoice.number}.{note}")
+            messages.success(request, f"{amount:,.2f} recorded against {invoice.number}.{note}")
             return _close_modal_url(request, back)
 
     return _modal_or_redirect(request, "platform/_invoice_pay.html", {
@@ -2272,7 +2272,7 @@ def payment_reverse(request, pk):
     audit.record_platform(request, "platform.payment_reversed", payment.invoice.number,
                           shop=payment.invoice.tenant.name, amount=str(payment.amount),
                           reason=reason)
-    messages.success(request, f"{payment.amount:,.0f} on {payment.invoice.number} reversed.")
+    messages.success(request, f"{payment.amount:,.2f} on {payment.invoice.number} reversed.")
     return redirect(back)
 
 

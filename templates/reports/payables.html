@@ -6,8 +6,8 @@
   {% if not whole_shop %}{% include "reports/_whole_shop.html" %}{% else %}
   <p class="text-sm text-ink-600">What you owe each supplier today: their bills, less what you have paid them.</p>
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="stat"><p class="stat-label">You owe</p><p class="stat-value text-amber-700">{{ total|floatformat:0|intcomma }}</p></div>
-    <div class="stat"><p class="stat-label">Of it, past due</p><p class="stat-value {% if late_total %}text-red-600{% endif %}">{{ late_total|floatformat:0|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">You owe</p><p class="stat-value text-amber-700">{{ total|floatformat:"-2"|intcomma }}</p></div>
+    <div class="stat"><p class="stat-label">Of it, past due</p><p class="stat-value {% if late_total %}text-red-600{% endif %}">{{ late_total|floatformat:"-2"|intcomma }}</p></div>
   </div>
 
   <div class="card">
@@ -19,9 +19,9 @@
           {% for row in rows %}
           <tr>
             <td class="font-medium"><a href="{% url 'purchasing:supplier_detail' row.supplier.pk %}" class="hover:underline">{{ row.supplier.name }}</a></td>
-            <td class="tnum text-right text-ink-600">{{ row.invoiced|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right text-ink-600">{{ row.paid|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right font-semibold {% if row.balance < 0 %}text-emerald-700{% endif %}">{{ row.balance|floatformat:0|intcomma }}{% if row.balance < 0 %} <span class="hint">paid ahead</span>{% endif %}</td>
+            <td class="tnum text-right text-ink-600">{{ row.invoiced|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right text-ink-600">{{ row.paid|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right font-semibold {% if row.balance < 0 %}text-emerald-700{% endif %}">{{ row.balance|floatformat:"-2"|intcomma }}{% if row.balance < 0 %} <span class="hint">paid ahead</span>{% endif %}</td>
           </tr>
           {% empty %}<tr><td colspan="4" class="py-8 text-center text-sm text-ink-500">You owe no supplier anything.</td></tr>{% endfor %}
         </tbody>
@@ -41,8 +41,8 @@
             <td class="font-medium">{{ b.bill.number }}</td>
             <td class="whitespace-nowrap text-ink-500">{{ b.bill.invoice_date|date:"j M Y" }}</td>
             <td class="whitespace-nowrap {% if b.late %}text-red-600{% else %}text-ink-500{% endif %}">{{ b.bill.due_date|date:"j M Y"|default:"&mdash;" }}{% if b.late %} <span class="badge badge-warn">{{ b.days_late }} day{{ b.days_late|pluralize }} late</span>{% endif %}</td>
-            <td class="tnum text-right text-ink-600">{{ b.bill.amount|floatformat:0|intcomma }}</td>
-            <td class="tnum text-right font-semibold">{{ b.outstanding|floatformat:0|intcomma }}</td>
+            <td class="tnum text-right text-ink-600">{{ b.bill.amount|floatformat:"-2"|intcomma }}</td>
+            <td class="tnum text-right font-semibold">{{ b.outstanding|floatformat:"-2"|intcomma }}</td>
           </tr>
           {% empty %}<tr><td colspan="6" class="py-8 text-center text-sm text-ink-500">No unpaid bills.</td></tr>{% endfor %}
         </tbody>

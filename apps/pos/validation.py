@@ -141,7 +141,7 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
             if not limit:
                 raise SaleRejected(
                     "Open items are not allowed for this cashier"
-                    + (f" above {limit.limit:,.0f}." if limit.limit else ".")
+                    + (f" above {limit.limit:,.2f}." if limit.limit else ".")
                 )
 
         if line_discount > 0:
@@ -208,7 +208,7 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
             "reference": str(raw.get("reference", ""))[:60], "change_given": change,
         })
     if paid + TOLERANCE < checked.total:
-        raise SaleRejected(f"Paid {paid:,.0f} of {checked.total:,.0f}.")
+        raise SaleRejected(f"Paid {paid:,.2f} of {checked.total:,.2f}.")
     # Only cash can be over-tendered (and change given). Mobile money, card or
     # credit beyond the total is not a payment -- credit of 400,000 on a
     # 1,000 sale put 400,000 of debt on a customer's account.
@@ -242,7 +242,7 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
         if not checked.customer.can_take_credit(credit):
             checked.review.append(
                 f"{checked.customer.name} went over their credit limit of "
-                f"{checked.customer.credit_limit:,.0f} by taking {credit:,.0f} on account."
+                f"{checked.customer.credit_limit:,.2f} by taking {credit:,.2f} on account."
             )
 
     now = timezone.now()

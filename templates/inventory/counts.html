@@ -33,7 +33,7 @@
           <td class="font-medium text-ink-900">{{ c.reference }}</td>
           <td class="text-ink-600">{{ c.created_at|date:"j M H:i" }}</td>
           <td><span class="badge {% if c.status == 'applied' %}badge-ok{% elif c.status == 'cancelled' %}badge-muted{% else %}badge-warn{% endif %}">{{ c.get_status_display }}</span>{% if c.applied_by %}<p class="hint">by {{ c.applied_by.name }}</p>{% endif %}</td>
-          <td class="text-right {% if c.total_variance_value < 0 %}text-red-600{% endif %}">{{ c.total_variance_value|floatformat:0|intcomma }}</td>
+          <td class="text-right {% if c.total_variance_value < 0 %}text-red-600{% endif %}">{{ c.total_variance_value|floatformat:"-2"|intcomma }}</td>
           <td class="text-right">
             <div class="flex items-center justify-end gap-1.5">
               <a href="{% url 'inventory:count_detail' c.pk %}" class="btn-icon btn-icon-brand" title="Open {{ c.reference }}" aria-label="Open {{ c.reference }}">{% icon "chevron-right" class="h-4 w-4" %}</a>

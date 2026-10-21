@@ -168,7 +168,7 @@ def expense_create(request):
         if drawer is None:
             errors.append("No POS of yours is open, so it cannot come out of a drawer.")
         elif data["amount"] > drawer.compute_expected_cash():
-            errors.append(f"Your drawer should only hold {drawer.compute_expected_cash():,.0f}.")
+            errors.append(f"Your drawer should only hold {drawer.compute_expected_cash():,.2f}.")
     if errors:
         return _expense_form(request, errors=errors, values=request.POST)
 
@@ -186,7 +186,7 @@ def expense_create(request):
                 reason=f"Expense: {data['category'].name} {data['description']}".strip()[:200])
             expense.save(update_fields=["cash_movement", "updated_at"])
     audit.record("expense.recorded", obj=expense, ip=audit.client_ip(request))
-    messages.success(request, f"{expense.amount:,.0f} for {expense.category} recorded"
+    messages.success(request, f"{expense.amount:,.2f} for {expense.category} recorded"
                      + (" and taken from your POS." if drawer else "."))
     return close_modal(request, reverse("finance:expense_list"))
 
@@ -408,7 +408,7 @@ def expense_approve(request, pk):
         expense.approved_at = timezone.now()
         expense.save(update_fields=["approved_by", "approved_at", "updated_at"])
         audit.record("expense.approved", obj=expense, ip=audit.client_ip(request))
-        messages.success(request, f"{expense.amount:,.0f} for {expense.category} approved.")
+        messages.success(request, f"{expense.amount:,.2f} for {expense.category} approved.")
     return redirect("finance:expense_list")
 
 

@@ -9,13 +9,13 @@
       <h2 class="text-sm font-semibold text-ink-900">What the system expects</h2>
     </div>
     <div class="divide-y divide-ink-100 text-sm">
-      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Opening float</span><span class="font-medium">{{ shift.opening_float|floatformat:0|intcomma }}</span></div>
-      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash sales ({{ sales_count }})</span><span class="font-medium">{{ cash_taken|floatformat:0|intcomma }}</span></div>
-      {% if cash_refunded %}<div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash refunded</span><span class="font-medium">&minus;{{ cash_refunded|floatformat:0|intcomma }}</span></div>{% endif %}
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Opening float</span><span class="font-medium">{{ shift.opening_float|floatformat:"-2"|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash sales ({{ sales_count }})</span><span class="font-medium">{{ cash_taken|floatformat:"-2"|intcomma }}</span></div>
+      {% if cash_refunded %}<div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">Cash refunded</span><span class="font-medium">&minus;{{ cash_refunded|floatformat:"-2"|intcomma }}</span></div>{% endif %}
       {% for m in movements %}
-      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ m.get_kind_display }} &mdash; {{ m.reason }}</span><span class="font-medium">{{ m.amount|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between px-5 py-2.5"><span class="text-ink-600">{{ m.get_kind_display }} &mdash; {{ m.reason }}</span><span class="font-medium">{{ m.amount|floatformat:"-2"|intcomma }}</span></div>
       {% endfor %}
-      <div class="flex justify-between bg-ink-50 px-5 py-3"><span class="font-semibold text-ink-900">Should be in the drawer</span><span class="text-lg font-bold text-ink-900">{{ expected|floatformat:0|intcomma }}</span></div>
+      <div class="flex justify-between bg-ink-50 px-5 py-3"><span class="font-semibold text-ink-900">Should be in the drawer</span><span class="text-lg font-bold text-ink-900">{{ expected|floatformat:"-2"|intcomma }}</span></div>
     </div>
   </div>
 
@@ -41,7 +41,7 @@
           <input type="radio" name="kind" value="drop" class="sr-only" x-model="kind">Banked</label>
       </div>
       <div class="grid grid-cols-3 gap-2">
-        <input type="number" step="1" min="1" name="amount" class="input" placeholder="Amount" required>
+        <input type="number" step="0.01" min="0.01" name="amount" class="input" placeholder="Amount" required>
         <input type="text" name="reason" maxlength="200" class="input col-span-2" placeholder="What for, e.g. change float, deposit slip no." required>
       </div>
       <button type="submit" class="btn btn-secondary w-full">Record it</button>
@@ -53,7 +53,7 @@
     {% csrf_token %}
     <div>
       <label class="label" for="counted_cash">Count the drawer and type what is there</label>
-      <input type="number" step="1" min="0" name="counted_cash" id="counted_cash"
+      <input type="number" step="0.01" min="0" name="counted_cash" id="counted_cash"
              inputmode="numeric" class="input py-3 text-lg" required autofocus>
       <p class="hint">Count the money first, then look at what it should be. That order is the point.</p>
     </div>

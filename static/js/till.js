@@ -687,10 +687,9 @@
         return Math.max(0, given - this.subtotal);
       },
 
+      // An amount as it is: 2,000 stays 2,000 and 36.50 stays 36.50.
       money(value) {
-        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
-          Math.round(value || 0)
-        );
+        return this.price(value);
       },
 
       // A price per item, as it was set: 6.80 stays 6.80, 2000 stays 2,000.

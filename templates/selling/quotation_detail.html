@@ -25,7 +25,7 @@
       <p class="text-xs uppercase tracking-wide text-ink-500">Total{% if quotation.is_foreign %} ({{ quotation.doc_currency }}){% endif %}</p>
       <p class="tnum text-2xl font-bold text-ink-900">{{ quotation.total|floatformat:quotation.money_places|intcomma }}</p>
       {% include "selling/_currency_note.html" with doc=quotation %}{% include "selling/_currency_switch.html" with doc=quotation %}
-      <p class="hint">VAT included {{ quotation.tax|floatformat:quotation.money_places|intcomma }}</p>
+      <p class="hint">{% if quotation.adds_vat %}VAT added{% else %}VAT included{% endif %} {{ quotation.tax|floatformat:quotation.money_places|intcomma }}</p>
     </div>
     <div class="flex w-full flex-wrap gap-2 sm:w-auto">
       <a href="{% url 'selling:quotation_print' quotation.pk %}" target="_blank" class="btn btn-secondary">{% icon "receipt" %} Print</a>
@@ -72,7 +72,7 @@
   <div class="card">
     <div class="card-head">
       <h2 class="card-title">What is being quoted</h2>
-      <span class="hint">Prices include VAT</span>
+      <span class="hint">{% if quotation.adds_vat %}Prices before VAT; VAT added on top{% else %}Prices include VAT{% endif %}</span>
     </div>
     <table class="table">
       <thead><tr>

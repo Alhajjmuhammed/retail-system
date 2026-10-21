@@ -19,6 +19,17 @@ from apps.selling import services
 
 pytestmark = pytest.mark.django_db
 
+
+@pytest.fixture(autouse=True)
+def _goods_leave_on_a_delivery_note(shop):
+    """These tests are about delivery notes, so issuing must not send the goods."""
+    from apps.org.models import TenantSettings
+
+    with tenant_context(shop):
+        row, _ = TenantSettings.objects.get_or_create(tenant=shop)
+        row.stock_out_on_invoice = False
+        row.save()
+
 RATE = Decimal("2500")   # 1 USD = 2,500 TZS: easy arithmetic.
 
 
@@ -317,10 +328,10 @@ def test_shilling_documents_are_unchanged(client, shop, main_branch, owner, hote
                                      issued_on=today, due_on=today, currency="TZS")
         inv.lines.create(description="Mincer", qty=Decimal("2"), unit_price=Decimal("2170.60"),
                          position=10)
-        assert inv.total == Decimal("4341")          # to the shilling, as before
+        assert inv.total == Decimal("4341.20")       # to the cent, like every document
         assert not inv.is_foreign
         services.issue(inv)
-        assert hotel.balance == Decimal("4341")
+        assert hotel.balance == Decimal("4341.20")
     client.force_login(owner)
     html = client.get(reverse("selling:invoice_detail", args=[inv.pk])).content.decode()
     assert inv.reference in html

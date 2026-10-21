@@ -10,7 +10,7 @@
   {% if unpaid %}
   <div class="flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/20">
     {% icon "alert" class="mt-0.5 h-4 w-4 shrink-0" %}
-    <span><strong>{{ owed|floatformat:0|intcomma }}</strong> to pay on {{ unpaid|length }} invoice{{ unpaid|length|pluralize }}.
+    <span><strong>{{ owed|floatformat:"-2"|intcomma }}</strong> to pay on {{ unpaid|length }} invoice{{ unpaid|length|pluralize }}.
       Pay by mobile money or bank using the invoice number as the reference; it is marked paid once received.</span>
   </div>
   {% endif %}
@@ -64,7 +64,7 @@
             <td class="whitespace-nowrap text-ink-600">{{ inv.period_start|date:"j M" }} &ndash; {{ inv.period_end|date:"j M Y" }}</td>
             <td class="{% if inv.status == 'open' and inv.due_date and inv.due_date < today %}text-red-600{% else %}text-ink-600{% endif %}">{{ inv.due_date|date:"j M Y"|default:"—" }}</td>
             <td><span class="badge {% if inv.status == 'paid' %}badge-ok{% elif inv.status == 'open' %}badge-warn{% else %}badge-muted{% endif %}">{{ inv.get_status_display }}</span></td>
-            <td class="tnum text-right font-medium">{{ inv.currency }} {{ inv.total|floatformat:0|intcomma }}{% if inv.status == 'open' and inv.left != inv.total %}<p class="hint">{{ inv.left|floatformat:0|intcomma }} left</p>{% endif %}</td>
+            <td class="tnum text-right font-medium">{{ inv.currency }} {{ inv.total|floatformat:"-2"|intcomma }}{% if inv.status == 'open' and inv.left != inv.total %}<p class="hint">{{ inv.left|floatformat:"-2"|intcomma }} left</p>{% endif %}</td>
           </tr>
           {% empty %}
           <tr><td colspan="6">

@@ -98,7 +98,7 @@ def sms_receipt(sale=None, **kwargs):
         return
     send_from_template(
         "sale_receipt", to=sale.customer.phone, tenant=sale.tenant,
-        receipt=sale.number, amount=f"{sale.total:,.0f}",
+        receipt=sale.number, amount=f"{sale.total:,.2f}",
         customer=sale.customer.name,
     )
 
@@ -109,8 +109,8 @@ def sms_credit(customer=None, amount=None, **kwargs):
         return
     send_from_template(
         "credit_taken", to=customer.phone, tenant=customer.tenant,
-        customer=customer.name, amount=f"{amount:,.0f}",
-        balance=f"{customer.balance:,.0f}",
+        customer=customer.name, amount=f"{amount:,.2f}",
+        balance=f"{customer.balance:,.2f}",
     )
 
 

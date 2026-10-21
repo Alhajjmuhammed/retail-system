@@ -59,7 +59,7 @@ def dashboard(request):
         cards = [
             {"label": "Takings", "value": took["net"], "money": True,
              "change": charts.change(took["net"], before["net"]),
-             "hint": f"{took['refunded']:,.0f} refunded" if took["refunded"]
+             "hint": f"{took['refunded']:,.2f} refunded" if took["refunded"]
                      else "nothing refunded",
              "spark": charts.spark([r["value"] for r in rows]),
              "url": reverse("reports:index")},

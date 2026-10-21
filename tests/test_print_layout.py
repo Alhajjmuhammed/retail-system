@@ -132,7 +132,7 @@ def test_the_quotation_print_follows_the_same_layout(
     html = client.get(reverse("selling:quotation_print", args=[q.pk])).content.decode()
     assert _headers(html) == ["Qty", "Description", "Rate", "Amount"]
     assert "Total before discount" in html
-    assert "4,341.00" in html  # 2 x 2,170.60, to the shilling, before the 10%
+    assert "4,341.20" in html  # 2 x 2,170.60, to the cent, before the 10%
 
 
 def test_settings_save_the_columns_in_the_numbered_order(rules):

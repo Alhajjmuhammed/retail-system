@@ -58,12 +58,12 @@
       </div>
       <div class="px-5 py-3.5">
         <p class="text-xs text-ink-500">Turnover</p>
-        <p class="tnum mt-0.5 text-xl font-semibold text-ink-900">{{ sales_value|floatformat:0|intcomma }}</p>
+        <p class="tnum mt-0.5 text-xl font-semibold text-ink-900">{{ sales_value|floatformat:"-2"|intcomma }}</p>
       </div>
       <div class="px-5 py-3.5">
         <p class="text-xs {% if outstanding %}text-amber-700{% else %}text-ink-500{% endif %}">Owes you</p>
         <p class="tnum mt-0.5 text-xl font-semibold {% if outstanding %}text-amber-700{% else %}text-ink-900{% endif %}">
-          {{ outstanding|floatformat:0|intcomma }}
+          {{ outstanding|floatformat:"-2"|intcomma }}
         </p>
       </div>
       <div class="px-5 py-3.5">
@@ -275,7 +275,7 @@
             <span class="hint">{{ inv.period_start|date:"M Y" }}</span>
           </span>
           <span class="flex shrink-0 items-center gap-2">
-            <span class="tnum text-ink-900">{{ inv.total|floatformat:0|intcomma }}</span>
+            <span class="tnum text-ink-900">{{ inv.total|floatformat:"-2"|intcomma }}</span>
             <span class="badge {% if inv.status == 'paid' %}badge-ok{% elif inv.status == 'void' %}badge-muted{% else %}badge-warn{% endif %}">
               {{ inv.get_status_display }}
             </span>

@@ -46,7 +46,7 @@
         <span class="min-w-0 flex-1 text-sm text-ink-800">{{ item.permission.label }}</span>
 
         {% if item.limit is not None %}
-        <span class="badge badge-muted">up to {{ item.limit|floatformat:0|intcomma }}{% if item.is_percent %}%{% endif %}</span>
+        <span class="badge badge-muted">up to {{ item.limit|floatformat:"-2"|intcomma }}{% if item.is_percent %}%{% endif %}</span>
         {% endif %}
         {% if item.options %}
         <span class="badge badge-muted">{{ item.options|join:", " }}</span>

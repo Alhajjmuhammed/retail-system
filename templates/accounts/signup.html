@@ -113,12 +113,12 @@ then the button that says what you are about to get.
             {% if package.is_free %}
             <span class="text-xl font-bold text-white sm:text-2xl">Free</span>
             {% else %}
-            <span class="text-xl font-bold text-white sm:text-2xl">{{ package.plan.price_monthly|floatformat:0|intcomma }}</span>
+            <span class="text-xl font-bold text-white sm:text-2xl">{{ package.plan.price_monthly|floatformat:"-2"|intcomma }}</span>
             <span class="text-sm text-brand-200/70">/month</span>
             {% endif %}
           </p>
           {% if package.months_free_on_annual %}
-          <p class="text-xs text-brand-300/90">or {{ package.plan.price_annual|floatformat:0|intcomma }} a year &mdash; {{ package.months_free_on_annual }} months free</p>
+          <p class="text-xs text-brand-300/90">or {{ package.plan.price_annual|floatformat:"-2"|intcomma }} a year &mdash; {{ package.months_free_on_annual }} months free</p>
           {% else %}
           <p class="text-xs text-brand-300/90">&nbsp;</p>
           {% endif %}

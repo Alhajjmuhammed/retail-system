@@ -7,8 +7,8 @@
         <td class="tnum w-12 text-right text-xs text-ink-400">{{ page.start_index|add:forloop.counter0 }}</td>
         <td><a href="{% url 'customers:customer_detail' c.pk %}" class="font-medium text-ink-900 hover:text-brand-700">{{ c.name }}</a>{% if not c.is_active %} <span class="badge badge-muted">removed</span>{% endif %}</td>
         <td class="text-ink-600">{{ c.phone|default:"—" }}</td>
-        <td class="tnum text-right text-ink-500">{{ c.credit_limit|floatformat:0|intcomma }}</td>
-        <td class="tnum text-right font-medium {% if c.owed > c.credit_limit and c.owed > 0 %}text-red-600{% elif c.owed > 0 %}text-amber-700{% elif c.owed < 0 %}text-emerald-700{% endif %}">{{ c.owed|floatformat:0|intcomma }}</td>
+        <td class="tnum text-right text-ink-500">{{ c.credit_limit|floatformat:"-2"|intcomma }}</td>
+        <td class="tnum text-right font-medium {% if c.owed > c.credit_limit and c.owed > 0 %}text-red-600{% elif c.owed > 0 %}text-amber-700{% elif c.owed < 0 %}text-emerald-700{% endif %}">{{ c.owed|floatformat:"-2"|intcomma }}</td>
         <td class="whitespace-nowrap text-right">
           <a href="{% url 'customers:customer_detail' c.pk %}" class="btn-icon btn-icon-brand" title="Open {{ c.name }}" aria-label="Open {{ c.name }}">{% icon "chevron-right" class="h-4 w-4" %}</a>
           <a href="{% url 'customers:customer_edit' c.pk %}" hx-get="{% url 'customers:customer_edit' c.pk %}" hx-target="#modal" class="btn-icon btn-icon-brand" title="Edit {{ c.name }}" aria-label="Edit {{ c.name }}">{% icon "pencil" class="h-4 w-4" %}</a>

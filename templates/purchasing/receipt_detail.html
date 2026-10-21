@@ -5,7 +5,7 @@
 <div class="mx-auto max-w-3xl space-y-4">
   <div class="card card-body flex flex-wrap items-center justify-between gap-3">
     <div class="text-sm"><a href="{% url 'purchasing:supplier_detail' receipt.supplier_id %}" class="font-medium text-ink-900 hover:text-brand-700">{{ receipt.supplier.name }}</a>{% if receipt.order_id %}<p class="hint">Against <a class="hover:underline" href="{% url 'purchasing:order_detail' receipt.order_id %}">{{ receipt.order.reference }}</a></p>{% endif %}<p class="hint">{{ receipt.received_at|date:"j M Y H:i" }}{% if receipt.supplier_note %} &middot; note {{ receipt.supplier_note }}{% endif %}</p></div>
-    <div class="text-right">{% if posted %}<span class="badge badge-ok">In stock</span>{% else %}<span class="badge badge-warn">Not yet posted</span>{% endif %}<p class="mt-1 text-xl font-bold">{{ receipt.total|floatformat:0|intcomma }}</p></div>
+    <div class="text-right">{% if posted %}<span class="badge badge-ok">In stock</span>{% else %}<span class="badge badge-warn">Not yet posted</span>{% endif %}<p class="mt-1 text-xl font-bold">{{ receipt.total|floatformat:"-2"|intcomma }}</p></div>
   </div>
 
   <div class="table-wrap">
@@ -23,7 +23,7 @@
             <button type="submit" class="btn-icon btn-icon-danger ml-1 h-7 w-7 align-middle" title="Remove {{ line.variant }}" aria-label="Remove {{ line.variant }}">{% icon "trash" class="h-3.5 w-3.5" %}</button>
           </form>
           {% endif %}
-        </td><td class="font-mono text-xs text-ink-600">{{ line.batch_no|default:"—" }}</td><td class="text-ink-600">{{ line.expiry_date|date:"j M Y"|default:"—" }}</td><td class="text-right">{{ line.qty|floatformat:"-3" }}</td><td class="text-right">{{ line.unit_cost|floatformat:"-2"|intcomma }}</td><td class="tnum text-right font-medium">{{ line.line_total|floatformat:0|intcomma }}</td></tr>
+        </td><td class="font-mono text-xs text-ink-600">{{ line.batch_no|default:"—" }}</td><td class="text-ink-600">{{ line.expiry_date|date:"j M Y"|default:"—" }}</td><td class="text-right">{{ line.qty|floatformat:"-3" }}</td><td class="text-right">{{ line.unit_cost|floatformat:"-2"|intcomma }}</td><td class="tnum text-right font-medium">{{ line.line_total|floatformat:"-2"|intcomma }}</td></tr>
         {% empty %}<tr><td colspan="7" class="py-8 text-center text-sm text-ink-500">Nothing added yet.</td></tr>{% endfor %}
       </tbody>
     </table>
@@ -49,7 +49,7 @@
     {% endif %}
     {% if receipt.lines.count %}
     <form method="post" x-data
-          @submit.prevent="$store.confirm.ask($el, { title: 'Put {{ receipt.reference|escapejs }} into stock?', body: 'Adds these quantities, updates cost prices and records a bill of {{ receipt.total|floatformat:0|intcomma }} from {{ receipt.supplier.name|escapejs }}. This cannot be undone.', label: 'Put into stock', danger: false })">
+          @submit.prevent="$store.confirm.ask($el, { title: 'Put {{ receipt.reference|escapejs }} into stock?', body: 'Adds these quantities, updates cost prices and records a bill of {{ receipt.total|floatformat:"-2"|intcomma }} from {{ receipt.supplier.name|escapejs }}. This cannot be undone.', label: 'Put into stock', danger: false })">
       {% csrf_token %}<input type="hidden" name="action" value="post">
       <button type="submit" class="btn btn-primary">{% icon "check" class="h-4 w-4" %} Put it into stock</button>
     </form>

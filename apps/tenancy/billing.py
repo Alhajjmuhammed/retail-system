@@ -119,7 +119,7 @@ def record_payment(invoice, *, amount, method, reference=""):
     if amount <= 0:
         raise BillingError("A payment must be more than zero.")
     if amount > invoice.outstanding:
-        raise BillingError(f"Only {invoice.outstanding:,.0f} is left to pay on {invoice.number}. "
+        raise BillingError(f"Only {invoice.outstanding:,.2f} is left to pay on {invoice.number}. "
                            "Record any extra as a separate invoice or a credit.")
     payment = Payment.objects.create(
         invoice=invoice, method=method, provider_ref=reference[:120],
