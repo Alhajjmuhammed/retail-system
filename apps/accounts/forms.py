@@ -9,13 +9,11 @@ class TailwindMixin:
 
     default_class = "input"
     # A rate is a percentage and 7.5% is a real one; a weight is measured.
-    # Everything else with two decimal places in this system is money, and
-    # money here is whole shillings -- Django's own step of 0.01 turned one
-    # click of the arrow into 3,000.01.
+    # Everything else with two decimal places in this system is money, kept
+    # to the cent like everything else.
     keeps_decimals = ("rate", "percent", "weight", "factor", "discount")
     # A price is kept to the cent (pos.services.price): a shop that buys at
-    # 2,170.60 means it. step="any" lets that be typed while the arrows still
-    # move in whole shillings; step="1" made the browser refuse the cents.
+    # 2,170.60 means it. step="any" lets that be typed with any decimals.
     is_price = ("price", "cost")
 
     def __init__(self, *args, **kwargs):
@@ -29,8 +27,9 @@ class TailwindMixin:
 
             if isinstance(field, forms.DecimalField) and field.decimal_places == 2 \
                     and not any(word in name for word in self.keeps_decimals):
+                # Amounts keep their cents, like prices.
                 widget.attrs["step"] = "any" if any(
-                    word in name for word in self.is_price) else "1"
+                    word in name for word in self.is_price) else "0.01"
 
 
 class SignupForm(TailwindMixin, forms.Form):

@@ -189,3 +189,41 @@ def test_the_till_the_check_and_the_sale_agree_to_the_shilling(client, shop, mai
     assert sale.total == expected, f"the sale disagrees with the till: {sale.total} vs {expected}"
     assert paid == expected, f"the drawer was told {paid}, the customer paid {expected}"
     assert change == 0, f"{change} was recorded as change nobody was given"
+
+
+def _sync(client, shift, lines, amount, method="cash"):
+    import json
+    import uuid
+
+    return client.post(
+        "/api/v1/sync/sales/",
+        data=json.dumps({"device_id": "till-1", "shift_id": shift.pk, "sales": [{
+            "client_uuid": str(uuid.uuid4()), "lines": lines,
+            "payments": [{"method": method, "amount": str(amount)}],
+        }]}),
+        content_type="application/json",
+    ).json()
+
+
+def test_a_till_not_reloaded_since_the_update_still_gets_its_sales_in(
+        client, shop, main_branch, register, odd_priced, owner):
+    """It rounded each line to a whole shilling; the sale is kept and flagged."""
+    from apps.pos.models import Sale
+    from apps.pos.services import open_shift
+
+    with tenant_context(shop, branch=main_branch, user=owner):
+        shift = open_shift(register=register, opening_float=0)
+    unga = odd_priced["Unga (kg)"]                       # 3,333.33
+    lines = [{"variant_id": unga.pk, "qty": "0.333", "unit_price": "3333.33"},
+             {"variant_id": unga.pk, "qty": "0.111", "unit_price": "3333.33"}]
+    # 1,110.00 + 370.00 to the cent; the old till sent 1,110 + 370 = 1,480 -- fine --
+    # so make it round down: pay what a whole-shilling till would, a little short.
+    client.force_login(owner)
+    result = _sync(client, shift, lines, "1479.40")
+    assert len(result["accepted"]) == 1, result
+    with tenant_context(shop, branch=main_branch):
+        assert Sale.objects.get().needs_review
+
+    # Far short is still refused.
+    result = _sync(client, shift, lines, "1000")
+    assert len(result["rejected"]) == 1

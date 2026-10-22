@@ -177,8 +177,11 @@ class Quotation(BranchModel):
 
     @property
     def discount_total(self) -> Decimal:
-        """All that came off, line discounts and the whole-document one."""
-        return self.before_discount - self.total
+        """
+        All that came off, line discounts and the whole-document one --
+        before any VAT added on top, which is not a discount.
+        """
+        return self.before_discount - self.net
 
     @property
     def lines_total(self) -> Decimal:
@@ -502,8 +505,11 @@ class Invoice(BranchModel):
 
     @property
     def discount_total(self) -> Decimal:
-        """All that came off, line discounts and the whole-document one."""
-        return self.before_discount - self.total
+        """
+        All that came off, line discounts and the whole-document one --
+        before any VAT added on top, which is not a discount.
+        """
+        return self.before_discount - self.net
 
     @property
     def lines_total(self) -> Decimal:

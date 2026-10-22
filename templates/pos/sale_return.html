@@ -51,7 +51,7 @@
       <span class="hint ml-1">Leave unticked for damaged goods.</span>
     </label>
     <div class="flex items-center justify-between gap-3">
-      <p class="text-sm text-ink-600">Refund <strong class="tnum text-ink-900" x-text="new Intl.NumberFormat('en-US', {maximumFractionDigits: 0}).format(total)">0</strong></p>
+      <p class="text-sm text-ink-600">Refund <strong class="tnum text-ink-900" x-text="new Intl.NumberFormat('en-US', {minimumFractionDigits: Math.abs(total - Math.round(total)) < 0.005 ? 0 : 2, maximumFractionDigits: 2}).format(total)">0</strong></p>
       <span class="flex gap-2">
         <a href="{{ back }}" class="btn btn-secondary">Cancel</a>
         <button type="submit" class="btn btn-primary" :disabled="total <= 0">Refund</button>

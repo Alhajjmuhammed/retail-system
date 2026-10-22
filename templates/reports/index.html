@@ -21,7 +21,7 @@
       {% if chart %}
       <div class="chart">
         <div class="chart-scale">
-          {% for line in chart.grid %}<span>{{ line.value|floatformat:"-2"|intcomma }}</span>{% endfor %}
+          {% for line in chart.grid %}<span>{{ line.value|floatformat:0|intcomma }}</span>{% endfor %}
         </div>
         <div class="chart-plot">
           <svg class="chart-svg" viewBox="0 0 {{ chart.width }} {{ chart.height }}" preserveAspectRatio="none" aria-hidden="true">

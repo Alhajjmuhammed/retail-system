@@ -33,8 +33,8 @@
         </div>
         <div class="w-40">
           <label class="label" for="counted-{{ sh.pk }}">What you counted</label>
-          <input type="number" step="1" min="0" name="counted_cash" id="counted-{{ sh.pk }}"
-                 inputmode="numeric" class="input" placeholder="e.g. 120,000" required>
+          <input type="number" step="0.01" min="0" name="counted_cash" id="counted-{{ sh.pk }}"
+                 inputmode="decimal" class="input" placeholder="e.g. 120,000" required>
         </div>
         <button type="submit" class="btn btn-secondary">Close it</button>
       </form>
@@ -79,7 +79,7 @@
               <span class="text-xs text-emerald-700">{{ s.approved_by.name }}</span>
             {% elif s.user_id != request.user.pk %}
               <form method="post" action="{% url 'finance:cashup_approve' s.pk %}" x-data
-                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s count?', body: 'Difference of {{ s.variance|floatformat:"-2" }} is accepted as recorded.', label: 'Approve' })">
+                    @submit.prevent="$store.confirm.ask($el, { title: 'Approve {{ s.user.name|escapejs }}\'s count?', body: 'Difference of {{ s.variance|floatformat:"-2"|intcomma }} is accepted as recorded.', label: 'Approve' })">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-secondary btn-sm">Approve</button>
               </form>

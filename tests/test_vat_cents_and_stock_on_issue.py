@@ -208,3 +208,58 @@ def test_an_invoice_from_a_quotation_charges_vat_as_quoted(shop, main_branch, bu
         q.save()
         inv = services.invoice_from_quotation(q)
         assert inv.adds_vat and inv.total == Decimal("118.00")
+
+
+def test_the_discount_printed_with_vat_on_top_is_the_discount(shop, main_branch, buyer, stocked):
+    _settings(shop, prices_include_tax=False)
+    inv = _invoice(shop, main_branch, buyer, [
+        (stocked["Mkate"], "1", "100", {"discount_percent": Decimal("10")})])
+    with tenant_context(shop):
+        assert inv.discount_total == Decimal("10.00")
+        assert inv.total == Decimal("106.20")
+
+
+def test_odd_prices_with_vat_on_top_post_a_sale_of_exactly_the_invoice(
+        shop, main_branch, owner, buyer, stocked):
+    _settings(shop, prices_include_tax=False)
+    inv = _invoice(shop, main_branch, buyer, [(stocked["Mkate"], "100", "1.01", {})])
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(inv)
+        inv = Invoice.objects.get(pk=inv.pk)
+        sale = inv.deliveries.get().sale
+        assert inv.total == Decimal("119.18")
+        assert sale.total == inv.total
+
+
+def test_a_copied_quotation_keeps_its_vat(shop, main_branch, buyer, stocked):
+    from apps.selling.models import Quotation
+
+    _settings(shop, prices_include_tax=False)
+    today = timezone.localdate()
+    with tenant_context(shop, branch=main_branch):
+        q = Quotation.objects.create(reference="QUO260002", customer=buyer, branch=main_branch,
+                                     issued_on=today, valid_until=today + timedelta(days=7))
+        q.lines.create(variant=stocked["Mkate"], description="Mkate", qty=Decimal("1"),
+                       unit_price=Decimal("100"), tax_rate=Decimal("18"), position=1)
+    _settings(shop, prices_include_tax=True)
+    with tenant_context(shop, branch=main_branch):
+        copy = services.copy_for_new(Quotation.objects.get(pk=q.pk))
+        assert copy.adds_vat and copy.total == Decimal("118.00")
+
+
+def test_goods_sent_by_hand_still_stop_a_cancel(shop, main_branch, owner, buyer, stocked):
+    from apps.core.numbering import save_with_number
+    from apps.selling.models import DeliveryNote
+
+    _settings(shop, stock_out_on_invoice=False)
+    inv = _invoice(shop, main_branch, buyer, [(stocked["Mkate"], "4", "1500", {})])
+    with tenant_context(shop, branch=main_branch, user=owner):
+        services.issue(inv)
+        note = save_with_number(
+            DeliveryNote(branch=main_branch, invoice=inv, delivered_on=timezone.localdate()),
+            field="reference", generate=lambda: services.next_reference(DeliveryNote, "DN"))
+        note.lines.create(invoice_line=inv.lines.get(), qty=Decimal("1"))
+        services.deliver(note, user=owner)
+    _settings(shop, stock_out_on_invoice=True)
+    with tenant_context(shop, branch=main_branch, user=owner), pytest.raises(ValueError):
+        services.void_invoice(Invoice.objects.get(pk=inv.pk), user=owner)

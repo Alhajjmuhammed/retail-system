@@ -94,8 +94,12 @@
 
       // Rounded line by line, the way the server records it.
       coin(value) {
+        // Half up, to the cent, as the server rounds. Plain Math.round on
+        // 0.5 x 2.01 gives 1.00 -- binary fractions -- where the server says
+        // 1.01, and a basket of such lines was refused when it synced.
         const step = (this.config && this.config.money_step) || 0.01;
-        return Math.round((value || 0) / step) * step;
+        const units = Math.round(Number(((value || 0) / step).toFixed(6)));
+        return Number((units * step).toFixed(2));
       },
 
       get total() {

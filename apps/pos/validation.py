@@ -207,15 +207,29 @@ def check_sale(membership, entry, *, price_list=None) -> CheckedSale:
             "method": method, "amount": amount,
             "reference": str(raw.get("reference", ""))[:60], "change_given": change,
         })
+    # A till still running the page from before amounts kept their cents
+    # rounded every line to a whole shilling: at most half a shilling a line
+    # either way. Its queued sales are real sales, so they are kept and put
+    # in front of the owner to check, rather than refused and lost.
+    slack = Decimal("0.5") * max(len(checked.lines), 1)
     if paid + TOLERANCE < checked.total:
-        raise SaleRejected(f"Paid {paid:,.2f} of {checked.total:,.2f}.")
+        if checked.total - paid > slack:
+            raise SaleRejected(f"Paid {paid:,.2f} of {checked.total:,.2f}.")
+        checked.review.append(
+            f"Paid {paid:,.2f} of {checked.total:,.2f}: rounded by a till that had not "
+            "been reloaded since the update.")
     # Only cash can be over-tendered (and change given). Mobile money, card or
     # credit beyond the total is not a payment -- credit of 400,000 on a
     # 1,000 sale put 400,000 of debt on a customer's account.
     not_cash = sum((pay["amount"] for pay in checked.payments
                     if pay["method"] != PaymentMethod.CASH), Decimal("0"))
     if not_cash > checked.total + TOLERANCE:
-        raise SaleRejected("More was paid by card, mobile money or on account than the sale costs.")
+        if not_cash - checked.total > slack:
+            raise SaleRejected(
+                "More was paid by card, mobile money or on account than the sale costs.")
+        checked.review.append(
+            f"{not_cash:,.2f} paid by card, mobile money or on account for a sale of "
+            f"{checked.total:,.2f}: rounded by a till that had not been reloaded since the update.")
     # A payment's amount is what the shop keeps. Cash handed over beyond the
     # total is change: stored that way, or the drawer would expect money
     # that went straight back to the customer -- and a refund could pay it

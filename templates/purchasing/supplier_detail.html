@@ -17,7 +17,7 @@
     </div>
     <div class="text-right">
       <p class="text-xs uppercase tracking-wide text-ink-500">{% if balance < 0 %}Paid ahead{% else %}You owe{% endif %}</p>
-      <p class="text-2xl font-bold {% if balance > 0 %}text-amber-700{% else %}text-ink-900{% endif %}">{% if balance < 0 %}{% widthratio balance 1 -1 as ahead %}{{ ahead|floatformat:"-2"|intcomma }}{% else %}{{ balance|floatformat:"-2"|intcomma }}{% endif %}</p>
+      <p class="text-2xl font-bold {% if balance > 0 %}text-amber-700{% else %}text-ink-900{% endif %}">{% if balance < 0 %}{{ balance|cut:"-"|floatformat:"-2"|intcomma }}{% else %}{{ balance|floatformat:"-2"|intcomma }}{% endif %}</p>
     </div>
   </div>
 

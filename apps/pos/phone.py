@@ -29,7 +29,7 @@ from apps.core import audit
 from apps.core.decorators import requires
 from apps.core.parsing import decimal_or_none, int_or
 from apps.pos.models import PaymentMethod, Sale, Shift, ShiftStatus
-from apps.pos.services import add_to_cart, complete_sale, new_cart, quantum
+from apps.pos.services import add_to_cart, complete_sale, money, new_cart, quantum
 from apps.pos.validation import SaleRejected, check_sale
 
 
@@ -243,7 +243,8 @@ def checkout(request):
                                 status=400)
         lines.append({"variant_id": variant.pk, "qty": str(qty), "unit_price": str(price),
                       "discount": "0", "added_via": "camera"})
-        total += qty * price
+        # Each line to the cent, as the sale will be written and checked.
+        total += money(qty * price, request.tenant.currency)
 
     method = body.get("method")
     reference = str(body.get("reference") or "").strip()[:60]

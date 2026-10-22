@@ -147,6 +147,8 @@ def copy_for_new(quotation):
             discount_percent=quotation.discount_percent,
             currency=currency,
             exchange_rate=rate,
+            # The prices are copied as they were, so VAT goes with them.
+            vat_on_top=quotation.adds_vat,
         ),
         field="reference",
         generate=lambda: next_reference(Quotation, "QUO"),
@@ -321,6 +323,11 @@ def issue(invoice):
     return invoice
 
 
+# How a delivery note made by issuing an invoice is told apart from one
+# somebody wrote: cancelling the invoice brings those goods back.
+AUTO_SENT = "Sent when the invoice was issued."
+
+
 def send_everything(invoice, *, user=None):
     """A delivery note for all that is still to go out, sent now."""
     from apps.accounts.models import Membership
@@ -340,7 +347,7 @@ def send_everything(invoice, *, user=None):
     note = save_with_number(
         DeliveryNote(branch=invoice.branch, invoice=invoice,
                      delivered_on=timezone.localdate(),
-                     note="Sent when the invoice was issued."),
+                     note=AUTO_SENT),
         field="reference",
         generate=lambda: next_reference(DeliveryNote, "DN"),
     )
@@ -464,16 +471,17 @@ def void_invoice(invoice, *, user=None):
         return invoice
     if invoice.paid > 0:
         raise ValueError("Something has already been paid against this invoice.")
-    if invoice.has_deliveries:
-        if not paperwork_rules().stock_out_on_invoice:
-            raise ValueError(
-                "Something has already been delivered against this invoice."
-            )
-        # Where issuing sent the goods, cancelling brings them back: each
-        # delivery is cancelled, so the stock returns and the sale comes
-        # off the day's figures.
-        for note in invoice.deliveries.filter(voided_at__isnull=True):
-            cancel_delivery(note, reason=f"Invoice {invoice.reference} cancelled", user=user)
+    live = list(invoice.deliveries.filter(voided_at__isnull=True))
+    if any(note.note != AUTO_SENT for note in live):
+        # Goods somebody sent on a trip of their own: cancel that delivery
+        # first, on purpose, as before.
+        raise ValueError(
+            "Something has already been delivered against this invoice."
+        )
+    # What issuing sent, cancelling brings back: the stock returns and the
+    # sale comes off the day's figures -- whatever the setting is now.
+    for note in live:
+        cancel_delivery(note, reason=f"Invoice {invoice.reference} cancelled", user=user)
 
     if invoice.status == InvoiceStatus.OPEN:
         customer = invoice.customer
@@ -554,7 +562,12 @@ def deliver(note, *, user=None):
             else price(source.unit_price)
         if invoice.adds_vat:
             # The till's prices include VAT; this one had it added on top.
-            unit_price = price(unit_price * (1 + source.tax_rate / Decimal("100")))
+            # Rounded up, never down: the line's discount below takes up the
+            # difference, so the sale is exactly what the invoice charges.
+            from decimal import ROUND_UP
+
+            unit_price = (unit_price * (1 + source.tax_rate / Decimal("100"))).quantize(
+                Decimal("0.01"), rounding=ROUND_UP)
         gross = money(row.qty * unit_price)
         CartLine.objects.create(
             tenant=cart.tenant, cart=cart, variant=source.variant,
